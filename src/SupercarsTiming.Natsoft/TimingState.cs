@@ -15,6 +15,8 @@ public sealed class TimingState
     public string SessionCode { get; private set; } = "";
     public string SessionName { get; private set; } = "";
     public string SessionType { get; private set; } = "";
+    /// <summary>Scheduled race distance in laps (<c>&lt;E L&gt;</c>); 0 when Natsoft doesn't send one (timed races).</summary>
+    public int ScheduledLaps { get; private set; }
     public string TrackCode { get; private set; } = "";
     public string TrackName { get; private set; } = "";
 
@@ -64,11 +66,18 @@ public sealed class TimingState
         switch (root.Name.LocalName)
         {
             case "New" or "Change" or "WaitCat":
+                // A reconnect (or a server restart replaying today's recording) sends a fresh snapshot of the
+                // same session. It doesn't include history (laps per driver, pit stops, mini-sector bests), so keep ours.
+                var previous = (SessionCode, SessionName, Cars: new Dictionary<string, CarState>(Cars));
                 Entries.Clear(); Cars.Clear(); TimingPoints.Clear();
                 Best.Reset();
+                ScheduledLaps = 0;
                 _inSnapshot = true;
                 try { foreach (var child in root.Elements()) ApplyChild(child); }
                 finally { _inSnapshot = false; }
+                if (previous.SessionCode == SessionCode && previous.SessionName == SessionName && SessionName != "")
+                    foreach (var c in Cars.Values)
+                        if (previous.Cars.TryGetValue(c.Id, out var old)) c.CarryHistoryFrom(old, Now);
                 break;
             default:
                 ApplyChild(root);
@@ -96,6 +105,7 @@ public sealed class TimingState
                 SessionCode = Str(e, "C") ?? SessionCode;
                 SessionName = Str(e, "D") ?? SessionName;
                 SessionType = Str(e, "Y") ?? SessionType;
+                ScheduledLaps = Int(e, "L") ?? ScheduledLaps;
                 break;
             case "RL":
                 foreach (var r in e.Elements("R"))
@@ -138,22 +148,52 @@ public sealed class TimingState
             // A change after the first value we see is a driver swap (co-driver events, practice changeovers).
             if (c.DriverSeen) c.DriverChangedAt = Now;
             c.DriverIndex = driver;
+            // The swap belongs to the pit stop it happened at (Natsoft can send it just after the car leaves).
+            if (c.DriverSeen && c.PitLog.LastOrDefault() is { } stop && (c.InPit || Now - stop.OutAt < 120)) stop.DriverOut = driver;
         }
         c.DriverSeen = true;
 
         if (p.Element("D") is not { } d) return;
 
         // Pit status first, so a pit-lane crossing in the same update isn't counted as racing pace.
+        var leaving = false;
         if (Str(d, "P") is { } inPit)
         {
             var entering = inPit == "Y" && !c.InPit;
+            leaving = inPit == "N" && c.InPit;
+            // Pit stop log. Entering: PI = pit-in time, LLP = lap. Leaving: PT = seconds in pit lane.
+            // A snapshot only says the car is in the pits, not since when, so it doesn't start a log entry.
+            if (entering && !_inSnapshot)
+                c.PitLog.Add(new PitStop
+                {
+                    Lap = Int(d, "LLP") ?? c.Laps,
+                    InAt = Dbl(d, "PI") is double pi && pi > 0 ? pi : Now,
+                    DriverIn = c.DriverIndex,
+                    DriverOut = c.DriverIndex,
+                });
+            if (leaving && c.PitLog.LastOrDefault() is { OutAt: 0 } open)
+            {
+                open.OutAt = Now;
+                open.Seconds = Dbl(d, "PT") is double pt && pt > 0 ? pt : Now - open.InAt;
+            }
             // Going in or out of the pits: the last crossing can't start a timed stretch (the car may have
             // sat in the garage since, or crossed a pit-lane timing line).
             if (c.InPit != (inPit == "Y")) c.SegmentStartAt = 0;
             c.InPit = inPit == "Y";
             if (entering) { c.LapsSincePit = 0; c.LapStartAt = 0; c.CurrentLapSplits.Clear(); }
         }
-        c.Laps = Int(d, "L") ?? c.Laps;
+        if (Int(d, "L") is int laps)
+        {
+            // Laps per driver (co-driver minimum laps at endurance events): credit completed laps to whoever's in
+            // the car. Laps from a snapshot happened before we connected, so we can't say who drove them.
+            if (!_inSnapshot && c.LapsKnown && laps > c.Laps) c.LapsByDriver[c.DriverIndex] = c.LapsByDriver.GetValueOrDefault(c.DriverIndex) + laps - c.Laps;
+            c.Laps = laps;
+            c.LapsKnown = true;
+        }
+        // LCD = Natsoft's own count of the current driver's laps this session (it resumes where that driver left
+        // off after a swap back). Trust it over our count; it's in snapshots too, so it survives connecting mid-race.
+        if (Int(d, "LCD") is int lcd) c.LapsByDriver[c.DriverIndex] = lcd;
+        if (leaving) c.StintStartLap = c.Laps;
         c.LastLap = Dbl(d, "I") ?? c.LastLap;
         c.BestLap = Dbl(d, "FI") ?? c.BestLap;
         c.BestLapNo = Int(d, "FL") ?? c.BestLapNo;
@@ -288,6 +328,13 @@ public sealed class CarState
     /// <summary>Natsoft time of the last driver swap in this session; 0 if none seen.</summary>
     public double DriverChangedAt { get; set; }
     public int Laps { get; set; }
+    internal bool LapsKnown { get; set; }
+    /// <summary>Laps completed with each driver in the car (key = <see cref="DriverIndex"/>), for laps seen live.</summary>
+    public Dictionary<string, int> LapsByDriver { get; } = [];
+    /// <summary>Laps completed before this stint started (at the last pit exit); 0 before the first stop.</summary>
+    public int StintStartLap { get; set; }
+    /// <summary>Pit stops seen live this session, oldest first.</summary>
+    public List<PitStop> PitLog { get; } = [];
     public double LastLap { get; set; }
     public double BestLap { get; set; }
     public int BestLapNo { get; set; }
@@ -352,4 +399,42 @@ public sealed class CarState
     public double BestI1 { get; set; }
     public double BestI2 { get; set; }
     public double LastLineCrossing { get; set; }
+
+    /// <summary>
+    /// Keeps history that a new snapshot of the same session doesn't include. Laps done while we were
+    /// disconnected go to the driver who was in the car, if they didn't stop in the meantime.
+    /// </summary>
+    internal void CarryHistoryFrom(CarState old, double now)
+    {
+        foreach (var (k, v) in old.LapsByDriver) LapsByDriver[k] = v;
+        if (old.LapsKnown && Laps > old.Laps && old.DriverIndex == DriverIndex && old.PitStops == PitStops)
+            LapsByDriver[DriverIndex] = LapsByDriver.GetValueOrDefault(DriverIndex) + Laps - old.Laps;
+        PitLog.AddRange(old.PitLog);
+        // It was in the pits when we lost the connection and has left since: we missed the exit time.
+        if (!InPit && PitLog.LastOrDefault() is { OutAt: 0 } open) open.OutAt = now;
+        StintStartLap = old.StintStartLap;
+        DriverChangedAt = old.DriverChangedAt;
+        LapsSincePit = old.LapsSincePit;
+        foreach (var (k, v) in old.SegmentSeconds) SegmentSeconds[k] = v;
+        foreach (var (k, v) in old.RawSegmentSeconds) RawSegmentSeconds[k] = v;
+        foreach (var (k, v) in old.BestSegments) BestSegments[k] = v;
+        LastLapSegments = new(old.LastLapSegments);
+        LastLapSplits = new(old.LastLapSplits);
+        BestLapSplits = new(old.BestLapSplits);
+    }
+}
+
+public sealed class PitStop
+{
+    /// <summary>Lap the car pitted on (Natsoft <c>LLP</c>).</summary>
+    public int Lap { get; set; }
+    /// <summary>Natsoft time the car entered the pit lane (<c>PI</c>).</summary>
+    public double InAt { get; set; }
+    /// <summary>Natsoft time the car left; 0 while it's still in the pits.</summary>
+    public double OutAt { get; set; }
+    /// <summary>Time in the pit lane (<c>PT</c>); 0 while it's still in the pits.</summary>
+    public double Seconds { get; set; }
+    /// <summary>Driver indices before and after the stop (different when drivers swapped).</summary>
+    public string DriverIn { get; set; } = "";
+    public string DriverOut { get; set; } = "";
 }

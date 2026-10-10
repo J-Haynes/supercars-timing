@@ -78,7 +78,7 @@ Session types seen in `<E Y>`: `Practice`, `Race`, and `OverrideQual` for the Ba
 (`D="2026 Repco Supercars Championship - Top Ten Shootout Race 30"`). In the Shootout, cars appear in the
 leaderboard as they come out rather than all at once.
 
-Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red flags and safety cars not yet seen.
+Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Red`, `Checkered`, `Ended`. `Yellow` and `Red` were seen in support races on 10 Oct; the session flag is the only safety car / full-course yellow signal found so far.
 
 ## Snapshot (`<New>`) children
 
@@ -88,6 +88,7 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red fla
   Bathurst: `1=Pos1, 2=Pos2, 3=Int1, 4=Pos3, 5=Int2, 6=Pos4, 7=Pos5`. The control line is `M`, so a
   lap is M → 1 → … → 7 → M: 8 crossings per lap, 15–25 s apart at Bathurst.
 - `E`: session. `C` = code (e.g. `P12`), `D` = name, `Y` = type (`Practice`, `Race`), `RI`/`RC`/`RV` = record time / driver / car.
+  `L` = scheduled laps, probably: `1` for the Top Ten Shootout, `0` for the timed support races (`<C Y="T">`). Not yet seen for a lap-based race.
 - `OL`: other categories at the meeting.
 - `RL`: entry list. `<R ID N V>` = Natsoft's internal car ID, car number, vehicle. `<V ID N>` = drivers; `_` stands for a space in surnames.
 
@@ -114,11 +115,14 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red fla
 | `LGNI`, `LGNL` | *Unconfirmed.* Companion of `LGI` |
 | `P` | `Y` = in pit lane, `N` = out. Sent in matching pairs at Bathurst (98 of each in Practice 5, 145 in Practice 6). Points crossed while `Y` include pit-lane lines, so don't time stretches from them |
 | `PS` | Pit stop count |
-| `PI`, `PT`, `PF` | Pit-in time, pit time, pit flag |
+| `LCD` | **Laps by the current driver** this session. Cumulative per driver: after swapping back it resumes from that driver's earlier total (Practice 6, car 10: driver 2 back in at lap 12 with `LCD=3`). Sent in snapshots too |
+| `LDC` | Lap of the last driver change; `0` before any |
+| `LLP` | Lap of the last pit entry |
+| `PI`, `PT`, `PF` | Pit stops. Entering: `P="Y" PF="P" PI=<pit-in time>`. Leaving: `P="N" PF="T" PI="0" PT=<seconds in pit lane>` (support races, 10 Oct: 32–91 s; a red-flag stop gave 684 s) |
 | `LL` | Last line: `1`, `2` (intermediates), `M` (control line) |
-| `SC` | *Unconfirmed:* `Y`/`N`, seen in races |
+| `SC` | *Unconfirmed:* `Y`/`N` per car. **Not the safety car:** it's `Y` for one car at a time under green (support races, 10 Oct). Use the session flag for safety car / full-course yellow |
 | `GL`, `GNL` | Can be `?` before a gap in laps is known |
-| `LCD`, `LLP`, `LDC`, `TY`, `TSL`, `PN`, `SN`, `LT`, `FTY` | Not yet identified |
+| `TY`, `TSL`, `PN`, `SN`, `LT`, `FTY` | Not yet identified |
 
 ## Open questions
 

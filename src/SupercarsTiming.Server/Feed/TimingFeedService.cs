@@ -22,6 +22,7 @@ public sealed class TimingFeedService(
         client.Connected += uri => store.SetStatus(new(FeedMode.Live, "connecting", uri.ToString()));
         client.Error += ex => store.SetStatus(new(FeedMode.Live, "error", ex.Message));
         store.SetStatus(new(FeedMode.Live, "connecting", client.StartUri.ToString()));
+        WarmStart();
 
         await using var recorder = string.IsNullOrWhiteSpace(_opt.RecordDirectory)
             ? null
@@ -65,6 +66,26 @@ public sealed class TimingFeedService(
             } while (_opt.ReplayLoop && !ct.IsCancellationRequested);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+    }
+
+    /// <summary>
+    /// After a restart mid-session, replay the session from our own recordings first. Natsoft's snapshot doesn't
+    /// include history (laps per driver, pit stops, mini-sector bests); TimingState keeps it when the live snapshot
+    /// turns out to be the same session. Only sessions recorded in the last <see cref="SessionIndex.MergeGap"/>.
+    /// </summary>
+    void WarmStart()
+    {
+        if (string.IsNullOrWhiteSpace(_opt.RecordDirectory)) return;
+        var dir = paths.Resolve(_opt.RecordDirectory);
+        if (!Directory.Exists(dir)) return;
+        try
+        {
+            var latest = SessionIndex.Scan(Directory.GetFiles(dir, "*.jsonl")).MaxBy(s => s.End);
+            if (latest is null || DateTimeOffset.UtcNow - latest.End > SessionIndex.MergeGap) return;
+            log.LogInformation("Restoring {Session} from recordings ({Messages} messages)", latest.Name, latest.Messages);
+            foreach (var m in SessionIndex.Read(latest)) Apply(m);
+        }
+        catch (Exception ex) { log.LogWarning(ex, "Couldn't restore the current session from recordings"); }
     }
 
     void Apply(NatsoftMessage m)

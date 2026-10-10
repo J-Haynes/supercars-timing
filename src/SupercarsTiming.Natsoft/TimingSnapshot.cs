@@ -16,7 +16,7 @@ public sealed record TimingSnapshot(
     long MessageCount)
 {
     public static TimingSnapshot Empty { get; } =
-        new(new SessionInfo("", "", "", "", "", "", null, null), [], new BestTimes(null, null, null, null, null), [], [], [], 0, 0);
+        new(new SessionInfo("", "", "", "", "", "", null, null, 0), [], new BestTimes(null, null, null, null, null), [], [], [], 0, 0);
 
     public static TimingSnapshot From(TimingState s)
     {
@@ -28,6 +28,8 @@ public sealed record TimingSnapshot(
             .Select(c =>
             {
                 var e = s.Entries.GetValueOrDefault(c.Id);
+                var driverKeys = e?.Drivers.Keys.Order().ToList() ?? [];
+                string Name(string index) => e?.Drivers.GetValueOrDefault(index) ?? "";
                 return new CarRow(
                     c.Id, c.Position, e?.CarNumber ?? c.Id,
                     e?.Drivers.GetValueOrDefault(c.DriverIndex) ?? "",
@@ -42,7 +44,11 @@ public sealed record TimingSnapshot(
                     Splits(c.CurrentLapSplits, s), Splits(c.LastLapSplits, s), BestSplits(c, s),
                     e?.Drivers.OrderBy(d => d.Key).Select(d => d.Value).ToArray() ?? [],
                     c.DriverIndex, c.DriverChangedAt,
-                    Segments(c.CurrentLapSegments, order), Segments(c.LastLapSegments, order), Segments(c.BestSegments, order));
+                    Segments(c.CurrentLapSegments, order), Segments(c.LastLapSegments, order), Segments(c.BestSegments, order),
+                    driverKeys.Select(k => c.LapsByDriver.GetValueOrDefault(k)).ToArray(),
+                    Math.Max(0, c.Laps - c.LapsByDriver.Values.Sum()),
+                    c.Laps - c.StintStartLap,
+                    c.PitLog.Select(p => new PitStopRow(p.Lap, p.InAt, p.OutAt, Math.Round(p.Seconds, 1), Name(p.DriverIn), Name(p.DriverOut))).ToArray());
             })
             .ToList();
 
@@ -62,7 +68,7 @@ public sealed record TimingSnapshot(
             topSpeed > 0 ? topSpeed : null);
 
         return new TimingSnapshot(
-            new SessionInfo(s.Meeting, s.SessionName, s.SessionType, s.TrackName, s.TrackCode, s.Flag, s.ClockRemaining, s.ClockElapsed),
+            new SessionInfo(s.Meeting, s.SessionName, s.SessionType, s.TrackName, s.TrackCode, s.Flag, s.ClockRemaining, s.ClockElapsed, s.ScheduledLaps),
             s.TimingPoints.ToList(), best, cars, reference, SessionBestSegments(s, order), s.Now, s.MessageCount);
     }
 
@@ -131,7 +137,9 @@ public sealed record TimingSnapshot(
 
 public sealed record SessionInfo(
     string Meeting, string Name, string Type, string Track, string TrackCode, string Flag,
-    int? ClockRemaining, int? ClockElapsed);
+    int? ClockRemaining, int? ClockElapsed,
+    /// <summary>Scheduled race laps from Natsoft; 0 = not sent (the UI falls back to known race distances).</summary>
+    int ScheduledLaps);
 
 public sealed record BestTimes(double? Lap, double? S1, double? S2, double? S3, int? Speed);
 
@@ -152,4 +160,15 @@ public sealed record CarRow(
     /// <summary>Mini-sector times in point order: this lap so far, the last complete lap, and the car's best.</summary>
     IReadOnlyList<double> CurrentSegments,
     IReadOnlyList<double> LastLapSegments,
-    IReadOnlyList<double> BestSegments);
+    IReadOnlyList<double> BestSegments,
+    /// <summary>Laps completed by each driver, in <see cref="Drivers"/> order, for laps seen live.</summary>
+    IReadOnlyList<int> DriverLaps,
+    /// <summary>Laps completed before we connected, so not credited to a driver.</summary>
+    int UnattributedLaps,
+    /// <summary>Laps completed since the last pit exit (or the start).</summary>
+    int StintLaps,
+    /// <summary>Pit stops seen live, oldest first.</summary>
+    IReadOnlyList<PitStopRow> PitLog);
+
+/// <summary>A pit stop. Seconds = time in pit lane, 0 while the car is still in. Driver names differ on a swap.</summary>
+public sealed record PitStopRow(int Lap, double InAt, double OutAt, double Seconds, string DriverIn, string DriverOut);

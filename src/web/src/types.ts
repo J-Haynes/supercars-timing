@@ -20,6 +20,8 @@ export interface SessionInfo {
   flag: string
   clockRemaining: number | null
   clockElapsed: number | null
+  /** Scheduled race laps from Natsoft; 0 = not sent (see raceLaps() in session.ts). */
+  scheduledLaps: number
 }
 
 export interface TimingPoint {
@@ -87,6 +89,26 @@ export interface CarRow {
   currentSegments: number[]
   lastLapSegments: number[]
   bestSegments: number[]
+  /** Laps completed by each driver, in `drivers` order (Natsoft's own count when it sends one). */
+  driverLaps: number[]
+  /** Laps completed before we connected that we can't credit to a driver. */
+  unattributedLaps: number
+  /** Laps since the last pit exit (or the start). */
+  stintLaps: number
+  /** Pit stops seen live, oldest first. */
+  pitLog: PitStopRow[]
+}
+
+export interface PitStopRow {
+  lap: number
+  /** Natsoft time the car entered the pit lane. */
+  inAt: number
+  /** Natsoft time it left; 0 while still in the pits. */
+  outAt: number
+  /** Seconds in the pit lane; 0 while still in (or if we missed the exit). */
+  seconds: number
+  driverIn: string
+  driverOut: string
 }
 
 export interface TimingSnapshot {

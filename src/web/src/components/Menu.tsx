@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { RecordedSession } from '../types'
-import { UPCOMING, eventStart } from '../calendar'
+import { UPCOMING, eventEnd, eventStart } from '../calendar'
 import { trackManifest } from '../tracks'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
@@ -73,13 +73,15 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults }: {
 
         <section>
           <h2>Upcoming</h2>
-          {UPCOMING.filter((e) => eventStart(e).getTime() > now - 3 * 86400_000).map((e) => {
+          {/* Listed until the last day is over, so the weekend that's under way stays at the top. */}
+          {UPCOMING.filter((e) => eventEnd(e).getTime() > now).map((e) => {
             const map = e.trackCode ? trackManifest[e.trackCode] : undefined
+            const underWay = eventStart(e).getTime() <= now
             return (
               <div key={e.name} className="upcoming">
                 <div className="upcoming-top">
                   <span className="upcoming-name">{e.name}</span>
-                  <span className="soon">Coming soon</span>
+                  <span className="soon">{underWay ? 'This weekend' : 'Coming soon'}</span>
                 </div>
                 <div className="session-meta">{e.venue} · {e.location}</div>
                 <div className="session-meta">{dateRange(e.startDate, e.endDate)}{e.format ? ` · ${e.format}` : ''}</div>

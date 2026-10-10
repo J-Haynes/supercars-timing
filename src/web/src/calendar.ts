@@ -19,6 +19,11 @@ export interface UpcomingEvent {
 
 export const UPCOMING: UpcomingEvent[] = [
   {
+    name: 'Repco Bathurst 1000', venue: 'Mount Panorama Circuit', location: 'Bathurst, NSW',
+    startDate: '2026-10-08', endDate: '2026-10-11', utcOffset: '+11:00', trackCode: 'MOUN',
+    format: 'Enduro Cup · 161 laps, two drivers per car',
+  },
+  {
     name: 'Boost Mobile Gold Coast 500', venue: 'Surfers Paradise Street Circuit', location: 'Surfers Paradise, QLD',
     startDate: '2026-10-23', endDate: '2026-10-25', utcOffset: '+10:00', trackCode: 'SURF',
     format: 'Finals round 1 · two 250 km races',
@@ -37,4 +42,9 @@ export const UPCOMING: UpcomingEvent[] = [
 
 export function eventStart(e: UpcomingEvent): Date {
   return new Date(`${e.startDate}T00:00:00${e.utcOffset}`)
+}
+
+/** End of the event's last day, local track time. */
+export function eventEnd(e: UpcomingEvent): Date {
+  return new Date(`${e.endDate}T23:59:59${e.utcOffset}`)
 }

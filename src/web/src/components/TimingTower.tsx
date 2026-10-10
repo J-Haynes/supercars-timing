@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
 import { MiniSectors } from './MiniSectors'
-import { isRace } from '../session'
+import { isRace, minDriverLaps, raceLaps } from '../session'
 
 interface Ctx {
   car: CarRow
@@ -14,6 +14,9 @@ interface Ctx {
   race: boolean
   best: TimingSnapshot['best']
   points: TimingSnapshot['timingPoints']
+  /** Minimum laps per driver (0 = no rule) and laps left in the race (0 = unknown). */
+  minLaps: number
+  lapsLeft: number
 }
 
 interface Column {
@@ -104,6 +107,14 @@ const COLUMNS: Record<string, Column> = {
   },
   pits: { key: 'pits', header: 'Pits', numeric: true, cell: ({ car }) => car.pitStops || '' },
   laps: { key: 'laps', header: 'Laps', numeric: true, cell: ({ car }) => car.laps || '' },
+  stint: {
+    key: 'stint', header: 'Stint', numeric: true,
+    cell: ({ car }) => (car.inPit ? '' : car.stintLaps || ''),
+  },
+  driverLaps: {
+    key: 'driverLaps', header: 'Driver laps', cellClass: () => 'driver-laps',
+    cell: ({ car, minLaps, lapsLeft }) => <DriverLaps car={car} minLaps={minLaps} lapsLeft={lapsLeft} />,
+  },
   minis: { key: 'minis', header: 'Mini-sectors', cell: ({ car, order, segmentBest }) => <MiniSectors car={car} order={order} sessionBest={segmentBest} /> },
 }
 
@@ -114,9 +125,37 @@ const LAYOUTS = {
     simple: ['pos', 'car', 'driver', 'best', 'gap', 'last', 'pits', 'laps'],
   },
   race: {
-    detailed: ['pos', 'car', 'driver', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'minis'],
-    simple: ['pos', 'car', 'driver', 'gap', 'int', 'last', 'pits', 'laps'],
+    // Driver laps next to the names: at endurance races it's what decides strategy, so keep it on screen.
+    detailed: ['pos', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'stint', 'laps', 'minis'],
+    simple: ['pos', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'pits', 'stint', 'laps'],
   },
+}
+
+const abbreviation = (name: string) => surname(name).replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()
+
+/**
+ * Laps per driver at co-driver events, e.g. "FEE 61 · WHI 23/54". With a minimum-laps rule, a driver who still
+ * needs laps shows the target; red when there aren't enough laps left in the race to get there.
+ */
+function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; lapsLeft: number }) {
+  return (
+    <>
+      {car.drivers.map((name, i) => {
+        const laps = car.driverLaps?.[i] ?? 0
+        const needed = minLaps > 0 ? minLaps - laps : 0
+        const cls = ['dl', name === car.driver ? 'in-car' : '', minLaps > 0 && needed <= 0 ? 'done' : '', needed > 0 && lapsLeft > 0 && needed > lapsLeft ? 'at-risk' : '']
+        const title = `${name}: ${laps} laps${needed > 0 ? `, needs ${needed} more (minimum ${minLaps})` : ''}${name === car.driver ? ' · in the car' : ''}`
+        return (
+          <span key={name} className={cls.filter(Boolean).join(' ')} title={title}>
+            {abbreviation(name)} {laps}{needed > 0 ? `/${minLaps}` : ''}
+          </span>
+        )
+      })}
+      {car.unattributedLaps > 0 && (
+        <span className="dl unknown" title={`${car.unattributedLaps} laps before we connected: Natsoft hasn't said who drove them yet`}>+{car.unattributedLaps}?</span>
+      )}
+    </>
+  )
 }
 
 export function TimingTower({ timing, simple, hoverId, pinned, onHover, onTogglePin }: {
@@ -130,7 +169,15 @@ export function TimingTower({ timing, simple, hoverId, pinned, onHover, onToggle
   const { cars, best, timingPoints } = timing
   const race = isRace(timing.session.type)
   const order = ['M', ...timingPoints.map((p) => p.id)]
-  const columns = LAYOUTS[race ? 'race' : 'timed'][simple ? 'simple' : 'detailed'].map((k) => COLUMNS[k])
+  // Driver laps only matter when cars are shared (co-driver events).
+  const shared = cars.some((c) => (c.drivers?.length ?? 0) > 1)
+  const columns = LAYOUTS[race ? 'race' : 'timed'][simple ? 'simple' : 'detailed']
+    .filter((k) => k !== 'driverLaps' || shared)
+    .map((k) => COLUMNS[k])
+  const totalLaps = raceLaps(timing.session)
+  const leaderLaps = cars.find((c) => c.position === 1)?.laps ?? 0
+  const lapsLeft = totalLaps > 0 ? Math.max(0, totalLaps - leaderLaps) : 0
+  const minLaps = minDriverLaps(timing.session)
 
   return (
     <div className={`tower-wrap${simple ? ' simple' : ''}`}>
@@ -144,7 +191,7 @@ export function TimingTower({ timing, simple, hoverId, pinned, onHover, onToggle
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, race, best, points: timingPoints }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, race, best, points: timingPoints, minLaps, lapsLeft }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr

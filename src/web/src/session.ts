@@ -1,3 +1,5 @@
+import type { SessionInfo } from './types'
+
 /** Practice, qualifying and shootouts are ranked by best lap; races by running order. */
 export function isRace(sessionType: string): boolean {
   return sessionType.toLowerCase().includes('race')
@@ -6,6 +8,25 @@ export function isRace(sessionType: string): boolean {
 /** Top Ten Shootout (or similar single-car runs), detected from Natsoft's session name/type. */
 export function isShootout(sessionName: string, sessionType: string): boolean {
   return /shoot\s*-?out|top\s*(10|ten)/i.test(`${sessionName} ${sessionType}`)
+}
+
+/** Race distances Natsoft doesn't send (it sends <E L> = 0 for most races). */
+const KNOWN_RACE_LAPS: { meeting: RegExp; laps: number }[] = [{ meeting: /bathurst 1000/i, laps: 161 }]
+
+/** Scheduled laps for a race: Natsoft's value if it sends one, else a known distance; 0 = unknown (e.g. timed). */
+export function raceLaps(session: SessionInfo): number {
+  if (!isRace(session.type)) return 0
+  if (session.scheduledLaps > 0) return session.scheduledLaps
+  if (!isSupercarsSession(session.name)) return 0
+  return KNOWN_RACE_LAPS.find((k) => k.meeting.test(session.meeting))?.laps ?? 0
+}
+
+/**
+ * Minimum laps each driver must complete, at endurance events (0 = no rule). Bathurst 1000: 54 of 161 laps.
+ * Check the sporting regulations each year.
+ */
+export function minDriverLaps(session: SessionInfo): number {
+  return raceLaps(session) > 0 && /bathurst 1000/i.test(session.meeting) ? 54 : 0
 }
 
 /**

@@ -20,10 +20,14 @@ clever code, and explain non-obvious decisions in comments or the PR description
   - `Recording` (`RecordingWriter`, `RecordingReader`): JSON Lines recordings, including timed replay
   - `SessionIndex`: finds sessions in recordings (split at `<New>`/`<NotFound>`, merged across restarts), computes
     results, and `IsSupercarsChampionship()` (support categories share the feed; the app only shows Supercars)
-  - `TimingState`: applies XML messages to an in-memory model (`Entries`, `Cars`, flag, clock)
+  - `TimingState`: applies XML messages to an in-memory model (`Entries`, `Cars`, flag, clock). A `<New>` snapshot of
+    the *same* session (reconnect, restart) keeps each car's history (`CarState.CarryHistoryFrom`): laps per driver,
+    pit log, mini-sector bests. A different session starts from scratch.
   - `TimingSnapshot`: flat, serialisable view of `TimingState` sent to the UI
 - `src/SupercarsTiming.Server`: ASP.NET Core minimal API + SignalR.
-  - `Feed/TimingFeedService`: background service, live or replay → `TimingStore`
+  - `Feed/TimingFeedService`: background service, live or replay → `TimingStore`. Live mode records to
+    `Feed:RecordDirectory` (`data/recordings` by default) and, on start-up, replays a session recorded in the last
+    15 minutes first (`WarmStart`), so restarting mid-race keeps driver laps and the pit log.
   - `Feed/TimingStore`: lock-protected `TimingState`, rebuilds snapshots only when dirty
   - `Feed/SnapshotBroadcaster`: pushes `TimingUpdate` to `/hubs/timing` at most every `BroadcastIntervalMs`
   - Endpoints: `GET /api/health`, `GET /api/snapshot`, `GET /api/sessions`, hub `/hubs/timing` (method `snapshot`)
@@ -117,6 +121,16 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   times quicker than 0.8× the field median are rejected (`IsPlausibleSegment`): pit-lane timing lines produce them.
   The median comes from `RawSegmentSeconds` (timed laps, before the check). Never base it on accepted times: the
   slow first out-lap at Bathurst once pushed it so high that every real time was rejected and blocks stayed empty.
+- Flags: a red or yellow session flag frames the whole screen (`.flag-frame` on `.app`). The session flag is the only
+  safety-car signal; the per-car `SC` attribute is something else (see PROTOCOL.md).
+- Laps to go (header, next to the live indicator): `raceLaps()` in `session.ts` uses Natsoft's `<E L>` when it's set,
+  else `KNOWN_RACE_LAPS` (Bathurst 1000 = 161). Hidden when unknown (timed races).
+- Endurance races: Driver laps column (`DriverLaps` in `TimingTower.tsx`) from `CarRow.DriverLaps`, which comes from
+  Natsoft's `LCD` (current driver's laps, cumulative per driver) with our own count as the fallback.
+  `minDriverLaps()` = 54 at the Bathurst 1000 (check the regulations each year); red when a driver can't reach it.
+  `UnattributedLaps` = laps before we connected that no one has claimed yet. Stint column = laps since the pit exit.
+- Pit stop log (`PitLog.tsx`, under the map in races): from `CarRow.PitLog` (`PI` in, `PT` = pit-lane seconds out,
+  driver swap attached to the stop if it arrives up to 120 s after the exit).
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel` at the bottom of the page; closing is remembered.
 - Shootout: the map shows cars on out-lap, flying lap and in-lap, and hides them once they're in the pits. Natsoft
   doesn't flag that pit entry: an in-lap car past the last timing point and overdue at the line is treated as in
@@ -149,7 +163,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 
 1. Track map polish: more circuits (Albert Park, Surfers Paradise, Sandown, Adelaide...), car trails, selecting
    a car to follow, gaps shown on the map, better pit lane handling. (Bathurst map done.)
-2. Race-specific handling once a full Supercars race is captured: laps-down gaps, safety car, driver changes.
+2. Race-specific handling once a full Supercars race is captured: check `<E L>` and the flag values in a real
+   Supercars race (Bathurst 1000 recording, 11 Oct 2026), laps-down gaps.
 3. Lap time, position and gap charts from recorded history (needs per-lap history in `TimingState`).
 4. Broadcast-delay slider and scrubbable replay.
 5. Persist sessions (SQL) instead of only JSONL.

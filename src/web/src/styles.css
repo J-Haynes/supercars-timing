@@ -306,3 +306,37 @@ main { flex: 1; padding: 0 16px 24px; }
 .tips ul { margin: 8px 0 0; padding-left: 18px; color: var(--text); font-size: 13px; line-height: 1.6; }
 .page-footer { margin: 8px 16px 24px; }
 .link-button { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
+
+/* Red / yellow flag: frame the whole screen while it's out. Fixed overlay so it stays put while scrolling. */
+.flag-frame::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1000;
+  border: 6px solid var(--frame-colour); box-shadow: inset 0 0 24px var(--frame-colour);
+}
+.flag-frame-yellow { --frame-colour: var(--yellow); }
+.flag-frame-red { --frame-colour: var(--red); }
+.flag-frame-red::after { animation: frame-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes frame-pulse { from { opacity: 1; } to { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .flag-frame-red::after { animation: none; } }
+
+/* Race distance next to the live indicator. */
+.laps-to-go { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.laps-to-go .lap-of { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
+.laps-to-go .to-go { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+
+/* Laps per driver (co-driver events). */
+.driver-laps .dl { margin-right: 8px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.driver-laps .dl.in-car { color: var(--text); font-weight: 600; }
+.driver-laps .dl.done::after { content: ' ✓'; color: var(--green); }
+.driver-laps .dl.at-risk { color: var(--red); font-weight: 700; }
+.driver-laps .dl.unknown { font-style: italic; }
+
+/* Pit stop log under the map. */
+.pit-log { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 8px 10px; }
+.pit-log h2 { margin: 0 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.pit-log table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pit-log td { padding: 4px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pit-log td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.pit-log td.who { white-space: normal; }
+.pit-log .stop-no { color: var(--muted); font-size: 11px; }
+.pit-log tr.in-lane td { background: rgba(255, 210, 63, .08); }
+.pit-log-empty { color: var(--muted); font-size: 13px; padding: 4px 0; }

@@ -11,8 +11,9 @@ import { Menu } from './components/Menu'
 import { ResultsView } from './components/ResultsView'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
+import { PitLog } from './components/PitLog'
 import { useTrack } from './tracks'
-import { isShootout, isSupercarsSession } from './session'
+import { isRace, isShootout, isSupercarsSession } from './session'
 import type { RecordedSession } from './types'
 
 export default function App() {
@@ -34,9 +35,12 @@ export default function App() {
   // The on-track card shows automatically for Shootout sessions (by Natsoft's session name), or when forced on.
   const showCard = !!timing && (settings.focusCard === 'on' || (settings.focusCard === 'auto' && isShootout(timing.session.name, timing.session.type)))
   const focusId = showCard && timing ? pickFocusCar(timing.cars, timing.now)?.id ?? null : null
+  // Red / yellow (safety car, full-course yellow) flags frame the whole screen while they're out.
+  const flag = !results && !supportSession ? timing?.session.flag.toLowerCase() : undefined
+  const frame = flag === 'red' || flag === 'yellow' ? ` flag-frame flag-frame-${flag}` : ''
 
   return (
-    <div className="app">
+    <div className={`app${frame}`}>
       <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} hideSession={supportSession} />
       <Menu
         open={menuOpen}
@@ -91,6 +95,7 @@ export default function App() {
                         No map for {timing.session.track || 'this track'} yet. Build one with <code>tools/TrackBuilder</code>.
                       </div>
                     )}
+                    {isRace(timing.session.type) && <PitLog timing={timing} />}
                   </aside>
                 </div>
               </>
