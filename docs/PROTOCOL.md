@@ -74,6 +74,10 @@ Counts are from Practice 5 (63 minutes, 8,844 messages).
 | `G` | 1 | Unknown (empty so far) |
 | `New` | 1 | Full snapshot, sent per session |
 
+Session types seen in `<E Y>`: `Practice`, `Race`, and `OverrideQual` for the Bathurst Top Ten Shootout
+(`D="2026 Repco Supercars Championship - Top Ten Shootout Race 30"`). In the Shootout, cars appear in the
+leaderboard as they come out rather than all at once.
+
 Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red flags and safety cars not yet seen.
 
 ## Snapshot (`<New>`) children
@@ -121,4 +125,4 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red fla
 - What `LGI`/`LGNI` actually represent (gap at the last timing point crossed?).
 - Safety car and red flag representation (`S` values, `SC` field).
 - Driver changes mid-race (`D` index switching).
-- Qualifying and Top Ten Shootout session types.
+- Qualifying session type (not yet seen).
