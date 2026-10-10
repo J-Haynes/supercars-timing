@@ -2,7 +2,11 @@ import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
 import { TrackProgress } from './TrackProgress'
 
-export function TimingTower({ timing }: { timing: TimingSnapshot }) {
+export function TimingTower({ timing, highlightId, onHighlight }: {
+  timing: TimingSnapshot
+  highlightId: string | null
+  onHighlight: (id: string | null) => void
+}) {
   const { cars, best, timingPoints } = timing
   // Races: use the per-timing-point gaps. Practice/qualifying: gaps are to the fastest lap.
   const live = timing.session.type.toLowerCase() === 'race'
@@ -29,7 +33,8 @@ export function TimingTower({ timing }: { timing: TimingSnapshot }) {
         </thead>
         <tbody>
           {cars.map((c, i) => (
-            <Row key={c.id} car={c} isFirst={i === 0} live={live} best={best} points={timingPoints} />
+            <Row key={c.id} car={c} isFirst={i === 0} live={live} best={best} points={timingPoints}
+              highlighted={c.id === highlightId} onHighlight={onHighlight} />
           ))}
         </tbody>
       </table>
@@ -37,10 +42,12 @@ export function TimingTower({ timing }: { timing: TimingSnapshot }) {
   )
 }
 
-function Row({ car: c, isFirst, live, best, points }: {
+function Row({ car: c, isFirst, live, best, points, highlighted, onHighlight }: {
   car: CarRow
   isFirst: boolean
   live: boolean
+  highlighted: boolean
+  onHighlight: (id: string | null) => void
   best: TimingSnapshot['best']
   points: TimingSnapshot['timingPoints']
 }) {
@@ -49,7 +56,11 @@ function Row({ car: c, isFirst, live, best, points }: {
   const interval = live ? c.liveInterval : c.interval
   const intervalLaps = live ? c.liveIntervalLaps : c.intervalLaps
   return (
-    <tr className={c.inPit ? 'in-pit' : ''}>
+    <tr
+      className={`${c.inPit ? 'in-pit' : ''} ${highlighted ? 'highlighted' : ''}`}
+      onMouseEnter={() => onHighlight(c.id)}
+      onMouseLeave={() => onHighlight(null)}
+    >
       <td className="num pos">{c.position || ''}</td>
       <td>
         <span className={`car mfr-${c.manufacturer.toLowerCase()}`} title={c.vehicle}>{c.carNumber}</span>

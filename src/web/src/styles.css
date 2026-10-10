@@ -101,3 +101,34 @@ main { flex: 1; padding: 0 16px 24px; }
   .session { flex-direction: column; align-items: flex-start; }
   .session-status { justify-content: flex-start; }
 }
+
+/* Layout: tower + map side by side on wide screens */
+.layout { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+.map-panel { order: -1; }
+@media (min-width: 1500px) {
+  .layout { grid-template-columns: minmax(0, 1fr) minmax(380px, 30%); align-items: start; }
+  .map-panel { order: 0; position: sticky; top: 12px; }
+}
+.tower tbody tr.highlighted { background: #1f2a36; }
+
+/* Track map */
+.track-map { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 8px; }
+.track-map svg { display: block; width: 100%; height: auto; max-height: calc(100vh - 140px); }
+@media (max-width: 1499px) { .track-map svg { max-height: 520px; } }
+.track-outline { fill: none; stroke: #2b3540; stroke-width: 34; stroke-linejoin: round; }
+.track-surface { fill: none; stroke: #46525f; stroke-width: 14; stroke-linejoin: round; }
+.pit-lane { fill: none; stroke: #46525f; stroke-width: 8; stroke-dasharray: 22 16; }
+.control-line { stroke: #fff; stroke-width: 12; }
+.timing-point { fill: #8a96a3; }
+.corner-label { fill: var(--muted); font: 500 44px system-ui, sans-serif; pointer-events: none; }
+.map-car { cursor: pointer; transition: opacity .3s; }
+.map-car circle { fill: #5a6573; stroke: #0b0d10; stroke-width: 7; }
+.map-car text { fill: #fff; font: 700 44px ui-monospace, monospace; text-anchor: middle; pointer-events: none; }
+.map-car.mfr-ford circle { fill: var(--ford); }
+.map-car.mfr-chevrolet circle { fill: var(--chevrolet); }
+.map-car.mfr-chevrolet text { fill: #1d1400; }
+.map-car.mfr-toyota circle { fill: var(--toyota); }
+.map-car.dim { opacity: .45; }
+.map-car.highlighted circle { stroke: #fff; stroke-width: 10; }
+.map-caption { color: var(--muted); font-size: 11px; padding: 6px 4px 0; }
+.map-missing { color: var(--muted); padding: 32px 16px; text-align: center; border: 1px dashed var(--line); border-radius: 8px; }

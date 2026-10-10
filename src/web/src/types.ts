@@ -7,6 +7,8 @@ export interface FeedStatus {
   mode: 'Live' | 'Replay'
   state: FeedState
   detail: string | null
+  /** Session seconds per real second (replay speed; 1 live; 0 when a replay has ended). */
+  clockRate: number
 }
 
 export interface SessionInfo {
@@ -65,6 +67,8 @@ export interface CarRow {
   /** "M" = control line, otherwise a TimingPoint id. */
   lastPoint: string
   lastPointAt: number
+  /** Expected seconds from each point to the next, in point order (M, then timingPoints). 0 = unknown. */
+  segmentSeconds: number[]
 }
 
 export interface TimingSnapshot {
@@ -72,6 +76,8 @@ export interface TimingSnapshot {
   timingPoints: TimingPoint[]
   best: BestTimes
   cars: CarRow[]
+  /** Field-typical seconds per segment, in point order. 0 = unknown. */
+  segmentReference: number[]
   now: number
   messageCount: number
 }

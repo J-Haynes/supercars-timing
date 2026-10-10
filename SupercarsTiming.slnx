@@ -8,5 +8,6 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/NatsoftRecorder/NatsoftRecorder.csproj" />
+    <Project Path="tools/TrackBuilder/TrackBuilder.csproj" />
   </Folder>
 </Solution>

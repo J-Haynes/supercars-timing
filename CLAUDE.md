@@ -27,7 +27,12 @@ clever code, and explain non-obvious decisions in comments or the PR description
   - Endpoints: `GET /api/health`, `GET /api/snapshot`, hub `/hubs/timing` (method `snapshot`)
 - `src/web`: React 19 + Vite + TypeScript. `src/types.ts` mirrors the C# DTOs and must be kept in sync
   by hand. `useTiming.ts` handles the SignalR connection.
+  - `src/tracks/<CODE>.json`: generated track files (don't hand-edit; rerun TrackBuilder). `tracks/index.ts` lazy-loads them by Natsoft track code.
+  - `src/map/`: `trackModel.ts` (geometry, sim-time ↔ distance), `carPosition.ts` (where a car is between timing points),
+    `useSessionClock.ts` (smooth session time between server updates).
+  - `src/components/TrackMap.tsx`: the SVG map. Wrapped in an `ErrorBoundary` so a map bug can't take down the tower.
 - `tools/NatsoftRecorder`: console recorder and inspector. References the Natsoft library.
+- `tools/TrackBuilder`: builds track files from an OSM circuit relation + a recording (see its README).
 - `tests/SupercarsTiming.Natsoft.Tests`: xUnit.
 - `docs/PROTOCOL.md`: the protocol reference. **Update it whenever you learn something new about a field.**
 - `data/recordings/*.jsonl`: real captures, git-ignored. Use them for development and debugging.
@@ -41,6 +46,7 @@ dotnet run --project src/SupercarsTiming.Server -- --Feed:Mode=Replay --Feed:Rep
 dotnet run --project src/SupercarsTiming.Server                          # live
 dotnet run --project tools/NatsoftRecorder                               # record
 dotnet run --project tools/NatsoftRecorder -- replay data/recordings/<file>.jsonl
+dotnet run --project tools/TrackBuilder -- --code MOUN --relation 6942508 --name "Mount Panorama" --recording data/recordings/<file>.jsonl
 cd src/web && npm run dev         # http://localhost:5173, proxies /api and /hubs to :5080
 cd src/web && npm run build       # typecheck + build into the server's wwwroot
 ```
@@ -64,6 +70,19 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - `GI`/`GNI` gaps vs `LGI`/`LGNI` "live" gaps: the UI uses live gaps for `Race` sessions. Not yet confirmed.
 - Sector fields reset to 0 at the start of a lap. 0 means "no time yet" everywhere.
 
+## Track map essentials
+
+- Natsoft only gives the **last timing point** each car passed (`LP`) and when. Everything between points is estimated.
+- `TimingState` records each car's latest time per segment (`CarState.SegmentSeconds`), skipping pit-lane and
+  non-consecutive crossings. `TimingSnapshot` sends a per-car expected time per segment (own pace if it's within
+  0.8–1.6× the field median, otherwise the field median) plus `SegmentReference`.
+- The frontend moves a car the same fraction through the *simulated* segment time as it is through the expected
+  real time, which makes cars slow for corners. Cars that are late hold at 99% of the segment, and dim once
+  they're 2.5× overdue.
+- Timing point positions per track are estimates from TrackBuilder's lap simulation. If they look wrong on a
+  track, fix the inputs (OSM relation, control-line node, recording) and rebuild rather than hand-editing the JSON.
+- `FeedStatus.ClockRate` (replay speed) drives the client-side clock, so replays at 10× animate correctly.
+
 ## Rules
 
 - **One connection to Natsoft.** Never add polling, parallel connections or tighter retry loops.
@@ -76,8 +95,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 
 ## Roadmap / next steps
 
-1. Interpolated track map: track outline SVG per circuit (OpenStreetMap geometry), timing point positions
-   along it, cars animated between `LP` crossings using recent sector pace.
+1. Track map polish: more circuits (Albert Park, Surfers Paradise, Sandown, Adelaide...), car trails, selecting
+   a car to follow, gaps shown on the map, better pit lane handling. (Bathurst map done.)
 2. Race-specific handling once a full Supercars race is captured: laps-down gaps, safety car, driver changes.
 3. Lap time, position and gap charts from recorded history (needs per-lap history in `TimingState`).
 4. Broadcast-delay slider and scrubbable replay.

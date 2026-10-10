@@ -126,7 +126,9 @@ public sealed class TimingState
 
         if (p.Element("D") is not { } d) return;
 
-        if (Str(d, "LP") is { } lp && lp != c.LastPoint) { c.LastPoint = lp; c.LastPointAt = Now; }
+        // Pit status first, so a pit-lane crossing in the same update isn't counted as racing pace.
+        if (Str(d, "P") is { } inPit) c.InPit = inPit == "Y";
+        if (Str(d, "LP") is { } lp && lp != c.LastPoint) OnTimingPoint(c, lp);
         c.Laps = Int(d, "L") ?? c.Laps;
         c.LastLap = Dbl(d, "I") ?? c.LastLap;
         c.BestLap = Dbl(d, "FI") ?? c.BestLap;
@@ -147,8 +149,25 @@ public sealed class TimingState
         c.BestS3 = Dbl(d, "FS3") ?? c.BestS3;
         if (Int(d, "SP") is int sp && sp > 0) c.Speed = sp;   // sent as 0 then the value
         c.PitStops = Int(d, "PS") ?? c.PitStops;
-        if (Str(d, "P") is { } inPit) c.InPit = inPit == "Y";
         if (Dbl(d, "T") is double crossed && crossed > 0) c.LastLineCrossing = crossed;
+    }
+
+    /// <summary>Points in lap order: "M" (control line) then each timing point ID.</summary>
+    public IEnumerable<string> PointOrder => TimingPoints.Select(tp => tp.Id).Prepend("M");
+
+    void OnTimingPoint(CarState c, string point)
+    {
+        // Record how long the car took since the previous point, if it's the next one in order
+        // (a missed crossing or a pit visit would make the time meaningless).
+        var order = PointOrder.ToList();
+        int prev = order.IndexOf(c.LastPoint);
+        if (!c.InPit && prev >= 0 && c.LastPointAt > 0 && order[(prev + 1) % order.Count] == point)
+        {
+            var seconds = Now - c.LastPointAt;
+            if (seconds > 0) c.SegmentSeconds[c.LastPoint] = seconds;
+        }
+        c.LastPoint = point;
+        c.LastPointAt = Now;
     }
 
     static string? Str(XElement e, string a) => e.Attribute(a)?.Value;
@@ -214,5 +233,10 @@ public sealed class CarState
     public string LastPoint { get; set; } = "";
     /// <summary>Natsoft time (see <see cref="TimingState.Now"/>) when <see cref="LastPoint"/> changed.</summary>
     public double LastPointAt { get; set; }
+    /// <summary>
+    /// The car's most recent time (s) from each timing point to the next, keyed by the starting point.
+    /// Used to animate the car between points on the track map.
+    /// </summary>
+    public Dictionary<string, double> SegmentSeconds { get; } = [];
     public double LastLineCrossing { get; set; }
 }

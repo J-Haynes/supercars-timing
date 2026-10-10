@@ -2,8 +2,8 @@
 
 An unofficial live timing dashboard for the Repco Supercars Championship, in the spirit of the
 open-source F1 dashboards (f1-dash, undercut-f1). It reads the same Natsoft timing feed that powers
-the free "classic" live timing on supercars.com and shows it in a modern timing tower, with an
-interpolated track map planned next.
+the free "classic" live timing on supercars.com and shows it in a modern timing tower alongside a live
+track map, with cars animated between Natsoft's timing points.
 
 ![Status: early prototype](https://img.shields.io/badge/status-prototype-orange)
 
@@ -13,8 +13,9 @@ interpolated track map planned next.
 |---|---|
 | `src/SupercarsTiming.Natsoft` | Class library: feed decoder, WebSocket client, recording reader/writer, timing state model |
 | `src/SupercarsTiming.Server` | ASP.NET Core server. Pulls the feed (live or from a recording) and pushes snapshots over SignalR |
-| `src/web` | React + Vite + TypeScript frontend: session header and timing tower |
+| `src/web` | React + Vite + TypeScript frontend: session header, timing tower and track map |
 | `tools/NatsoftRecorder` | Console tool that records the live feed to JSON Lines, decodes recordings, and prints timing sheets |
+| `tools/TrackBuilder` | Builds track map files from OpenStreetMap geometry plus a recording |
 | `tests/SupercarsTiming.Natsoft.Tests` | xUnit tests for the decoder, state model and recordings |
 | `docs/PROTOCOL.md` | Everything known so far about the Natsoft protocol |
 | `data/recordings` | Your recordings (git-ignored) |
@@ -63,6 +64,13 @@ dotnet run --project tools/NatsoftRecorder -- decode <file>    # dump decoded XM
 Start it a few minutes before a session and leave it running. It reconnects by itself and captures
 every session on the feed (support categories included) into one file.
 
+## Track map
+
+The map shows each car's estimated position. Natsoft only reports when a car passes one of a handful of
+timing points (8 per lap at Bathurst), so the map moves each car towards the next point at its recent pace,
+slowing for corners using a simulated speed profile. See [`tools/TrackBuilder`](tools/TrackBuilder/README.md)
+for how track files are made and how to add a circuit. Available: Mount Panorama (Bathurst).
+
 ## Configuration
 
 Server settings live in `src/SupercarsTiming.Server/appsettings.json` under `Feed`, and any of them
@@ -85,6 +93,10 @@ cd src/web && npm run build     # writes to src/SupercarsTiming.Server/wwwroot
 cd ../.. && dotnet run --project src/SupercarsTiming.Server
 # open http://localhost:5080
 ```
+
+## Credits
+
+Track geometry © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, available under the ODbL.
 
 ## Disclaimer
 

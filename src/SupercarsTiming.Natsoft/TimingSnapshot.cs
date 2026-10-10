@@ -9,14 +9,18 @@ public sealed record TimingSnapshot(
     IReadOnlyList<TimingPoint> TimingPoints,
     BestTimes Best,
     IReadOnlyList<CarRow> Cars,
+    IReadOnlyList<double> SegmentReference,
     double Now,
     long MessageCount)
 {
     public static TimingSnapshot Empty { get; } =
-        new(new SessionInfo("", "", "", "", "", "", null, null), [], new BestTimes(null, null, null, null, null), [], 0, 0);
+        new(new SessionInfo("", "", "", "", "", "", null, null), [], new BestTimes(null, null, null, null, null), [], [], 0, 0);
 
     public static TimingSnapshot From(TimingState s)
     {
+        var order = s.PointOrder.ToList();
+        var reference = FieldSegmentTimes(s, order);
+
         var cars = s.Cars.Values
             .OrderBy(c => c.Position == 0 ? int.MaxValue : c.Position)
             .Select(c =>
@@ -30,7 +34,8 @@ public sealed record TimingSnapshot(
                     c.Gap, c.GapLaps, c.Interval, c.IntervalLaps,
                     c.LiveGap, c.LiveGapLaps, c.LiveInterval, c.LiveIntervalLaps,
                     c.S1, c.S2, c.S3, c.BestS1, c.BestS2, c.BestS3,
-                    c.Speed, c.PitStops, c.InPit, c.LastPoint, c.LastPointAt);
+                    c.Speed, c.PitStops, c.InPit, c.LastPoint, c.LastPointAt,
+                    ExpectedSegments(c, order, reference));
             })
             .ToList();
 
@@ -51,8 +56,32 @@ public sealed record TimingSnapshot(
 
         return new TimingSnapshot(
             new SessionInfo(s.Meeting, s.SessionName, s.SessionType, s.TrackName, s.TrackCode, s.Flag, s.ClockRemaining, s.ClockElapsed),
-            s.TimingPoints.ToList(), best, cars, s.Now, s.MessageCount);
+            s.TimingPoints.ToList(), best, cars, reference, s.Now, s.MessageCount);
     }
+
+    /// <summary>
+    /// Field-wide typical time for each segment: the median of every car's latest time, ignoring
+    /// anything over twice the fastest (cool-down laps, spins). 0 when there's no data yet.
+    /// </summary>
+    static double[] FieldSegmentTimes(TimingState s, List<string> order) => order.Select(point =>
+    {
+        var times = s.Cars.Values.Select(c => c.SegmentSeconds.GetValueOrDefault(point)).Where(t => t > 0).Order().ToList();
+        if (times.Count == 0) return 0;
+        var plausible = times.Where(t => t < times[0] * 2).ToList();
+        return Math.Round(plausible[plausible.Count / 2], 3);
+    }).ToArray();
+
+    /// <summary>
+    /// Expected time for this car through each segment: its own latest time when it's close to the
+    /// field's (so a car on a slow lap animates slowly), otherwise the field reference.
+    /// </summary>
+    static double[] ExpectedSegments(CarState c, List<string> order, double[] reference) => order.Select((point, i) =>
+    {
+        var own = c.SegmentSeconds.GetValueOrDefault(point);
+        var field = reference[i];
+        if (own > 0 && (field == 0 || (own > field * 0.8 && own < field * 1.6))) return Math.Round(own, 3);
+        return field;
+    }).ToArray();
 
     static string Manufacturer(string? vehicle) => vehicle switch
     {
@@ -76,4 +105,5 @@ public sealed record CarRow(
     double Gap, int GapLaps, double Interval, int IntervalLaps,
     double LiveGap, int LiveGapLaps, double LiveInterval, int LiveIntervalLaps,
     double S1, double S2, double S3, double BestS1, double BestS2, double BestS3,
-    int Speed, int PitStops, bool InPit, string LastPoint, double LastPointAt);
+    int Speed, int PitStops, bool InPit, string LastPoint, double LastPointAt,
+    IReadOnlyList<double> SegmentSeconds);

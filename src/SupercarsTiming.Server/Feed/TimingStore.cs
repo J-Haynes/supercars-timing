@@ -55,4 +55,6 @@ public sealed class TimingStore
 }
 
 /// <param name="State">starting | connecting | waiting (meeting not live) | live | replaying | error | ended</param>
-public sealed record FeedStatus(FeedMode Mode, string State, string? Detail);
+/// <param name="ClockRate">How fast session time passes relative to real time (replay speed, 1 when live).
+/// The map uses it to animate cars between updates.</param>
+public sealed record FeedStatus(FeedMode Mode, string State, string? Detail, double ClockRate = 1);

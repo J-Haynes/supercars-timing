@@ -57,10 +57,10 @@ public sealed class TimingFeedService(
             {
                 log.LogInformation("Replaying {File} at {Speed}x", file, _opt.ReplaySpeed);
                 store.Reset();
-                store.SetStatus(new(FeedMode.Replay, "replaying", Path.GetFileName(file)));
+                store.SetStatus(new(FeedMode.Replay, "replaying", Path.GetFileName(file), _opt.ReplaySpeed));
                 await foreach (var m in RecordingReader.ReplayAsync(file, _opt.ReplaySpeed, ct: ct))
                     if (!m.IsNotFound) Apply(m);
-                store.SetStatus(new(FeedMode.Replay, "ended", Path.GetFileName(file)));
+                store.SetStatus(new(FeedMode.Replay, "ended", Path.GetFileName(file), 0));
                 if (_opt.ReplayLoop) await Task.Delay(TimeSpan.FromSeconds(5), ct);
             } while (_opt.ReplayLoop && !ct.IsCancellationRequested);
         }

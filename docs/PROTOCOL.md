@@ -43,6 +43,22 @@ Every root element has `T` in seconds, but it is the **track's local wall clock 
 were UTC**: AEDT at Bathurst means Unix time + 39600. Treat it as a session clock, or subtract the
 track's UTC offset to get real Unix time.
 
+### Estimated timing point positions
+
+Natsoft doesn't say where timing points are. `tools/TrackBuilder` estimates them from measured pace and a lap
+simulation. Bathurst (from Practice 5), in metres from the Finish Line, on a 6,196 m OSM centreline:
+
+| Point | Name | Distance | Near |
+|---|---|---|---|
+| M | Control line | 0 | Finish Line, Pit Straight |
+| 1 | Pos1 | 548 | Start of Mountain Straight, after Hell Corner |
+| 2 | Pos2 | 1,478 | Approaching Griffins Bend |
+| 3 | Int1 | 2,522 | Reid Park |
+| 4 | Pos3 | 3,332 | Brock's Skyline |
+| 5 | Int2 | 3,963 | Exit of Forrest's Elbow |
+| 6 | Pos4 | 5,049 | Mid-Conrod Straight (speed trap, `SP` arrives just after) |
+| 7 | Pos5 | 5,800 | Between The Chase and Murray's Corner |
+
 ## Message types
 
 Counts are from Practice 5 (63 minutes, 8,844 messages).

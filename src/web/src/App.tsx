@@ -1,18 +1,37 @@
+import { useState } from 'react'
 import { useTiming } from './useTiming'
 import { SessionHeader } from './components/SessionHeader'
 import { TimingTower } from './components/TimingTower'
+import { TrackMap } from './components/TrackMap'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { useTrack } from './tracks'
 
 export default function App() {
   const { update, connection } = useTiming()
+  const [highlightId, setHighlightId] = useState<string | null>(null)
   const timing = update?.timing
+  const track = useTrack(timing?.session.trackCode || undefined)
   const hasCars = !!timing && timing.cars.length > 0
 
   return (
     <div className="app">
       <SessionHeader update={update} connection={connection} />
       <main>
-        {hasCars ? (
-          <TimingTower timing={timing} />
+        {hasCars && update ? (
+          <div className="layout">
+            <TimingTower timing={timing} highlightId={highlightId} onHighlight={setHighlightId} />
+            <aside className="map-panel">
+              {track ? (
+                <ErrorBoundary fallback={<div className="map-missing">The track map hit an error. Check the browser console.</div>}>
+                  <TrackMap track={track} update={update} highlightId={highlightId} onHighlight={setHighlightId} />
+                </ErrorBoundary>
+              ) : (
+                <div className="map-missing">
+                  No map for {timing.session.track || 'this track'} yet. Build one with <code>tools/TrackBuilder</code>.
+                </div>
+              )}
+            </aside>
+          </div>
         ) : (
           <EmptyState state={update?.feed.state} detail={update?.feed.detail} connection={connection} />
         )}
