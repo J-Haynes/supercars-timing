@@ -6,18 +6,23 @@ import { SessionHeader } from './components/SessionHeader'
 import { Controls } from './components/Controls'
 import { TimingTower } from './components/TimingTower'
 import { TrackMap } from './components/TrackMap'
-import { TipBar } from './components/TipBar'
+import { TipsPanel } from './components/TipsPanel'
+import { Menu } from './components/Menu'
+import { ReplayBar } from './components/ReplayBar'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useTrack } from './tracks'
 import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
 import { isShootout } from './session'
 
 export default function App() {
-  const { update: latest, connection } = useTiming()
+  const { update: latest, connection, controls } = useTiming()
   const { settings, update: updateSettings, togglePinned } = useSettings()
+  const replay = latest?.replay ?? null
   // Everything below shows the delayed update, so the tower, map and clock stay in sync with the broadcast.
-  const { update, buffered } = useDelayedUpdate(latest, settings.delay)
+  // Replays aren't delayed.
+  const { update, buffered } = useDelayedUpdate(latest, replay ? 0 : settings.delay)
   const [hoverId, setHoverId] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const timing = update?.timing
   const track = useTrack(timing?.session.trackCode || undefined, timing?.session.track)
@@ -29,11 +34,22 @@ export default function App() {
 
   return (
     <div className="app">
-      <SessionHeader update={update} feed={latest?.feed} connection={connection} />
+      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} />
+      <Menu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        replayingId={replay?.sessionId ?? null}
+        onWatchLive={controls.watchLive}
+        onReplay={controls.startReplay}
+      />
+      {replay && (
+        <ReplayBar replay={replay} onPlay={controls.play} onSeek={controls.seek} onSpeed={controls.speed} onLive={controls.watchLive} />
+      )}
       <Controls
         simple={settings.simple}
         delay={settings.delay}
         buffered={buffered}
+        replaying={!!replay}
         onSimple={(simple) => updateSettings({ simple })}
         onDelay={(delay) => updateSettings({ delay })}
         focusCard={settings.focusCard}
@@ -79,7 +95,11 @@ export default function App() {
           <EmptyState state={latest?.feed.state} detail={latest?.feed.detail} connection={connection} />
         )}
       </main>
-      {!settings.tipDismissed && <TipBar onDismiss={() => updateSettings({ tipDismissed: true })} />}
+      <TipsPanel
+        open={!settings.tipDismissed}
+        onClose={() => updateSettings({ tipDismissed: true })}
+        onOpen={() => updateSettings({ tipDismissed: false })}
+      />
     </div>
   )
 }

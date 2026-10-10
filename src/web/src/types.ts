@@ -1,7 +1,7 @@
 // Mirrors the server DTOs (SupercarsTiming.Natsoft.TimingSnapshot, Server.Hubs.TimingUpdate).
 // Times are seconds; 0 means "no time yet".
 
-export type FeedState = 'starting' | 'connecting' | 'waiting' | 'live' | 'replaying' | 'error' | 'ended'
+export type FeedState = 'starting' | 'connecting' | 'waiting' | 'live' | 'replaying' | 'paused' | 'error' | 'ended'
 
 export interface FeedStatus {
   mode: 'Live' | 'Replay'
@@ -96,7 +96,33 @@ export interface TimingSnapshot {
   messageCount: number
 }
 
+/** Present while this viewer is watching a replay. */
+export interface ReplayStatus {
+  sessionId: string
+  meeting: string
+  name: string
+  position: number
+  duration: number
+  playing: boolean
+  speed: number
+}
+
 export interface TimingUpdate {
   feed: FeedStatus
   timing: TimingSnapshot
+  replay?: ReplayStatus | null
+}
+
+/** A recorded session available to replay (GET /api/sessions). */
+export interface RecordedSession {
+  id: string
+  meeting: string
+  name: string
+  type: string
+  track: string
+  trackCode: string
+  start: string
+  end: string
+  durationSeconds: number
+  messages: number
 }

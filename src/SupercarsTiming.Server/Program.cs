@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using SupercarsTiming.Server.Feed;
 using SupercarsTiming.Server.Hubs;
+using SupercarsTiming.Server.Replay;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,8 @@ builder.Services.AddSingleton<RepoPaths>();
 builder.Services.AddSingleton<TimingStore>();
 builder.Services.AddHostedService<TimingFeedService>();
 builder.Services.AddHostedService<SnapshotBroadcaster>();
+builder.Services.AddSingleton<SessionCatalog>();
+builder.Services.AddSingleton<ReplayManager>();
 
 builder.Services.AddSignalR()
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -18,6 +21,11 @@ var app = builder.Build();
 
 app.MapGet("/api/health", (TimingStore store) => Results.Ok(store.Status));
 app.MapGet("/api/snapshot", (TimingStore store) => Results.Ok(new TimingUpdate(store.Status, store.Snapshot())));
+app.MapGet("/api/sessions", (SessionCatalog catalog) => Results.Ok(catalog.List().Select(s => new
+{
+    s.Id, s.Meeting, s.Name, s.Type, s.Track, s.TrackCode, s.Start, s.End,
+    DurationSeconds = Math.Round(s.DurationSeconds), s.Messages,
+})));
 app.MapHub<TimingHub>(TimingHub.Path);
 
 // Production: serve the built React app from wwwroot (npm run build in src/web writes there).

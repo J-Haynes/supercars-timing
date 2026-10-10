@@ -1,8 +1,16 @@
 {
-  "MOUN": [
-    "MOUNT PANORAMA"
-  ],
-  "SURF": [
-    "SURFERS"
-  ]
+  "MOUN": {
+    "name": "Mount Panorama",
+    "match": [
+      "MOUNT PANORAMA"
+    ],
+    "provisional": false
+  },
+  "SURF": {
+    "name": "Surfers Paradise",
+    "match": [
+      "SURFERS"
+    ],
+    "provisional": true
+  }
 }

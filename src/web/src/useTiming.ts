@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { HubConnectionBuilder, HubConnectionState, LogLevel, type HubConnection } from '@microsoft/signalr'
 import type { TimingUpdate } from './types'
 
 export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
@@ -8,6 +8,7 @@ export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'dis
 export function useTiming() {
   const [update, setUpdate] = useState<TimingUpdate | null>(null)
   const [connection, setConnection] = useState<ConnectionState>('connecting')
+  const hubRef = useRef<HubConnection | null>(null)
 
   useEffect(() => {
     const hub = new HubConnectionBuilder()
@@ -15,6 +16,7 @@ export function useTiming() {
       .withAutomaticReconnect({ nextRetryDelayInMilliseconds: () => 3000 })
       .configureLogging(LogLevel.Warning)
       .build()
+    hubRef.current = hub
 
     hub.on('snapshot', (u: TimingUpdate) => setUpdate(u))
 
@@ -24,6 +26,7 @@ export function useTiming() {
       .then((u) => u && setUpdate((prev) => prev ?? u))
       .catch(() => {})
     hub.onreconnecting(() => setConnection('reconnecting'))
+    // After a reconnect the server has forgotten any replay, so the next snapshot is live.
     hub.onreconnected(() => setConnection('connected'))
     hub.onclose(() => setConnection('disconnected'))
 
@@ -47,5 +50,18 @@ export function useTiming() {
     }
   }, [])
 
-  return { update, connection }
+  // Replay controls. The server answers with snapshots for this connection only.
+  const invoke = useCallback((method: string, ...args: unknown[]) => {
+    const hub = hubRef.current
+    if (hub?.state === HubConnectionState.Connected) hub.invoke(method, ...args).catch((e) => console.error(method, e))
+  }, [])
+  const controls = {
+    startReplay: (sessionId: string) => invoke('StartReplay', sessionId),
+    play: (playing: boolean) => invoke('ReplayPlay', playing),
+    seek: (seconds: number) => invoke('ReplaySeek', seconds),
+    speed: (speed: number) => invoke('ReplaySpeed', speed),
+    watchLive: () => invoke('WatchLive'),
+  }
+
+  return { update, connection, controls }
 }

@@ -48,6 +48,15 @@ export function ShootoutCard({ timing, track, clockRate }: { timing: TimingSnaps
   const result = phase === 'in' ? splits[splits.length - 1] : 0
   const position = lastReached >= 0 ? runningPosition(splits[lastReached], lastReached, timing.cars, car.id) : null
 
+  // Mini-sectors: time through each stretch between timing points, compared with the fastest anyone has
+  // done through it (purple) and with the reference driver (green faster, yellow slower).
+  const fastest = points.map((_, i) => Math.min(
+    ...timing.cars.flatMap((c) => [segment(c.bestLapSplits, i), segment(c.lastLapSplits, i)]).filter((t) => t > 0),
+    ...(segment(splits, i) > 0 ? [segment(splits, i)] : []),
+  ))
+  const refName = pole ? `#${pole.carNumber} ${pole.driver}` : null
+  const refRole = pole && car.bestLap > 0 && car.bestLap < pole.bestLap ? 'next fastest' : 'provisional pole'
+
   return (
     <section className={`shootout phase-${phase}`}>
       <div className="shootout-head">
@@ -68,25 +77,42 @@ export function ShootoutCard({ timing, track, clockRate }: { timing: TimingSnaps
         </div>
       </div>
 
+      <div className="splits-label">
+        {refName
+          ? <>Gaps at each timing point to <strong>{refName}</strong> ({refRole}, {lapTime(pole!.bestLap)})</>
+          : 'Split times · first car out, no time to beat yet'}
+      </div>
       <ol className="splits">
         {points.map((p, i) => {
           const t = splits[i] || 0
           const d = t > 0 && ref[i] > 0 ? t - ref[i] : null
+          const seg = segment(splits, i)
+          const refSeg = segment(ref, i)
+          const mini = seg <= 0 ? '' : seg <= fastest[i] + 0.0005 ? 'mini-purple' : refSeg > 0 && seg < refSeg ? 'mini-green' : 'mini-yellow'
           return (
-            <li key={p.id} className={[t > 0 ? 'reached' : '', d === null ? '' : d <= 0 ? 'ahead' : 'behind'].join(' ')}>
+            <li key={p.id} className={[t > 0 ? 'reached' : '', d === null ? '' : d <= 0 ? 'ahead' : 'behind', mini].join(' ')}>
               <span className="split-name">{p.name}</span>
               <span className="split-delta">{d === null ? (t > 0 ? lapTime(t) : '') : signed(d)}</span>
+              {seg > 0 && <span className="split-seg">{seg.toFixed(3)}</span>}
             </li>
           )
         })}
       </ol>
 
       <div className="shootout-foot">
-        {pole ? <>Provisional pole <strong>#{pole.carNumber} {pole.driver}</strong> {lapTime(pole.bestLap)}</> : 'First car out: no time to beat yet'}
-        {!ref.some((x) => x > 0) && pole && <span className="muted"> · split comparison appears once pole's lap is seen live</span>}
+        Bars: <span className="key-purple">purple</span> fastest of anyone through that stretch
+        {refName && <> · <span className="key-green">green</span> faster than {pole!.driver.split(' ').slice(1).join(' ') || pole!.driver} · <span className="key-yellow">yellow</span> slower</>}
+        {!ref.some((x) => x > 0) && pole && <span className="muted"> · gaps appear once the reference lap has been seen live</span>}
       </div>
     </section>
   )
+}
+
+/** Seconds through stretch i (from the previous timing point, or the line), or 0 if unknown. */
+function segment(splits: number[] | undefined, i: number): number {
+  if (!splits || !(splits[i] > 0)) return 0
+  if (i === 0) return splits[0]
+  return splits[i - 1] > 0 ? splits[i] - splits[i - 1] : 0
 }
 
 function lastIndex(splits: number[]): number {

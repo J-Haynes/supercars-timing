@@ -18,13 +18,18 @@ clever code, and explain non-obvious decisions in comments or the PR description
   - `NatsoftDecoder`: XOR-chain frame decoding
   - `NatsoftClient`: WebSocket client with reconnect / NotFound / Redirect handling
   - `Recording` (`RecordingWriter`, `RecordingReader`): JSON Lines recordings, including timed replay
+  - `SessionIndex`: finds sessions in recordings (split at `<New>`/`<NotFound>`, merged across restarts)
   - `TimingState`: applies XML messages to an in-memory model (`Entries`, `Cars`, flag, clock)
   - `TimingSnapshot`: flat, serialisable view of `TimingState` sent to the UI
 - `src/SupercarsTiming.Server`: ASP.NET Core minimal API + SignalR.
   - `Feed/TimingFeedService`: background service, live or replay → `TimingStore`
   - `Feed/TimingStore`: lock-protected `TimingState`, rebuilds snapshots only when dirty
   - `Feed/SnapshotBroadcaster`: pushes `TimingUpdate` to `/hubs/timing` at most every `BroadcastIntervalMs`
-  - Endpoints: `GET /api/health`, `GET /api/snapshot`, hub `/hubs/timing` (method `snapshot`)
+  - Endpoints: `GET /api/health`, `GET /api/snapshot`, `GET /api/sessions`, hub `/hubs/timing` (method `snapshot`)
+  - `Replay/`: race viewer. `SessionCatalog` lists sessions in data/recordings (via `SessionIndex` in the Natsoft
+    library); `ReplayManager` runs one `ReplayPlayer` per SignalR connection with its own `TimingState`.
+    Hub methods: `StartReplay(id)`, `ReplayPlay(bool)`, `ReplaySeek(seconds)`, `ReplaySpeed(x)`, `WatchLive()`.
+    Live viewers are in the `live` group; the broadcaster only sends there. `TimingUpdate.Replay` is set for replays.
 - `src/web`: React 19 + Vite + TypeScript. `src/types.ts` mirrors the C# DTOs and must be kept in sync
   by hand. `useTiming.ts` handles the SignalR connection.
   - `src/tracks/<CODE>.json`: generated track files (don't hand-edit; rerun TrackBuilder). `tracks/index.ts` lazy-loads them
@@ -99,6 +104,11 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Co-driver events: `CarRow.Drivers` lists every driver; `Driver`/`DriverIndex` is who's in the car (Natsoft `<P D>`).
   `DriverChangedAt` marks a swap; the tower shows the other driver(s) in detailed mode and a SWAP badge for 3 minutes.
 - Manufacturer colours (CSS vars): Ford blue, Chevrolet orange, Toyota red; `ManufacturerKey` in the controls bar.
+- Menu (`Menu.tsx`, ☰ in the header): live, previous sessions (replay), upcoming events from `calendar.ts` with
+  countdowns and map status from `tracks/manifest.json`. Update `calendar.ts` when Supercars publishes changes.
+- Tips live in `tips.ts` (one string each) and render in `TipsPanel` at the bottom of the page; closing is remembered.
+- Shootout: the map hides cars that are in the pits or on their in-lap; the card's mini-sector bars are purple
+  (fastest of anyone through that stretch), green (faster than the named reference driver) or yellow (slower).
 - On-track (Shootout) card (`ShootoutCard.tsx`): shown automatically when the session name/type matches
   `isShootout()` in `session.ts` (/shoot-out|top 10|top ten/), or forced On/Off from the controls bar. It focuses
   the car on its flying lap (`lapsSincePit === 1`), else the most recently active car on track, and compares its

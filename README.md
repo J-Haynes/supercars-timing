@@ -59,6 +59,7 @@ Connects to Natsoft and waits until a session goes live, checking every 30 secon
 dotnet run --project tools/NatsoftRecorder                     # record into data/recordings
 dotnet run --project tools/NatsoftRecorder -- replay <file>    # print the final timing sheet
 dotnet run --project tools/NatsoftRecorder -- decode <file>    # dump decoded XML
+dotnet run --project tools/NatsoftRecorder -- sessions         # list sessions found in data/recordings
 ```
 
 Start it a few minutes before a session and leave it running. It reconnects by itself and captures
@@ -76,6 +77,10 @@ every session on the feed (support categories included) into one file.
 - **On-track card** for the Top Ten Shootout: the car on its lap, a running lap timer, and the gap to provisional
   pole at every timing point, plus where they're running in the order. It appears automatically for Shootout
   sessions; the "On-track card" control can force it on or off for any session.
+- **Race viewer:** open the menu (☰) to replay any recorded session, with play/pause, a scrubber and up to 60×
+  speed. Each viewer gets their own replay; live viewers aren't affected.
+- **Upcoming rounds** are listed in the menu with a countdown and whether the track is mapped yet.
+- **Tips** for all of this are listed at the bottom of the page.
 - **Map controls:** rotate (remembered per track), zoom with the wheel, a pinch or the buttons, drag to pan.
 
 ## Track map

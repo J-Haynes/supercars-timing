@@ -162,12 +162,16 @@ var track = new
 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
 await File.WriteAllTextAsync(outPath, JsonSerializer.Serialize(track, new JsonSerializerOptions { WriteIndented = false }) + "\n");
 
-// manifest.json: track code -> name fragments, so the web app can find a track by name without loading every file.
+// manifest.json: track code -> name fragments and status, so the web app can find a track by name and show
+// which circuits are mapped without loading every file.
 var manifestPath = Path.Combine(Path.GetDirectoryName(outPath)!, "manifest.json");
-var manifest = File.Exists(manifestPath)
-    ? JsonSerializer.Deserialize<SortedDictionary<string, string[]>>(await File.ReadAllTextAsync(manifestPath)) ?? []
-    : new SortedDictionary<string, string[]>();
-manifest[code] = track.match;
+var manifest = new SortedDictionary<string, ManifestEntry>();
+if (File.Exists(manifestPath))
+{
+    try { manifest = JsonSerializer.Deserialize<SortedDictionary<string, ManifestEntry>>(await File.ReadAllTextAsync(manifestPath)) ?? manifest; }
+    catch (JsonException) { /* older format: rebuilt as tracks are regenerated */ }
+}
+manifest[code] = new ManifestEntry(track.name, track.match, track.provisional);
 await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }) + "\n");
 Console.WriteLine($"Wrote {Path.GetRelativePath(root, outPath)} ({new FileInfo(outPath).Length / 1024} KB)");
 return 0;
@@ -186,3 +190,6 @@ static string FindRepoRoot()
         if (dir.GetFiles("SupercarsTiming.slnx").Length > 0) return dir.FullName;
     return Directory.GetCurrentDirectory();
 }
+
+/// <summary>Entry in src/web/src/tracks/manifest.json (lower-case names: it's read by the web app).</summary>
+record ManifestEntry(string name, string[] match, bool provisional);

@@ -7,8 +7,10 @@ const loaders = import.meta.glob<{ default: TrackDefinition }>(['./*.json', '!./
 // Small index written by TrackBuilder: track code -> Natsoft track-name fragments. Bundled up front so a
 // track can be found by name when its code is unknown.
 import manifest from './manifest.json'
+export interface ManifestEntry { name: string; match: string[]; provisional: boolean }
+export const trackManifest = manifest as Record<string, ManifestEntry>
 const matches: Record<string, string[] | undefined> = Object.fromEntries(
-  Object.entries(manifest as Record<string, string[]>).map(([code, frags]) => [`./${code}.json`, frags]),
+  Object.entries(trackManifest).map(([code, entry]) => [`./${code}.json`, entry.match]),
 )
 
 /** File for a Natsoft track: by code first, then by a `match` fragment found in the track name. */

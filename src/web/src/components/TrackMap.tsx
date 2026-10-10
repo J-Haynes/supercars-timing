@@ -4,7 +4,7 @@ import type { TrackDefinition } from '../tracks/types'
 import { TrackModel, type Vec } from '../map/trackModel'
 import { carPosition } from '../map/carPosition'
 import { useSessionClock } from '../map/useSessionClock'
-import { isRace } from '../session'
+import { isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from '../map/calibrate'
 
 const CAR_RADIUS = 46 // metres, in map units
@@ -111,6 +111,8 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
   const layer = (c: CarRow) => (c.id === hoverId ? 3 : c.id === focusId ? 2 : pinned.includes(c.carNumber) ? 1 : 0)
   const cars = [...timing.cars].sort((a, b) => layer(a) - layer(b) || (b.position || 99) - (a.position || 99))
   let pitIndex = 0
+  // In the Shootout only the car on its run matters: hide cars once they're back in the pits or on the in-lap.
+  const shootout = isShootout(timing.session.name, timing.session.type)
 
   const w = view.fit.w / zoom
   const h = view.fit.h / zoom
@@ -142,6 +144,7 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
           ))}
         </g>
         {cars.map((car) => {
+          if (shootout && (car.inPit || car.lapsSincePit >= 2)) return null
           const state = carPosition(car, model, order, fallback, now, cap)
           let p: Vec
           if (state.kind === 'track') p = s(state.distance)

@@ -6,6 +6,7 @@ using SupercarsTiming.Natsoft;
 //   dotnet run --project tools/NatsoftRecorder -- record V8SUPER ./out
 //   dotnet run --project tools/NatsoftRecorder -- decode <file.jsonl>  print decoded XML
 //   dotnet run --project tools/NatsoftRecorder -- replay <file.jsonl>  rebuild state, print final timing sheet
+//   dotnet run --project tools/NatsoftRecorder -- sessions [dir]       list the sessions found in recordings
 
 var command = args.Length > 0 ? args[0] : "record";
 switch (command)
@@ -15,6 +16,10 @@ switch (command)
         break;
     case "decode" when args.Length > 1:
         foreach (var m in RecordingReader.Read(args[1])) Console.WriteLine($"{m.ReceivedAt:O} {m.Xml}");
+        break;
+    case "sessions":
+        foreach (var session in SessionIndex.Scan(Directory.GetFiles(args.ElementAtOrDefault(1) ?? DefaultRecordingsDir(), "*.jsonl")))
+            Console.WriteLine($"{session.Start.ToLocalTime():ddd dd MMM HH:mm}  {TimeSpan.FromSeconds(session.DurationSeconds):hh\\:mm\\:ss}  {session.Messages,6} msgs  {session.Parts.Count} part(s)  {session.Name}  [{session.Id}]");
         break;
     case "replay" when args.Length > 1:
         PrintSheet(args[1]);
