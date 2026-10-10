@@ -1,0 +1,84 @@
+# CLAUDE.md
+
+Guidance for Claude Code working in this repo.
+
+## Project
+
+Unofficial live timing dashboard for the Repco Supercars Championship (F1-dashboard style). Data
+comes from Natsoft's public live timing WebSocket, the same feed behind supercars.com's free
+"classic" live timing. Goals in order: timing tower → interpolated track map → charts and analysis
+(lap times, gaps, stints, battles) → broadcast-delay sync and session replay.
+
+Owner is a junior developer working in React, .NET/C# and SQL. Prefer clear, idiomatic code over
+clever code, and explain non-obvious decisions in comments or the PR description.
+
+## Layout
+
+- `src/SupercarsTiming.Natsoft`: no ASP.NET dependency. Protocol and domain logic lives here.
+  - `NatsoftDecoder`: XOR-chain frame decoding
+  - `NatsoftClient`: WebSocket client with reconnect / NotFound / Redirect handling
+  - `Recording` (`RecordingWriter`, `RecordingReader`): JSON Lines recordings, including timed replay
+  - `TimingState`: applies XML messages to an in-memory model (`Entries`, `Cars`, flag, clock)
+  - `TimingSnapshot`: flat, serialisable view of `TimingState` sent to the UI
+- `src/SupercarsTiming.Server`: ASP.NET Core minimal API + SignalR.
+  - `Feed/TimingFeedService`: background service, live or replay → `TimingStore`
+  - `Feed/TimingStore`: lock-protected `TimingState`, rebuilds snapshots only when dirty
+  - `Feed/SnapshotBroadcaster`: pushes `TimingUpdate` to `/hubs/timing` at most every `BroadcastIntervalMs`
+  - Endpoints: `GET /api/health`, `GET /api/snapshot`, hub `/hubs/timing` (method `snapshot`)
+- `src/web`: React 19 + Vite + TypeScript. `src/types.ts` mirrors the C# DTOs and must be kept in sync
+  by hand. `useTiming.ts` handles the SignalR connection.
+- `tools/NatsoftRecorder`: console recorder and inspector. References the Natsoft library.
+- `tests/SupercarsTiming.Natsoft.Tests`: xUnit.
+- `docs/PROTOCOL.md`: the protocol reference. **Update it whenever you learn something new about a field.**
+- `data/recordings/*.jsonl`: real captures, git-ignored. Use them for development and debugging.
+
+## Commands
+
+```bash
+dotnet build                      # whole solution (SupercarsTiming.slnx)
+dotnet test
+dotnet run --project src/SupercarsTiming.Server -- --Feed:Mode=Replay --Feed:ReplaySpeed=10
+dotnet run --project src/SupercarsTiming.Server                          # live
+dotnet run --project tools/NatsoftRecorder                               # record
+dotnet run --project tools/NatsoftRecorder -- replay data/recordings/<file>.jsonl
+cd src/web && npm run dev         # http://localhost:5173, proxies /api and /hubs to :5080
+cd src/web && npm run build       # typecheck + build into the server's wwwroot
+```
+
+## Verifying changes
+
+- Protocol or state changes: add or extend a test in `TimingStateTests` using trimmed real frames,
+  then run `NatsoftRecorder replay` on a real recording and check the sheet looks sane.
+- UI changes: run the server in replay mode plus `npm run dev`, and look at the page.
+- `npm run build` must pass (TypeScript strict, no unused locals).
+
+## Protocol essentials
+
+Read `docs/PROTOCOL.md` before touching parsing. The traps:
+
+- `<P C="...">` is Natsoft's **internal car ID** (`R ID` in the entry list), not the car number.
+- Partial `L` updates only carry changed fields. Never reset a field because it's missing.
+- `T` timestamps are track-local wall-clock time encoded as Unix seconds (AEDT = Unix + 39600).
+- Each session starts with its own `<New>` snapshot, which must reset state. Support categories share the `V8SUPER` feed.
+- `SP` (speed trap) is sent as `0` and then the real value. Ignore the zero.
+- `GI`/`GNI` gaps vs `LGI`/`LGNI` "live" gaps: the UI uses live gaps for `Race` sessions. Not yet confirmed.
+- Sector fields reset to 0 at the start of a lap. 0 means "no time yet" everywhere.
+
+## Rules
+
+- **One connection to Natsoft.** Never add polling, parallel connections or tighter retry loops.
+  Keep the 30 s retry while a meeting isn't live.
+- **Never commit recordings or `.har` files.** They're git-ignored. Recordings are Natsoft's data, and
+  HAR captures contain supercars.com login tokens.
+- Keep the Natsoft library free of ASP.NET dependencies so tools and tests can use it.
+- When you add a field to `CarRow` / `TimingSnapshot`, update `src/web/src/types.ts` too.
+- Don't build features on the paid MySupercars+ (Firebase) data without discussing it first. It's behind a login and its terms are different.
+
+## Roadmap / next steps
+
+1. Interpolated track map: track outline SVG per circuit (OpenStreetMap geometry), timing point positions
+   along it, cars animated between `LP` crossings using recent sector pace.
+2. Race-specific handling once a full Supercars race is captured: laps-down gaps, safety car, driver changes.
+3. Lap time, position and gap charts from recorded history (needs per-lap history in `TimingState`).
+4. Broadcast-delay slider and scrubbable replay.
+5. Persist sessions (SQL) instead of only JSONL.

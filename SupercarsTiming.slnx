@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SupercarsTiming.Natsoft/SupercarsTiming.Natsoft.csproj" />
+    <Project Path="src/SupercarsTiming.Server/SupercarsTiming.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SupercarsTiming.Natsoft.Tests/SupercarsTiming.Natsoft.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/NatsoftRecorder/NatsoftRecorder.csproj" />
+  </Folder>
+</Solution>

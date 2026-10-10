@@ -1,0 +1,103 @@
+:root {
+  --bg: #0b0d10;
+  --panel: #12161b;
+  --row-alt: #151a20;
+  --line: #222a33;
+  --text: #e8ecf1;
+  --muted: #8a96a3;
+  --purple: #b57cff;
+  --green: #3ddc84;
+  --yellow: #ffd23f;
+  --red: #ff4d4f;
+  --ford: #2f6fdf;
+  --chevrolet: #e0a526;
+  --toyota: #e5172f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+main { flex: 1; padding: 0 16px 24px; }
+
+/* Header */
+.session {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.meeting { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.session h1 { margin: 2px 0; font-size: 20px; font-weight: 650; }
+.track { color: var(--muted); font-size: 13px; }
+.session-status { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.clock { font: 600 28px/1 ui-monospace, "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+.feed { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+
+.flag { padding: 4px 10px; border-radius: 4px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; background: var(--line); }
+.flag-green { background: var(--green); color: #04210f; }
+.flag-yellow { background: var(--yellow); color: #2b2200; }
+.flag-red { background: var(--red); color: #fff; }
+.flag-checkered { background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 10px 10px; color: #000; text-shadow: 0 0 3px #fff; }
+.flag-ended { background: var(--line); color: var(--muted); }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.dot-live, .dot-replaying { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot-waiting, .dot-connecting, .dot-starting { background: var(--yellow); }
+.dot-error, .dot-offline { background: var(--red); }
+
+/* Tower */
+.tower-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.tower { width: 100%; border-collapse: collapse; white-space: nowrap; }
+.tower th {
+  position: sticky; top: 0; background: var(--panel);
+  text-align: left; color: var(--muted); font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px; border-bottom: 1px solid var(--line);
+}
+.tower td { padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.tower tbody tr:nth-child(even) { background: var(--row-alt); }
+.tower tbody tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-family: ui-monospace, "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+.tower th.num { text-align: right; }
+.pos { font-weight: 700; }
+.driver { font-weight: 550; }
+
+.car {
+  display: inline-block; min-width: 38px; text-align: center; padding: 2px 6px; border-radius: 4px;
+  font-weight: 700; font-family: ui-monospace, monospace; background: var(--line); border-left: 4px solid var(--muted);
+}
+.mfr-ford { border-left-color: var(--ford); }
+.mfr-chevrolet { border-left-color: var(--chevrolet); }
+.mfr-toyota { border-left-color: var(--toyota); }
+
+.session-best { color: var(--purple); font-weight: 700; }
+.personal-best { color: var(--green); }
+
+.in-pit td { opacity: .55; }
+.in-pit td.driver { opacity: 1; }
+.pit-badge { margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--yellow); color: #2b2200; }
+
+.flash { animation: flash .8s ease-out; }
+@keyframes flash { from { background: rgba(255, 255, 255, .07); } to { background: transparent; } }
+
+.progress { display: flex; gap: 2px; }
+.seg { width: 12px; height: 6px; border-radius: 2px; background: var(--line); }
+.seg.passed { background: #3a4552; }
+.seg.current { background: var(--text); }
+
+.empty { color: var(--muted); padding: 64px 16px; text-align: center; font-size: 15px; }
+
+@media (max-width: 700px) {
+  .session { flex-direction: column; align-items: flex-start; }
+  .session-status { justify-content: flex-start; }
+}

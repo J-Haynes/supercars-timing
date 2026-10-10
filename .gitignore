@@ -1,0 +1,28 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Node / Vite
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Built frontend (npm run build in src/web writes here)
+src/SupercarsTiming.Server/wwwroot/
+
+# Timing recordings: large, and they're Natsoft's data, so keep them out of a public repo
+data/recordings/*
+!data/recordings/.gitkeep
+
+# Browser network captures can contain login tokens
+*.har
+
+# Editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
