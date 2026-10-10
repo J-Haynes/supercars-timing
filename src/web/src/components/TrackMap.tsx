@@ -150,7 +150,7 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
           if (shootout && car.inPit) return null
           const inLap = shootout && car.lapsSincePit >= 2
           // In-laps are slow: don't cap them at racing pace.
-          const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap)
+          const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap, baseline)
           if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) return null
           let p: Vec
           if (state.kind === 'track') p = s(state.distance)

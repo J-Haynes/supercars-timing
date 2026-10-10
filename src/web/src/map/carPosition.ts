@@ -6,6 +6,9 @@ export type CarMapState =
   | { kind: 'pit' }
   | { kind: 'unknown' }
 
+/** Out-lap pace (x typical) before the car has completed a stretch. Checked against Bathurst recordings. */
+const OUT_LAP_PACE = 1.3
+
 /**
  * Estimates where a car is on the lap.
  *
@@ -21,6 +24,8 @@ export function carPosition(
   car: CarRow, track: TrackModel, order: string[], fallback: number[], now: number,
   /** Optional upper bound per segment (seconds). See TrackMap: used outside races. */
   cap?: number[],
+  /** The track file's typical time per segment, used to estimate out-lap pace. */
+  baseline?: number[],
 ): CarMapState {
   if (car.inPit) return { kind: 'pit' }
   const i = order.indexOf(car.lastPoint)
@@ -36,6 +41,14 @@ export function carPosition(
   // Outside races a car's "recent pace" is often an out-lap or cool-down lap. Capping it near the
   // track's typical racing pace keeps flying laps smooth; a slow car simply waits at the next point.
   if (cap?.[i]) expected = Math.min(expected || Infinity, cap[i] * 1.12)
+  // Out-laps are slow and uneven (the queue out of pit lane at the start of practice can take 2-3x racing pace),
+  // so neither the cap nor the car's flying-lap pace fits: it would race ahead and wait at the next point.
+  // Expect the same pace, relative to the track's typical times, as the car's previous stretch this lap.
+  if (car.lapsSincePit === 0 && baseline?.[i]) {
+    const prevTime = car.currentSegments?.[i - 1] ?? 0
+    const ratio = i > 0 && prevTime > 0 && baseline[i - 1] ? prevTime / baseline[i - 1] : OUT_LAP_PACE
+    expected = Math.max(expected, baseline[i] * Math.min(Math.max(ratio, 1), 3))
+  }
   if (expected <= 0) return { kind: 'track', distance: track.wrap(from), stale: false, overdue: false }
 
   const elapsed = Math.max(0, now - car.lastPointAt)

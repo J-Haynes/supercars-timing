@@ -110,4 +110,43 @@ public class SegmentTimingTests
         Assert.False(s.Cars["22"].BestSegments.ContainsKey("M"));
         Assert.Equal(12, TimingSnapshot.From(s).SegmentBest[0], 3);
     }
+
+    [Fact]
+    public void Slow_out_laps_dont_make_real_times_look_implausible()
+    {
+        // Bathurst, start of practice: the whole field queues out of pit lane at well under half pace.
+        var s = Fresh();
+        s.Apply("""<RL><R ID="5" N="5" V="Ford Mustang GT"><V ID="1" N="A" /></R><R ID="6" N="6" V="Ford Mustang GT"><V ID="1" N="B" /></R></RL>""");
+        foreach (var car in new[] { "9", "5", "6", "22" }) { Cross(s, 1000, car, "1"); Cross(s, 1025, car, "2"); }   // out-lap: 25 s
+        Assert.Empty(s.Cars["22"].SegmentSeconds);                              // not the car's pace
+        Assert.Equal(25, s.Cars["22"].CurrentLapSegments["1"], 3);             // but still a mini-sector
+
+        Cross(s, 1040, "22", "M"); Cross(s, 1053, "22", "1"); Cross(s, 1067.5, "22", "2");   // flying lap: 14.5 s
+        var car22 = s.Cars["22"];
+        Assert.Equal(14.5, car22.SegmentSeconds["1"], 3);
+        Assert.Equal(14.5, car22.CurrentLapSegments["1"], 3);
+        Assert.Equal(14.5, car22.BestSegments["1"], 3);
+    }
+
+    [Fact]
+    public void Snapshot_position_does_not_start_a_timed_stretch()
+    {
+        // Connecting mid-session: the snapshot says car 88 last passed point 1, not when.
+        var s = new TimingState();
+        s.Apply(Snapshot.Replace("</New>", """<L><P L="1" C="22" D="1"><D LP="1" /></P></L></New>"""));
+        Assert.Equal("1", s.Cars["22"].LastPoint);
+        Cross(s, 1000.75, "22", "2");                                           // 0.75 s after the snapshot
+        Assert.Empty(s.Cars["22"].CurrentLapSegments);
+        Cross(s, 1024, "22", "M");                                              // the next stretch is real
+        Assert.Equal(23.25, s.Cars["22"].LastLapSegments["2"], 3);            // completed the lap
+    }
+
+    [Fact]
+    public void Crossing_made_in_the_pits_does_not_start_a_timed_stretch()
+    {
+        var s = Fresh();
+        Cross(s, 1000, "22", "M", pit: "Y");     // pit-lane crossing of the line, then a stop
+        Cross(s, 1074, "22", "1", pit: "N");     // out of the pits: 74 s isn't a stretch time
+        Assert.Empty(s.Cars["22"].CurrentLapSegments);
+    }
 }

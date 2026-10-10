@@ -46,6 +46,9 @@ public sealed class TimingState
     /// <summary>Number of messages applied since the last snapshot reset.</summary>
     public long MessageCount { get; private set; }
 
+    /// <summary>True while applying a session snapshot, whose LP values say where each car is but not when it got there.</summary>
+    bool _inSnapshot;
+
     public void Apply(NatsoftMessage message)
     {
         if (message.IsNotFound || message.IsRedirect) return;
@@ -63,7 +66,9 @@ public sealed class TimingState
             case "New" or "Change" or "WaitCat":
                 Entries.Clear(); Cars.Clear(); TimingPoints.Clear();
                 Best.Reset();
-                foreach (var child in root.Elements()) ApplyChild(child);
+                _inSnapshot = true;
+                try { foreach (var child in root.Elements()) ApplyChild(child); }
+                finally { _inSnapshot = false; }
                 break;
             default:
                 ApplyChild(root);
@@ -142,6 +147,9 @@ public sealed class TimingState
         if (Str(d, "P") is { } inPit)
         {
             var entering = inPit == "Y" && !c.InPit;
+            // Going in or out of the pits: the last crossing can't start a timed stretch (the car may have
+            // sat in the garage since, or crossed a pit-lane timing line).
+            if (c.InPit != (inPit == "Y")) c.SegmentStartAt = 0;
             c.InPit = inPit == "Y";
             if (entering) { c.LapsSincePit = 0; c.LapStartAt = 0; c.CurrentLapSplits.Clear(); }
         }
@@ -177,10 +185,13 @@ public sealed class TimingState
     /// <summary>
     /// Rejects stretch times far quicker than the field's typical time. Crossing a pit-lane timing line (which
     /// Natsoft can report as the control line) produces impossible ones, e.g. 1.7 s for a 9 s stretch.
+    /// The reference is every car's latest time on a timed lap <em>before</em> this check. Using times that
+    /// passed the check would feed on itself: at Bathurst the first out-lap queue (22–42 s through a 14.5 s
+    /// stretch) set the reference so high that every real time after it was rejected.
     /// </summary>
     bool IsPlausibleSegment(string from, double seconds)
     {
-        var times = Cars.Values.Select(x => x.SegmentSeconds.GetValueOrDefault(from)).Where(t => t > 0).Order().ToList();
+        var times = Cars.Values.Select(x => x.RawSegmentSeconds.GetValueOrDefault(from)).Where(t => t > 0).Order().ToList();
         return times.Count < 3 || seconds >= times[times.Count / 2] * 0.8;
     }
 
@@ -193,13 +204,16 @@ public sealed class TimingState
         // (a missed crossing or a pit visit would make the time meaningless).
         var order = PointOrder.ToList();
         int prev = order.IndexOf(c.LastPoint);
-        if (!c.InPit && prev >= 0 && c.LastPointAt > 0 && order[(prev + 1) % order.Count] == point)
+        if (!c.InPit && prev >= 0 && c.SegmentStartAt > 0 && order[(prev + 1) % order.Count] == point)
         {
-            var seconds = Now - c.LastPointAt;
+            var seconds = Now - c.SegmentStartAt;
+            // Out-laps are slow and uneven, so they don't count as the car's pace (map) or the field's (reference).
+            var timedLap = c.LapsSincePit > 0;
+            if (seconds > 0 && timedLap) c.RawSegmentSeconds[c.LastPoint] = seconds;
             if (seconds > 0 && IsPlausibleSegment(c.LastPoint, seconds))
             {
-                c.SegmentSeconds[c.LastPoint] = seconds;
-                // Mini-sectors: this lap's time through the stretch, and the car's best through it.
+                if (timedLap) c.SegmentSeconds[c.LastPoint] = seconds;
+                // Mini-sectors: this lap's time through the stretch (out-laps too), and the car's best through it.
                 c.CurrentLapSegments[c.LastPoint] = seconds;
                 if (!c.BestSegments.TryGetValue(c.LastPoint, out var best) || seconds < best) c.BestSegments[c.LastPoint] = seconds;
             }
@@ -212,6 +226,8 @@ public sealed class TimingState
         }
         c.LastPoint = point;
         c.LastPointAt = Now;
+        // A snapshot's LP was crossed at some unknown earlier time, so it can't start a timed stretch.
+        c.SegmentStartAt = _inSnapshot || c.InPit ? 0 : Now;
         if (c.InPit) return;
 
         if (point == "M")
@@ -305,10 +321,17 @@ public sealed class CarState
     /// <summary>Natsoft time (see <see cref="TimingState.Now"/>) when <see cref="LastPoint"/> changed.</summary>
     public double LastPointAt { get; set; }
     /// <summary>
+    /// When <see cref="LastPoint"/> was crossed, if that crossing can start a timed stretch; 0 if it came from a
+    /// session snapshot (time unknown) or the car has been in the pits since.
+    /// </summary>
+    public double SegmentStartAt { get; set; }
+    /// <summary>
     /// The car's most recent time (s) from each timing point to the next, keyed by the starting point.
-    /// Used to animate the car between points on the track map.
+    /// Used to animate the car between points on the track map. Timed laps only (not out-laps).
     /// </summary>
     public Dictionary<string, double> SegmentSeconds { get; } = [];
+    /// <summary>Latest time through each stretch on a timed lap, before the plausibility check (its reference).</summary>
+    public Dictionary<string, double> RawSegmentSeconds { get; } = [];
 
     /// <summary>Mini-sector times (seconds through each stretch, keyed by the starting point) on the current lap.</summary>
     public Dictionary<string, double> CurrentLapSegments { get; } = [];

@@ -83,11 +83,13 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 
 - Natsoft only gives the **last timing point** each car passed (`LP`) and when. Everything between points is estimated.
 - `TimingState` records each car's latest time per segment (`CarState.SegmentSeconds`), skipping pit-lane and
-  non-consecutive crossings. `TimingSnapshot` sends a per-car expected time per segment (own pace if it's within
-  0.8–1.6× the field median, otherwise the field median) plus `SegmentReference`.
+  non-consecutive crossings, out-laps, and stretches that start at a snapshot `LP` (`CarState.SegmentStartAt` = 0).
+  `TimingSnapshot` sends a per-car expected time per segment (own pace if it's within 0.8–1.6× the field median,
+  otherwise the field median) plus `SegmentReference`.
 - The frontend moves a car the same fraction through the *simulated* segment time as it is through the expected
   real time, which makes cars slow for corners. Cars that are late hold at 99% of the segment, and dim once
-  they're 2.5× overdue.
+  they're 2.5× overdue. On out-laps the expected time is the track's typical time × the car's pace through its
+  previous stretch (1.3× before it has one), so cars in the pit-exit queue keep moving.
 - Timing point positions per track are estimates from TrackBuilder's lap simulation. If they look wrong on a
   track, fix the inputs (OSM relation, control-line node, recording) and rebuild rather than hand-editing the JSON.
 - `FeedStatus.ClockRate` (replay speed) drives the client-side clock, so replays at 10× animate correctly.
@@ -113,6 +115,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   `CarRow.CurrentSegments`/`LastLapSegments`/`BestSegments` and `TimingSnapshot.SegmentBest`. Purple = session
   best, green = personal best, yellow = slower; faded = previous lap; outlined = stretch the car is in. Stretch
   times quicker than 0.8× the field median are rejected (`IsPlausibleSegment`): pit-lane timing lines produce them.
+  The median comes from `RawSegmentSeconds` (timed laps, before the check). Never base it on accepted times: the
+  slow first out-lap at Bathurst once pushed it so high that every real time was rejected and blocks stayed empty.
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel` at the bottom of the page; closing is remembered.
 - Shootout: the map shows cars on out-lap, flying lap and in-lap, and hides them once they're in the pits. Natsoft
   doesn't flag that pit entry: an in-lap car past the last timing point and overdue at the line is treated as in

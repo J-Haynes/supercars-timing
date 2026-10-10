@@ -99,7 +99,7 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red fla
 
 | Attr | Meaning |
 |---|---|
-| `LP` | **Last timing point passed** (`M`, `1`–`7`). The most frequent update and the basis for a track map |
+| `LP` | **Last timing point passed** (`M`, `1`–`7`). The most frequent update and the basis for a track map. In a `<New>` snapshot it says where each car is but not when it crossed, so the car's next stretch can't be timed from it |
 | `L` | Laps completed |
 | `I` | Last lap time (s) |
 | `T` | Timestamp of the last control-line crossing |
@@ -112,7 +112,7 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red fla
 | `GNI`, `GNL` | Interval to car ahead (time / laps) |
 | `LGI`, `LGL` | *Unconfirmed.* Updates more often than `GI` in races, but is frequently out of order with positions (up to 7 inversions in a 21-car field in the SuperUte race, vs 0–1 for `GI`). Use `GI` |
 | `LGNI`, `LGNL` | *Unconfirmed.* Companion of `LGI` |
-| `P` | `Y` = in pit lane |
+| `P` | `Y` = in pit lane, `N` = out. Sent in matching pairs at Bathurst (98 of each in Practice 5, 145 in Practice 6). Points crossed while `Y` include pit-lane lines, so don't time stretches from them |
 | `PS` | Pit stop count |
 | `PI`, `PT`, `PF` | Pit-in time, pit time, pit flag |
 | `LL` | Last line: `1`, `2` (intermediates), `M` (control line) |
