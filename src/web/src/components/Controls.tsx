@@ -3,7 +3,7 @@ import { ManufacturerKey } from './ManufacturerKey'
 
 type FocusCard = 'auto' | 'on' | 'off'
 
-export function Controls({ simple, delay, buffered, onSimple, onDelay, focusCard, onFocusCard }: {
+export function Controls({ simple, delay, buffered, onSimple, onDelay, focusCard, onFocusCard, onSettings }: {
   simple: boolean
   delay: number
   buffered: number
@@ -11,6 +11,7 @@ export function Controls({ simple, delay, buffered, onSimple, onDelay, focusCard
   onDelay: (seconds: number) => void
   focusCard: FocusCard
   onFocusCard: (value: FocusCard) => void
+  onSettings: () => void
 }) {
   const setDelay = (s: number) => onDelay(Math.min(MAX_DELAY_SECONDS, Math.max(0, Math.round(s))))
   const filling = delay > 0 && buffered < delay - 0.5
@@ -48,6 +49,8 @@ export function Controls({ simple, delay, buffered, onSimple, onDelay, focusCard
           {delay > 0 && <button type="button" className="link" onClick={() => setDelay(0)}>Reset</button>}
           {filling && <span className="delay-filling">buffering {Math.floor(buffered)}/{delay}s</span>}
       </div>
+
+      <button type="button" className="settings-button" onClick={onSettings}>⚙ Settings</button>
 
       <ManufacturerKey />
     </div>

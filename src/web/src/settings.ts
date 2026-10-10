@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { ColumnPrefs, SessionKind } from './towerLayout'
 
 /** Per-viewer preferences, remembered in this browser. */
 export interface Settings {
@@ -13,10 +14,12 @@ export interface Settings {
   focusCard: 'auto' | 'on' | 'off'
   /** Map rotation in degrees, per Natsoft track code. */
   mapRotation: Record<string, number>
+  /** Detailed-mode tower columns (order and hidden), per session kind. Missing = the default layout. */
+  columns: Partial<Record<SessionKind, ColumnPrefs>>
 }
 
 const KEY = 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, focusCard: 'auto' }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, focusCard: 'auto', columns: {} }
 
 function load(): Settings {
   try {

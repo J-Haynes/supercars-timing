@@ -12,6 +12,7 @@ import { ResultsView } from './components/ResultsView'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
 import { PitLog } from './components/PitLog'
+import { SettingsPanel } from './components/SettingsPanel'
 import { useTrack } from './tracks'
 import { isRace, isShootout, isSupercarsSession } from './session'
 import type { RecordedSession } from './types'
@@ -23,6 +24,7 @@ export default function App() {
   const { update, buffered } = useDelayedUpdate(latest, settings.delay)
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   // null = live timing; otherwise the recorded session whose results are on screen.
   const [results, setResults] = useState<RecordedSession | null>(null)
 
@@ -61,6 +63,16 @@ export default function App() {
             onDelay={(delay) => updateSettings({ delay })}
             focusCard={settings.focusCard}
             onFocusCard={(focusCard) => updateSettings({ focusCard })}
+            onSettings={() => setSettingsOpen(true)}
+          />
+          <SettingsPanel
+            // Re-mount on open so it starts on the layout for the session on screen.
+            key={settingsOpen ? 'open' : 'closed'}
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            kind={timing && isRace(timing.session.type) ? 'race' : 'timed'}
+            columns={settings.columns}
+            onColumns={(columns) => updateSettings({ columns })}
           />
           <main>
             {hasCars && update ? (
@@ -70,6 +82,7 @@ export default function App() {
                   <TimingTower
                     timing={timing}
                     simple={settings.simple}
+                    columnPrefs={settings.columns}
                     hoverId={hoverId}
                     pinned={settings.pinned}
                     onHover={setHoverId}

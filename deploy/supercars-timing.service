@@ -1,0 +1,23 @@
+# systemd *user* service for the live timing server (no sudo needed). Install / update:
+#   systemctl --user link ~/Dev/supercars-timing/deploy/supercars-timing.service
+#   systemctl --user daemon-reload && systemctl --user enable --now supercars-timing
+# Logs: journalctl --user -u supercars-timing -f
+# The site is shared on the tailnet with `tailscale serve --bg 5080` (see deploy/README.md).
+[Unit]
+Description=Supercars live timing server (Natsoft feed -> http://localhost:5080)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=%h/Dev/supercars-timing
+# Release build in its own output folder, so development builds don't fight over the same files.
+ExecStart=/usr/lib/dotnet/dotnet run --project src/SupercarsTiming.Server -c Release --no-launch-profile
+Environment=ASPNETCORE_URLS=http://localhost:5080
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+# Natsoft rule: one connection. Restarting after a crash is fine; the client keeps its own 30 s retry.
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

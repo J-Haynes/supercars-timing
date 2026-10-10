@@ -340,3 +340,31 @@ main { flex: 1; padding: 0 16px 24px; }
 .pit-log .stop-no { color: var(--muted); font-size: 11px; }
 .pit-log tr.in-lane td { background: rgba(255, 210, 63, .08); }
 .pit-log-empty { color: var(--muted); font-size: 13px; padding: 4px 0; }
+
+/* Primary / co-driver in the car, as on the broadcast: hollow white circle = primary, green dot = co-driver. */
+.driver-marker { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 7px; vertical-align: 1px; box-sizing: border-box; }
+.driver-marker.primary { border: 1.5px solid #fff; }
+.driver-marker.co-driver { background: var(--green); }
+
+/* Settings drawer (from the right, mirroring the menu). */
+.settings-button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; }
+.settings-button:hover { border-color: var(--muted); }
+.settings-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(400px, 92vw); z-index: 21; overflow-y: auto;
+  background: var(--panel); border-left: 1px solid var(--line); transform: translateX(100%); transition: transform .2s;
+  padding: 0 16px 32px;
+}
+.settings-panel.open { transform: none; }
+.settings-panel .menu-head button { background: none; border: 0; color: var(--muted); font-size: 22px; cursor: pointer; }
+.settings-panel h2 { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin: 20px 0 8px; }
+.segmented { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+.segmented button { flex: 1; background: none; border: 0; color: var(--muted); padding: 6px 8px; cursor: pointer; font: inherit; font-size: 13px; }
+.segmented button.active { background: #16202c; color: var(--text); }
+.column-list { list-style: none; margin: 8px 0 12px; padding: 0; }
+.column-list li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 4px; background: var(--bg); font-size: 14px; }
+.column-list li.hidden-column { opacity: .55; }
+.column-list li.dragging { outline: 1px dashed var(--muted); }
+.column-list .grip { color: var(--muted); cursor: grab; letter-spacing: -2px; }
+.column-list label { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.column-list button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 4px; width: 28px; height: 26px; cursor: pointer; }
+.column-list button:disabled { opacity: .3; cursor: default; }

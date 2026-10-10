@@ -3,6 +3,7 @@ import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
 import { MiniSectors } from './MiniSectors'
 import { isRace, minDriverLaps, raceLaps } from '../session'
+import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
 
 interface Ctx {
   car: CarRow
@@ -53,6 +54,7 @@ const COLUMNS: Record<string, Column> = {
       return (
         <>
           {car.driver}
+          <DriverMarker car={car} />
           {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
           {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
           {car.inPit && <span className="pit-badge">PIT</span>}
@@ -118,17 +120,20 @@ const COLUMNS: Record<string, Column> = {
   minis: { key: 'minis', header: 'Mini-sectors', cell: ({ car, order, segmentBest }) => <MiniSectors car={car} order={order} sessionBest={segmentBest} /> },
 }
 
-/** Which columns to show, in order, for each session kind and display mode. */
-const LAYOUTS = {
-  timed: {
-    detailed: ['pos', 'car', 'driver', 'best', 'gap', 'int', 'last', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'minis'],
-    simple: ['pos', 'car', 'driver', 'best', 'gap', 'last', 'pits', 'laps'],
-  },
-  race: {
-    // Driver laps next to the names: at endurance races it's what decides strategy, so keep it on screen.
-    detailed: ['pos', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'stint', 'laps', 'minis'],
-    simple: ['pos', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'pits', 'stint', 'laps'],
-  },
+/**
+ * Who's in a shared car, as on the TV graphics: a hollow white circle for the primary (full-time) driver, a green
+ * dot for the co-driver. Natsoft's driver 1 is the full-time driver in every Bathurst 2026 entry.
+ */
+function DriverMarker({ car }: { car: CarRow }) {
+  if ((car.drivers?.length ?? 0) < 2) return null
+  const primary = car.driverIndex === '1'
+  return (
+    <span
+      className={`driver-marker ${primary ? 'primary' : 'co-driver'}`}
+      title={primary ? 'Primary driver in the car' : 'Co-driver in the car'}
+      aria-label={primary ? 'Primary driver' : 'Co-driver'}
+    />
+  )
 }
 
 const abbreviation = (name: string) => surname(name).replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()
@@ -158,9 +163,11 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, hoverId, pinned, onHover, onTogglePin }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHover, onTogglePin }: {
   timing: TimingSnapshot
   simple: boolean
+  /** The viewer's detailed-mode layout per session kind (settings panel). */
+  columnPrefs: Partial<Record<SessionKind, ColumnPrefs>>
   hoverId: string | null
   pinned: string[]
   onHover: (id: string | null) => void
@@ -171,7 +178,8 @@ export function TimingTower({ timing, simple, hoverId, pinned, onHover, onToggle
   const order = ['M', ...timingPoints.map((p) => p.id)]
   // Driver laps only matter when cars are shared (co-driver events).
   const shared = cars.some((c) => (c.drivers?.length ?? 0) > 1)
-  const columns = LAYOUTS[race ? 'race' : 'timed'][simple ? 'simple' : 'detailed']
+  const kind: SessionKind = race ? 'race' : 'timed'
+  const columns = visibleColumns(kind, simple, columnPrefs[kind])
     .filter((k) => k !== 'driverLaps' || shared)
     .map((k) => COLUMNS[k])
   const totalLaps = raceLaps(timing.session)

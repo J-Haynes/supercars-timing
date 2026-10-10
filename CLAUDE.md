@@ -43,6 +43,7 @@ clever code, and explain non-obvious decisions in comments or the PR description
   - `src/map/`: `trackModel.ts` (geometry, sim-time ↔ distance), `carPosition.ts` (where a car is between timing points),
     `useSessionClock.ts` (smooth session time between server updates).
   - `src/components/TrackMap.tsx`: the SVG map. Wrapped in an `ErrorBoundary` so a map bug can't take down the tower.
+- `deploy/`: systemd user service for the live server and its README (install, logs, Tailscale).
 - `tools/NatsoftRecorder`: console recorder and inspector. References the Natsoft library.
 - `tools/TrackBuilder`: builds track files from an OSM circuit relation + a recording (see its README).
 - `tests/SupercarsTiming.Natsoft.Tests`: xUnit.
@@ -55,7 +56,8 @@ clever code, and explain non-obvious decisions in comments or the PR description
 dotnet build                      # whole solution (SupercarsTiming.slnx)
 dotnet test
 dotnet run --project src/SupercarsTiming.Server -- --Feed:Mode=Replay --Feed:ReplaySpeed=10
-dotnet run --project src/SupercarsTiming.Server                          # live
+dotnet run --project src/SupercarsTiming.Server                          # live (stop the service first)
+systemctl --user restart supercars-timing                                 # the live service (see deploy/README.md)
 dotnet run --project tools/NatsoftRecorder                               # record
 dotnet run --project tools/NatsoftRecorder -- replay data/recordings/<file>.jsonl
 dotnet run --project tools/TrackBuilder -- --code MOUN --relation 6942508 --name "Mount Panorama" --recording data/recordings/<file>.jsonl
@@ -100,8 +102,11 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 
 ## UI essentials
 
-- Tower columns are defined once in `TimingTower.tsx` (`COLUMNS`) and arranged per session kind and mode in `LAYOUTS`.
-  Practice/qualifying ("timed") lead with Best then Gap; races lead with Gap then Int. `isRace()` decides.
+- Tower column cells are defined once in `TimingTower.tsx` (`COLUMNS`). Which show and in what order lives in
+  `towerLayout.ts`: `DEFAULT_LAYOUTS` per session kind and mode (practice/qualifying lead with Best then Gap; races
+  with Gap then Int; `isRace()` decides), `COLUMN_LABELS` (add new columns here too). Detailed mode is configurable
+  in the Settings drawer (`SettingsPanel.tsx`, ⚙ in the controls bar): order and hidden columns per session kind,
+  saved in `settings.columns`. `columnPrefs()` merges saved prefs with columns added later. Simple mode is fixed.
 - Viewer preferences (`settings.ts`: simple mode, broadcast delay, highlighted car numbers, tip dismissed) live in
   localStorage, wrapped in try/catch so the app still works where storage is blocked.
 - Broadcast delay (`useDelayedUpdate.ts`) buffers updates client-side and shows the one from N seconds ago.
@@ -109,6 +114,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Highlights are keyed by car number (stable across sessions), hover by Natsoft car ID.
 - Co-driver events: `CarRow.Drivers` lists every driver; `Driver`/`DriverIndex` is who's in the car (Natsoft `<P D>`).
   `DriverChangedAt` marks a swap; the tower shows the other driver(s) in detailed mode and a SWAP badge for 3 minutes.
+  Natsoft driver `1` is the primary (full-time) driver in every entry. As on the broadcast, the tower marks who's in
+  the car: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
 - Manufacturer colours (CSS vars): Ford blue, Chevrolet orange, Toyota red; `ManufacturerKey` in the controls bar.
 - Menu (`Menu.tsx`, ☰ in the header): live, results of previous Supercars sessions (`ResultsView.tsx`), upcoming
   events from `calendar.ts` with countdowns and map status from `tracks/manifest.json`. Update `calendar.ts` when

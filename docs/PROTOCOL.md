@@ -88,9 +88,11 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Red`, `Checkered`, `Ended`. 
   Bathurst: `1=Pos1, 2=Pos2, 3=Int1, 4=Pos3, 5=Int2, 6=Pos4, 7=Pos5`. The control line is `M`, so a
   lap is M → 1 → … → 7 → M: 8 crossings per lap, 15–25 s apart at Bathurst.
 - `E`: session. `C` = code (e.g. `P12`), `D` = name, `Y` = type (`Practice`, `Race`), `RI`/`RC`/`RV` = record time / driver / car.
-  `L` = scheduled laps, probably: `1` for the Top Ten Shootout, `0` for the timed support races (`<C Y="T">`). Not yet seen for a lap-based race.
+  `L` = scheduled laps: `161` for the Bathurst 1000 (Race 30, 11 Oct 2026), `1` for the Top Ten Shootout, `0` for
+  timed races (`<C Y="T">`).
 - `OL`: other categories at the meeting.
 - `RL`: entry list. `<R ID N V>` = Natsoft's internal car ID, car number, vehicle. `<V ID N>` = drivers; `_` stands for a space in surnames.
+  Driver `ID="1"` is the primary (full-time) driver and `2` the co-driver in every Bathurst 2026 entry; `B` matched `ID`.
 
 ## Per-car fields (`<L><P><D>`)
 
