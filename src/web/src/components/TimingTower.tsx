@@ -134,7 +134,7 @@ const LAYOUTS = {
 const abbreviation = (name: string) => surname(name).replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()
 
 /**
- * Laps per driver at co-driver events, e.g. "FEE 61 · WHI 23/54". With a minimum-laps rule, a driver who still
+ * Laps per driver at co-driver events, e.g. "FEE 71 · WHI 23/60". With a minimum-laps rule, a driver who still
  * needs laps shows the target; red when there aren't enough laps left in the race to get there.
  */
 function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; lapsLeft: number }) {

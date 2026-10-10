@@ -127,7 +127,7 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   else `KNOWN_RACE_LAPS` (Bathurst 1000 = 161). Hidden when unknown (timed races).
 - Endurance races: Driver laps column (`DriverLaps` in `TimingTower.tsx`) from `CarRow.DriverLaps`, which comes from
   Natsoft's `LCD` (current driver's laps, cumulative per driver) with our own count as the fallback.
-  `minDriverLaps()` = 54 at the Bathurst 1000 (check the regulations each year); red when a driver can't reach it.
+  `minDriverLaps()` = 60 at the Bathurst 1000 (2026) (check the regulations each year); red when a driver can't reach it.
   `UnattributedLaps` = laps before we connected that no one has claimed yet. Stint column = laps since the pit exit.
 - Pit stop log (`PitLog.tsx`, under the map in races): from `CarRow.PitLog` (`PI` in, `PT` = pit-lane seconds out,
   driver swap attached to the stop if it arrives up to 120 s after the exit).

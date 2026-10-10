@@ -22,11 +22,13 @@ export function raceLaps(session: SessionInfo): number {
 }
 
 /**
- * Minimum laps each driver must complete, at endurance events (0 = no rule). Bathurst 1000: 54 of 161 laps.
+ * Minimum laps each driver must complete, at endurance events (0 = no rule). Bathurst 1000: 60 of 161 laps
+ * (2026, with the fuel capacity change:
+ * https://www.v8sleuth.com.au/supercars-adjusts-fuel-capacity-change-for-enduros-finals/).
  * Check the sporting regulations each year.
  */
 export function minDriverLaps(session: SessionInfo): number {
-  return raceLaps(session) > 0 && /bathurst 1000/i.test(session.meeting) ? 54 : 0
+  return raceLaps(session) > 0 && /bathurst 1000/i.test(session.meeting) ? 60 : 0
 }
 
 /**
