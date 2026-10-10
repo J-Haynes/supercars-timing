@@ -7,3 +7,11 @@ export function isRace(sessionType: string): boolean {
 export function isShootout(sessionName: string, sessionType: string): boolean {
   return /shoot\s*-?out|top\s*(10|ten)/i.test(`${sessionName} ${sessionType}`)
 }
+
+/**
+ * The main championship. Support categories (Super2, TCM, Carrera Cup...) share Natsoft's V8SUPER feed;
+ * they're still recorded, but the app only shows Supercars.
+ */
+export function isSupercarsSession(sessionName: string): boolean {
+  return /supercars championship/i.test(sessionName)
+}

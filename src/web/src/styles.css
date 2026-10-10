@@ -90,10 +90,6 @@ main { flex: 1; padding: 0 16px 24px; }
 .flash { animation: flash .8s ease-out; }
 @keyframes flash { from { background: rgba(255, 255, 255, .07); } to { background: transparent; } }
 
-.progress { display: flex; gap: 2px; }
-.seg { width: 12px; height: 6px; border-radius: 2px; background: var(--line); }
-.seg.passed { background: #3a4552; }
-.seg.current { background: var(--text); }
 
 .empty { color: var(--muted); padding: 64px 16px; text-align: center; font-size: 15px; }
 
@@ -265,19 +261,26 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-status.mapped { color: var(--green); }
 .map-status.provisional { color: var(--yellow); }
 
-/* Replay bar */
-.replay-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 16px 12px; padding: 8px 12px; border: 1px solid #3a4f6b; border-radius: 8px; background: #121a24; font-size: 13px; }
-.replay-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; background: #2f6fdf; color: #fff; border-radius: 4px; padding: 2px 6px; }
-.replay-name { font-weight: 600; }
-.replay-play { width: 34px; height: 28px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--text); cursor: pointer; }
-.replay-bar input[type="range"] { flex: 1; min-width: 160px; accent-color: #2f6fdf; }
-.replay-time { font-family: ui-monospace, monospace; color: var(--muted); }
-.replay-bar select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; }
-.replay-live { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+/* Results view */
+.results { padding-top: 4px; }
+.results-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 12px; }
+.results-head h2 { margin: 2px 0; font-size: 20px; }
+.results-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; background: var(--line); color: var(--muted); border-radius: 4px; padding: 2px 6px; vertical-align: middle; }
+.back-button { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.results-table { max-width: 900px; }
+
+/* Mini-sectors */
+.minis { display: flex; gap: 2px; }
+.mini { width: 12px; height: 8px; border-radius: 2px; background: var(--line); box-sizing: border-box; }
+.mini.purple { background: var(--purple); }
+.mini.green { background: var(--green); }
+.mini.yellow { background: var(--yellow); }
+.mini.prev { opacity: .3; }
+.mini.active { outline: 1.5px solid var(--text); outline-offset: 1px; }
+.minis.in-pit .mini { opacity: .25; }
 
 /* Delay buttons: larger touch targets, no double-tap zoom swallowing taps on phones */
 .delay button { width: auto; min-width: 30px; padding: 0 6px; touch-action: manipulation; }
-.delay.muted { color: var(--muted); }
 
 /* Card mini-sectors */
 .splits-label { color: var(--muted); font-size: 13px; margin-top: 12px; }

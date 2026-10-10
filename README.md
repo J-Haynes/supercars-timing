@@ -77,8 +77,10 @@ every session on the feed (support categories included) into one file.
 - **On-track card** for the Top Ten Shootout: the car on its lap, a running lap timer, and the gap to provisional
   pole at every timing point, plus where they're running in the order. It appears automatically for Shootout
   sessions; the "On-track card" control can force it on or off for any session.
-- **Race viewer:** open the menu (☰) to replay any recorded session, with play/pause, a scrubber and up to 60×
-  speed. Each viewer gets their own replay; live viewers aren't affected.
+- **Results:** open the menu (☰) for the final classification of any recorded Supercars session.
+- **Mini-sectors** in the tower colour each stretch of every car's lap: purple fastest of anyone, green a personal
+  best, yellow slower.
+- **Supercars only:** support categories share the timing feed; the app records them but only shows Supercars.
 - **Upcoming rounds** are listed in the menu with a countdown and whether the track is mapped yet.
 - **Tips** for all of this are listed at the bottom of the page.
 - **Map controls:** rotate (remembered per track), zoom with the wheel, a pinch or the buttons, drag to pan.

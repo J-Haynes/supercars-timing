@@ -1,7 +1,7 @@
 // Mirrors the server DTOs (SupercarsTiming.Natsoft.TimingSnapshot, Server.Hubs.TimingUpdate).
 // Times are seconds; 0 means "no time yet".
 
-export type FeedState = 'starting' | 'connecting' | 'waiting' | 'live' | 'replaying' | 'paused' | 'error' | 'ended'
+export type FeedState = 'starting' | 'connecting' | 'waiting' | 'live' | 'replaying' | 'error' | 'ended'
 
 export interface FeedStatus {
   mode: 'Live' | 'Replay'
@@ -83,6 +83,10 @@ export interface CarRow {
   driverIndex: string
   /** Natsoft time of the last driver swap this session; 0 = none. */
   driverChangedAt: number
+  /** Mini-sector times in point order (index i = stretch from point i to the next). 0 = no time. */
+  currentSegments: number[]
+  lastLapSegments: number[]
+  bestSegments: number[]
 }
 
 export interface TimingSnapshot {
@@ -92,28 +96,18 @@ export interface TimingSnapshot {
   cars: CarRow[]
   /** Field-typical seconds per segment, in point order. 0 = unknown. */
   segmentReference: number[]
+  /** Fastest time anyone has done through each stretch this session (purple mini-sector). */
+  segmentBest: number[]
   now: number
   messageCount: number
-}
-
-/** Present while this viewer is watching a replay. */
-export interface ReplayStatus {
-  sessionId: string
-  meeting: string
-  name: string
-  position: number
-  duration: number
-  playing: boolean
-  speed: number
 }
 
 export interface TimingUpdate {
   feed: FeedStatus
   timing: TimingSnapshot
-  replay?: ReplayStatus | null
 }
 
-/** A recorded session available to replay (GET /api/sessions). */
+/** A recorded session (GET /api/sessions); its results come from GET /api/sessions/{id}/results. */
 export interface RecordedSession {
   id: string
   meeting: string

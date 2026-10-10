@@ -3,13 +3,14 @@ import type { RecordedSession } from '../types'
 import { UPCOMING, eventStart } from '../calendar'
 import { trackManifest } from '../tracks'
 
-/** Slide-out menu: live, previous sessions to replay, and upcoming events. */
-export function Menu({ open, onClose, replayingId, onWatchLive, onReplay }: {
+/** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
+export function Menu({ open, onClose, resultsId, onWatchLive, onResults }: {
   open: boolean
   onClose: () => void
-  replayingId: string | null
+  /** Session whose results are on screen, or null for live timing. */
+  resultsId: string | null
   onWatchLive: () => void
-  onReplay: (sessionId: string) => void
+  onResults: (session: RecordedSession) => void
 }) {
   const [sessions, setSessions] = useState<RecordedSession[] | null>(null)
   const now = useNow(open)
@@ -39,15 +40,15 @@ export function Menu({ open, onClose, replayingId, onWatchLive, onReplay }: {
 
         <section>
           <h2>Live</h2>
-          <button type="button" className={`menu-item${replayingId ? '' : ' active'}`} onClick={() => { onWatchLive(); onClose() }}>
+          <button type="button" className={`menu-item${resultsId ? '' : ' active'}`} onClick={() => { onWatchLive(); onClose() }}>
             <span className="live-dot" /> Live timing
           </button>
         </section>
 
         <section>
-          <h2>Previous sessions</h2>
+          <h2>Results</h2>
           {sessions === null && <p className="menu-muted">Loading…</p>}
-          {sessions?.length === 0 && <p className="menu-muted">No recordings yet. Sessions appear here once they've been recorded.</p>}
+          {sessions?.length === 0 && <p className="menu-muted">No results yet. Supercars sessions appear here once they've been recorded.</p>}
           {Object.entries(byMeeting).map(([meeting, list]) => (
             <div key={meeting} className="menu-group">
               <h3>{meeting.replace(/^\d{4}\s+/, '')}</h3>
@@ -55,12 +56,12 @@ export function Menu({ open, onClose, replayingId, onWatchLive, onReplay }: {
                 <div key={day}>
                   <div className="menu-day">{day}</div>
                   {daySessions.map((s) => {
-                    const { series, session } = splitName(s.name)
+                    const { session } = splitName(s.name)
                     return (
-                      <button key={s.id} type="button" className={`menu-item session${s.id === replayingId ? ' active' : ''}`}
-                        onClick={() => { onReplay(s.id); onClose() }}>
+                      <button key={s.id} type="button" className={`menu-item session${s.id === resultsId ? ' active' : ''}`}
+                        onClick={() => { onResults(s); onClose() }}>
                         <span className="session-name">{session}</span>
-                        <span className="session-meta">{series} · {timeLabel(s.start)} · {Math.round(s.durationSeconds / 60)} min</span>
+                        <span className="session-meta">{timeLabel(s.start)} · {Math.round(s.durationSeconds / 60)} min</span>
                       </button>
                     )
                   })}

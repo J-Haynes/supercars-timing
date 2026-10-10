@@ -1,7 +1,8 @@
 using System.Text.Json.Serialization;
 using SupercarsTiming.Server.Feed;
 using SupercarsTiming.Server.Hubs;
-using SupercarsTiming.Server.Replay;
+using SupercarsTiming.Natsoft;
+using SupercarsTiming.Server.Sessions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +12,6 @@ builder.Services.AddSingleton<TimingStore>();
 builder.Services.AddHostedService<TimingFeedService>();
 builder.Services.AddHostedService<SnapshotBroadcaster>();
 builder.Services.AddSingleton<SessionCatalog>();
-builder.Services.AddSingleton<ReplayManager>();
 
 builder.Services.AddSignalR()
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -21,11 +21,17 @@ var app = builder.Build();
 
 app.MapGet("/api/health", (TimingStore store) => Results.Ok(store.Status));
 app.MapGet("/api/snapshot", (TimingStore store) => Results.Ok(new TimingUpdate(store.Status, store.Snapshot())));
-app.MapGet("/api/sessions", (SessionCatalog catalog) => Results.Ok(catalog.List().Select(s => new
-{
-    s.Id, s.Meeting, s.Name, s.Type, s.Track, s.TrackCode, s.Start, s.End,
-    DurationSeconds = Math.Round(s.DurationSeconds), s.Messages,
-})));
+// Recorded sessions, newest first. Supercars Championship only unless ?all=true (support categories are recorded too).
+app.MapGet("/api/sessions", (SessionCatalog catalog, bool? all) => Results.Ok(catalog.List()
+    .Where(s => all == true || SessionIndex.IsSupercarsChampionship(s.Name))
+    .Select(s => new
+    {
+        s.Id, s.Meeting, s.Name, s.Type, s.Track, s.TrackCode, s.Start, s.End,
+        DurationSeconds = Math.Round(s.DurationSeconds), s.Messages,
+    })));
+// Final classification of a recorded session.
+app.MapGet("/api/sessions/{id}/results", (SessionCatalog catalog, string id) =>
+    catalog.Results(id) is { } results ? Results.Ok(results) : Results.NotFound());
 app.MapHub<TimingHub>(TimingHub.Path);
 
 // Production: serve the built React app from wwwroot (npm run build in src/web writes there).

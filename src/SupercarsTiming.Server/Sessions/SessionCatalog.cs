@@ -1,14 +1,16 @@
 using SupercarsTiming.Natsoft;
 using SupercarsTiming.Server.Feed;
 
-namespace SupercarsTiming.Server.Replay;
+namespace SupercarsTiming.Server.Sessions;
 
-/// <summary>Sessions available to replay, found in data/recordings. Rescans when files change.</summary>
+/// <summary>Recorded sessions found in data/recordings, and their results. Rescans when files change.</summary>
 public sealed class SessionCatalog(RepoPaths paths)
 {
     readonly Lock _lock = new();
     string _signature = "";
     List<RecordedSession> _sessions = [];
+    // Results are cached per session and size: a session still being recorded gets recomputed as it grows.
+    readonly Dictionary<string, (int Messages, TimingSnapshot Results)> _results = [];
 
     public IReadOnlyList<RecordedSession> List()
     {
@@ -29,4 +31,16 @@ public sealed class SessionCatalog(RepoPaths paths)
     }
 
     public RecordedSession? Find(string id) => List().FirstOrDefault(s => s.Id == id);
+
+    public TimingSnapshot? Results(string id)
+    {
+        if (Find(id) is not { } session) return null;
+        lock (_lock)
+        {
+            if (_results.TryGetValue(id, out var cached) && cached.Messages == session.Messages) return cached.Results;
+        }
+        var results = SessionIndex.Results(session);
+        lock (_lock) { _results[id] = (session.Messages, results); }
+        return results;
+    }
 }

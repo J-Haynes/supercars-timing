@@ -6,5 +6,6 @@ export const TIPS: string[] = [
   'Watching on TV or a stream? Use Broadcast delay to hold the timing back until it lines up with your picture.',
   'Simple mode shows just the essentials. Turn it off for sectors, speed trap and lap progress.',
   'During the Top Ten Shootout the on-track card compares each lap with provisional pole, timing point by timing point.',
-  'Open the menu (☰) to replay earlier sessions or see what\'s coming up.',
+  'Open the menu (☰) for results from earlier sessions and countdowns to upcoming rounds.',
+  'The Mini-sectors column colours each stretch of the lap: purple fastest of anyone, green a personal best, yellow slower. Faded blocks are from the previous lap.',
 ]

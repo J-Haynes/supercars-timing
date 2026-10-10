@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
-import { TrackProgress } from './TrackProgress'
+import { MiniSectors } from './MiniSectors'
 import { isRace } from '../session'
 
 interface Ctx {
   car: CarRow
+  order: string[]
+  segmentBest: number[]
   now: number
   simple: boolean
   isFirst: boolean
@@ -102,17 +104,17 @@ const COLUMNS: Record<string, Column> = {
   },
   pits: { key: 'pits', header: 'Pits', numeric: true, cell: ({ car }) => car.pitStops || '' },
   laps: { key: 'laps', header: 'Laps', numeric: true, cell: ({ car }) => car.laps || '' },
-  progress: { key: 'progress', header: 'Lap progress', cell: ({ car, points }) => <TrackProgress lastPoint={car.lastPoint} points={points} /> },
+  minis: { key: 'minis', header: 'Mini-sectors', cell: ({ car, order, segmentBest }) => <MiniSectors car={car} order={order} sessionBest={segmentBest} /> },
 }
 
 /** Which columns to show, in order, for each session kind and display mode. */
 const LAYOUTS = {
   timed: {
-    detailed: ['pos', 'car', 'driver', 'best', 'gap', 'int', 'last', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'progress'],
+    detailed: ['pos', 'car', 'driver', 'best', 'gap', 'int', 'last', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'minis'],
     simple: ['pos', 'car', 'driver', 'best', 'gap', 'last', 'pits', 'laps'],
   },
   race: {
-    detailed: ['pos', 'car', 'driver', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'progress'],
+    detailed: ['pos', 'car', 'driver', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'minis'],
     simple: ['pos', 'car', 'driver', 'gap', 'int', 'last', 'pits', 'laps'],
   },
 }
@@ -127,6 +129,7 @@ export function TimingTower({ timing, simple, hoverId, pinned, onHover, onToggle
 }) {
   const { cars, best, timingPoints } = timing
   const race = isRace(timing.session.type)
+  const order = ['M', ...timingPoints.map((p) => p.id)]
   const columns = LAYOUTS[race ? 'race' : 'timed'][simple ? 'simple' : 'detailed'].map((k) => COLUMNS[k])
 
   return (
@@ -141,7 +144,7 @@ export function TimingTower({ timing, simple, hoverId, pinned, onHover, onToggle
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, now: timing.now, simple, isFirst: i === 0, race, best, points: timingPoints }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, race, best, points: timingPoints }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr

@@ -10,11 +10,13 @@ public sealed record TimingSnapshot(
     BestTimes Best,
     IReadOnlyList<CarRow> Cars,
     IReadOnlyList<double> SegmentReference,
+    /// <summary>Fastest time anyone has done through each stretch this session (mini-sector purple). 0 = none yet.</summary>
+    IReadOnlyList<double> SegmentBest,
     double Now,
     long MessageCount)
 {
     public static TimingSnapshot Empty { get; } =
-        new(new SessionInfo("", "", "", "", "", "", null, null), [], new BestTimes(null, null, null, null, null), [], [], 0, 0);
+        new(new SessionInfo("", "", "", "", "", "", null, null), [], new BestTimes(null, null, null, null, null), [], [], [], 0, 0);
 
     public static TimingSnapshot From(TimingState s)
     {
@@ -39,7 +41,8 @@ public sealed record TimingSnapshot(
                     c.LapStartAt, c.LapsSincePit,
                     Splits(c.CurrentLapSplits, s), Splits(c.LastLapSplits, s), BestSplits(c, s),
                     e?.Drivers.OrderBy(d => d.Key).Select(d => d.Value).ToArray() ?? [],
-                    c.DriverIndex, c.DriverChangedAt);
+                    c.DriverIndex, c.DriverChangedAt,
+                    Segments(c.CurrentLapSegments, order), Segments(c.LastLapSegments, order), Segments(c.BestSegments, order));
             })
             .ToList();
 
@@ -60,7 +63,7 @@ public sealed record TimingSnapshot(
 
         return new TimingSnapshot(
             new SessionInfo(s.Meeting, s.SessionName, s.SessionType, s.TrackName, s.TrackCode, s.Flag, s.ClockRemaining, s.ClockElapsed),
-            s.TimingPoints.ToList(), best, cars, reference, s.Now, s.MessageCount);
+            s.TimingPoints.ToList(), best, cars, reference, SessionBestSegments(s, order), s.Now, s.MessageCount);
     }
 
     /// <summary>
@@ -85,6 +88,16 @@ public sealed record TimingSnapshot(
         var field = reference[i];
         if (own > 0 && (field == 0 || (own > field * 0.8 && own < field * 1.6))) return Math.Round(own, 3);
         return field;
+    }).ToArray();
+
+    /// <summary>Per-stretch times in point order (index i = from point i to the next). 0 = no time.</summary>
+    static double[] Segments(Dictionary<string, double> segments, List<string> order) =>
+        order.Select(p => Math.Round(segments.GetValueOrDefault(p), 3)).ToArray();
+
+    static double[] SessionBestSegments(TimingState s, List<string> order) => order.Select(p =>
+    {
+        var times = s.Cars.Values.Select(c => c.BestSegments.GetValueOrDefault(p)).Where(t => t > 0).ToList();
+        return times.Count > 0 ? Math.Round(times.Min(), 3) : 0;
     }).ToArray();
 
     /// <summary>Splits in timing point order with the lap time last: [TP1, TP2, ..., TPn, lap]. 0 = not reached.</summary>
@@ -135,4 +148,8 @@ public sealed record CarRow(
     /// <summary>All drivers entered in the car, in Natsoft's order (co-driver events have two).</summary>
     IReadOnlyList<string> Drivers,
     string DriverIndex,
-    double DriverChangedAt);
+    double DriverChangedAt,
+    /// <summary>Mini-sector times in point order: this lap so far, the last complete lap, and the car's best.</summary>
+    IReadOnlyList<double> CurrentSegments,
+    IReadOnlyList<double> LastLapSegments,
+    IReadOnlyList<double> BestSegments);

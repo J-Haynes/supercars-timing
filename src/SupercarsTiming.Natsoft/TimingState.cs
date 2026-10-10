@@ -174,6 +174,16 @@ public sealed class TimingState
         if (Str(d, "LP") is { } lp && lp != c.LastPoint) OnTimingPoint(c, lp, d);
     }
 
+    /// <summary>
+    /// Rejects stretch times far quicker than the field's typical time. Crossing a pit-lane timing line (which
+    /// Natsoft can report as the control line) produces impossible ones, e.g. 1.7 s for a 9 s stretch.
+    /// </summary>
+    bool IsPlausibleSegment(string from, double seconds)
+    {
+        var times = Cars.Values.Select(x => x.SegmentSeconds.GetValueOrDefault(from)).Where(t => t > 0).Order().ToList();
+        return times.Count < 3 || seconds >= times[times.Count / 2] * 0.8;
+    }
+
     /// <summary>Points in lap order: "M" (control line) then each timing point ID.</summary>
     public IEnumerable<string> PointOrder => TimingPoints.Select(tp => tp.Id).Prepend("M");
 
@@ -186,7 +196,19 @@ public sealed class TimingState
         if (!c.InPit && prev >= 0 && c.LastPointAt > 0 && order[(prev + 1) % order.Count] == point)
         {
             var seconds = Now - c.LastPointAt;
-            if (seconds > 0) c.SegmentSeconds[c.LastPoint] = seconds;
+            if (seconds > 0 && IsPlausibleSegment(c.LastPoint, seconds))
+            {
+                c.SegmentSeconds[c.LastPoint] = seconds;
+                // Mini-sectors: this lap's time through the stretch, and the car's best through it.
+                c.CurrentLapSegments[c.LastPoint] = seconds;
+                if (!c.BestSegments.TryGetValue(c.LastPoint, out var best) || seconds < best) c.BestSegments[c.LastPoint] = seconds;
+            }
+        }
+        if (point == "M")
+        {
+            // The stretch into the line completes the lap: keep it as "last lap" while the new lap fills in.
+            c.LastLapSegments = new(c.CurrentLapSegments);
+            c.CurrentLapSegments.Clear();
         }
         c.LastPoint = point;
         c.LastPointAt = Now;
@@ -287,6 +309,12 @@ public sealed class CarState
     /// Used to animate the car between points on the track map.
     /// </summary>
     public Dictionary<string, double> SegmentSeconds { get; } = [];
+
+    /// <summary>Mini-sector times (seconds through each stretch, keyed by the starting point) on the current lap.</summary>
+    public Dictionary<string, double> CurrentLapSegments { get; } = [];
+    public Dictionary<string, double> LastLapSegments { get; set; } = [];
+    /// <summary>The car's best time through each stretch this session.</summary>
+    public Dictionary<string, double> BestSegments { get; } = [];
 
     /// <summary>Natsoft time the current lap started at the control line; 0 when unknown (e.g. an out-lap).</summary>
     public double LapStartAt { get; set; }

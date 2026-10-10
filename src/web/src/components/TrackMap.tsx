@@ -111,8 +111,11 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
   const layer = (c: CarRow) => (c.id === hoverId ? 3 : c.id === focusId ? 2 : pinned.includes(c.carNumber) ? 1 : 0)
   const cars = [...timing.cars].sort((a, b) => layer(a) - layer(b) || (b.position || 99) - (a.position || 99))
   let pitIndex = 0
-  // In the Shootout only the car on its run matters: hide cars once they're back in the pits or on the in-lap.
+  // In the Shootout, show cars on their out-lap, flying lap and in-lap, and hide them once they're back in the
+  // pits. Natsoft doesn't flag the pit entry after the in-lap; the car just stops crossing timing points. So an
+  // in-lap car that's past the last timing point and overdue at the line has gone into the pit lane.
   const shootout = isShootout(timing.session.name, timing.session.type)
+  const lastPointId = order[order.length - 1]
 
   const w = view.fit.w / zoom
   const h = view.fit.h / zoom
@@ -144,8 +147,11 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
           ))}
         </g>
         {cars.map((car) => {
-          if (shootout && (car.inPit || car.lapsSincePit >= 2)) return null
-          const state = carPosition(car, model, order, fallback, now, cap)
+          if (shootout && car.inPit) return null
+          const inLap = shootout && car.lapsSincePit >= 2
+          // In-laps are slow: don't cap them at racing pace.
+          const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap)
+          if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) return null
           let p: Vec
           if (state.kind === 'track') p = s(state.distance)
           else if (state.kind === 'pit') p = view.toScreen(track.pitLane.length > 1 ? pitSlot(model, pitIndex++) : pitAreaSlot(model, pitIndex++))

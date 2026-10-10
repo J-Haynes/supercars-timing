@@ -78,4 +78,36 @@ public class SegmentTimingTests
         feeney = TimingSnapshot.From(s).Cars.Single(c => c.CarNumber == "88");
         Assert.Equal(13, feeney.SegmentSeconds[0], 3);         // falls back to the field reference
     }
+
+    [Fact]
+    public void Mini_sectors_track_current_last_and_best()
+    {
+        var s = Fresh();
+        Cross(s, 1000, "22", "M");
+        Cross(s, 1012, "22", "1"); Cross(s, 1026, "22", "2"); Cross(s, 1050, "22", "M");   // lap 1: 12, 14, 24
+        Cross(s, 1061, "22", "1");                                                           // lap 2: 11 so far
+        Cross(s, 1000, "9", "M"); Cross(s, 1010.5, "9", "1");                                // car 10: 10.5
+
+        var car = s.Cars["22"];
+        Assert.Equal(11, car.CurrentLapSegments["M"], 3);
+        Assert.Equal([12.0, 14.0, 24.0], new[] { car.LastLapSegments["M"], car.LastLapSegments["1"], car.LastLapSegments["2"] });
+        Assert.Equal(11, car.BestSegments["M"], 3);
+
+        var snap = TimingSnapshot.From(s);
+        var row = snap.Cars.Single(c => c.CarNumber == "88");
+        Assert.Equal([11.0, 0, 0], row.CurrentSegments);
+        Assert.Equal([12.0, 14.0, 24.0], row.LastLapSegments);
+        Assert.Equal([10.5, 14.0, 24.0], snap.SegmentBest);                                  // purple: fastest of anyone
+    }
+
+    [Fact]
+    public void Implausibly_quick_stretches_are_ignored()
+    {
+        var s = Fresh();
+        s.Apply("""<RL><R ID="5" N="5" V="Ford Mustang GT"><V ID="1" N="A" /></R><R ID="6" N="6" V="Ford Mustang GT"><V ID="1" N="B" /></R></RL>""");
+        foreach (var car in new[] { "9", "5", "6" }) { Cross(s, 1000, car, "M"); Cross(s, 1012, car, "1"); }   // field: 12 s
+        Cross(s, 1000, "22", "M"); Cross(s, 1001.7, "22", "1");                                             // 1.7 s: pit line
+        Assert.False(s.Cars["22"].BestSegments.ContainsKey("M"));
+        Assert.Equal(12, TimingSnapshot.From(s).SegmentBest[0], 3);
+    }
 }

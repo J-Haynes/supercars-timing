@@ -20,6 +20,24 @@ public sealed record RecordedSession(
 /// <summary>Finds sessions in recording files and reads their messages back.</summary>
 public static class SessionIndex
 {
+    /// <summary>
+    /// True for the main championship ("2026 Repco Supercars Championship - ..."). Support categories share the
+    /// V8SUPER feed (Super2, TCM, Carrera Cup, ...) and are recorded, but the app only shows Supercars.
+    /// </summary>
+    public static bool IsSupercarsChampionship(string sessionName) =>
+        sessionName.Contains("Supercars Championship", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Final state of a session: the classification as it stood at the last message.</summary>
+    public static TimingSnapshot Results(RecordedSession session)
+    {
+        var state = new TimingState();
+        foreach (var m in Read(session))
+        {
+            try { state.Apply(m); } catch { /* skip malformed frames */ }
+        }
+        return TimingSnapshot.From(state);
+    }
+
     /// <summary>Gap under which two parts with the same meeting and session name are treated as one session.</summary>
     public static readonly TimeSpan MergeGap = TimeSpan.FromMinutes(15);
 

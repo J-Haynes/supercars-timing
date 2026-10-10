@@ -62,5 +62,20 @@ public class SessionIndexTests : IDisposable
         Assert.Empty(SessionIndex.Scan([file]));
     }
 
+    [Fact]
+    public void Results_are_the_final_state()
+    {
+        var file = Write("a.jsonl", Session(T0, "2026 Repco Supercars Championship - Practice 6", 60));
+        var results = SessionIndex.Results(Assert.Single(SessionIndex.Scan([file])));
+        Assert.Equal("MOUNT PANORAMA - BATHURST", results.Session.Track);
+        Assert.Equal(59, results.Session.ClockElapsed);     // from the last clock message
+    }
+
+    [Theory]
+    [InlineData("2026 Repco Supercars Championship - Top Ten Shootout Race 30", true)]
+    [InlineData("2026 Dunlop Super 2 Series - Race 2", false)]
+    [InlineData("2026 Touring Car Masters - Race 2", false)]
+    public void Supercars_filter(string name, bool expected) => Assert.Equal(expected, SessionIndex.IsSupercarsChampionship(name));
+
     public void Dispose() => Directory.Delete(_dir, true);
 }

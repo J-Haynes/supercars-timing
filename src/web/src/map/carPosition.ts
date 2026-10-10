@@ -2,7 +2,7 @@ import type { CarRow } from '../types'
 import type { TrackModel } from './trackModel'
 
 export type CarMapState =
-  | { kind: 'track'; distance: number; stale: boolean }
+  | { kind: 'track'; distance: number; stale: boolean; overdue: boolean }
   | { kind: 'pit' }
   | { kind: 'unknown' }
 
@@ -36,12 +36,13 @@ export function carPosition(
   // Outside races a car's "recent pace" is often an out-lap or cool-down lap. Capping it near the
   // track's typical racing pace keeps flying laps smooth; a slow car simply waits at the next point.
   if (cap?.[i]) expected = Math.min(expected || Infinity, cap[i] * 1.12)
-  if (expected <= 0) return { kind: 'track', distance: track.wrap(from), stale: false }
+  if (expected <= 0) return { kind: 'track', distance: track.wrap(from), stale: false, overdue: false }
 
   const elapsed = Math.max(0, now - car.lastPointAt)
   // Hold just short of the next point if the car is late: it hasn't crossed yet, so it can't be past it.
   const fraction = Math.min(elapsed / expected, 0.99)
   const stale = elapsed > expected * 2.5
+  const overdue = elapsed > expected
 
   // Same fraction of the *simulated* time through this segment, then back to distance.
   const lap = track.lapSimTime
@@ -49,5 +50,5 @@ export function carPosition(
   const t1 = to > track.length ? lap + track.simTimeAt(to - track.length) : track.simTimeAt(to)
   const target = t0 + fraction * (t1 - t0)
   const distance = target > lap ? track.length + track.distanceAtSimTime(target - lap) : track.distanceAtSimTime(target)
-  return { kind: 'track', distance: track.wrap(distance), stale }
+  return { kind: 'track', distance: track.wrap(distance), stale, overdue }
 }
