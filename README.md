@@ -73,6 +73,10 @@ every session on the feed (support categories included) into one file.
   matches your TV or stream. Find a moment you can see on both, like a car crossing the line, and nudge the delay
   until they line up. The app keeps a rolling buffer, so changing the delay takes effect immediately.
 - **Highlight drivers** by double-clicking them in the tower or on the map. Highlights are remembered.
+- **On-track card** for the Top Ten Shootout: the car on its lap, a running lap timer, and the gap to provisional
+  pole at every timing point, plus where they're running in the order. It appears automatically for Shootout
+  sessions; the "On-track card" control can force it on or off for any session.
+- **Map controls:** rotate (remembered per track), zoom with the wheel, a pinch or the buttons, drag to pan.
 
 ## Track map
 

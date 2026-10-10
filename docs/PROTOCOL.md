@@ -80,7 +80,7 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red fla
 
 - `M`: meeting. `D` = name, `Y` = category.
 - `T`: track. `C` = code, `N` = name, `P` = number of timing points, `I` = number of intermediates,
-  `PI1`/`PI2` = which points are the intermediates. `<TP ID Y>` lists timing points in lap order.
+  `PI1`/`PI2` = which timing points the exact intermediate times `I1`/`I2` are measured at (Bathurst: 3 and 5). `<TP ID Y>` lists timing points in lap order.
   Bathurst: `1=Pos1, 2=Pos2, 3=Int1, 4=Pos3, 5=Int2, 6=Pos4, 7=Pos5`. The control line is `M`, so a
   lap is M → 1 → … → 7 → M: 8 crossings per lap, 15–25 s apart at Bathurst.
 - `E`: session. `C` = code (e.g. `P12`), `D` = name, `Y` = type (`Practice`, `Race`), `RI`/`RC`/`RV` = record time / driver / car.

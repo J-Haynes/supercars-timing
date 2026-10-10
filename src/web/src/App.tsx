@@ -9,6 +9,8 @@ import { TrackMap } from './components/TrackMap'
 import { TipBar } from './components/TipBar'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useTrack } from './tracks'
+import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
+import { isShootout } from './session'
 
 export default function App() {
   const { update: latest, connection } = useTiming()
@@ -20,6 +22,10 @@ export default function App() {
   const timing = update?.timing
   const track = useTrack(timing?.session.trackCode || undefined)
   const hasCars = !!timing && timing.cars.length > 0
+  const rate = latest && (latest.feed.state === 'live' || latest.feed.state === 'replaying') ? latest.feed.clockRate ?? 1 : 0
+  // The on-track card shows automatically for Shootout sessions (by Natsoft's session name), or when forced on.
+  const showCard = !!timing && (settings.focusCard === 'on' || (settings.focusCard === 'auto' && isShootout(timing.session.name, timing.session.type)))
+  const focusId = showCard && timing ? pickFocusCar(timing.cars, timing.now)?.id ?? null : null
 
   return (
     <div className="app">
@@ -30,9 +36,13 @@ export default function App() {
         buffered={buffered}
         onSimple={(simple) => updateSettings({ simple })}
         onDelay={(delay) => updateSettings({ delay })}
+        focusCard={settings.focusCard}
+        onFocusCard={(focusCard) => updateSettings({ focusCard })}
       />
       <main>
         {hasCars && update ? (
+          <>
+          {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
           <div className="layout">
             <TimingTower
               timing={timing}
@@ -49,7 +59,10 @@ export default function App() {
                     track={track}
                     update={update}
                     hoverId={hoverId}
+                    focusId={focusId}
                     pinned={settings.pinned}
+                    rotation={settings.mapRotation[track.code] ?? 0}
+                    onRotate={(deg) => updateSettings({ mapRotation: { ...settings.mapRotation, [track.code]: ((deg % 360) + 360) % 360 } })}
                     onHover={setHoverId}
                     onTogglePin={togglePinned}
                   />
@@ -61,6 +74,7 @@ export default function App() {
               )}
             </aside>
           </div>
+          </>
         ) : (
           <EmptyState state={latest?.feed.state} detail={latest?.feed.detail} connection={connection} />
         )}

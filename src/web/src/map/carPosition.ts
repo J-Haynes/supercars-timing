@@ -17,7 +17,11 @@ export type CarMapState =
  * @param order point order: "M" then the snapshot's timing point IDs
  * @param now   estimated current Natsoft time (seconds)
  */
-export function carPosition(car: CarRow, track: TrackModel, order: string[], fallback: number[], now: number): CarMapState {
+export function carPosition(
+  car: CarRow, track: TrackModel, order: string[], fallback: number[], now: number,
+  /** Optional upper bound per segment (seconds). See TrackMap: used outside races. */
+  cap?: number[],
+): CarMapState {
   if (car.inPit) return { kind: 'pit' }
   const i = order.indexOf(car.lastPoint)
   const from = track.pointDistance.get(car.lastPoint)
@@ -28,7 +32,10 @@ export function carPosition(car: CarRow, track: TrackModel, order: string[], fal
   if (to <= from) to += track.length // the segment crosses the control line
 
   // segmentSeconds may be missing if the server is older than the frontend.
-  const expected = car.segmentSeconds?.[i] || fallback[i] || 0
+  let expected = car.segmentSeconds?.[i] || fallback[i] || 0
+  // Outside races a car's "recent pace" is often an out-lap or cool-down lap. Capping it near the
+  // track's typical racing pace keeps flying laps smooth; a slow car simply waits at the next point.
+  if (cap?.[i]) expected = Math.min(expected || Infinity, cap[i] * 1.12)
   if (expected <= 0) return { kind: 'track', distance: track.wrap(from), stale: false }
 
   const elapsed = Math.max(0, now - car.lastPointAt)

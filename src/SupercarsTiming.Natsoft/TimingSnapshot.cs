@@ -35,7 +35,9 @@ public sealed record TimingSnapshot(
                     c.LiveGap, c.LiveGapLaps, c.LiveInterval, c.LiveIntervalLaps,
                     c.S1, c.S2, c.S3, c.BestS1, c.BestS2, c.BestS3,
                     c.Speed, c.PitStops, c.InPit, c.LastPoint, c.LastPointAt,
-                    ExpectedSegments(c, order, reference));
+                    ExpectedSegments(c, order, reference),
+                    c.LapStartAt, c.LapsSincePit,
+                    Splits(c.CurrentLapSplits, s), Splits(c.LastLapSplits, s), BestSplits(c, s));
             })
             .ToList();
 
@@ -83,6 +85,25 @@ public sealed record TimingSnapshot(
         return field;
     }).ToArray();
 
+    /// <summary>Splits in timing point order with the lap time last: [TP1, TP2, ..., TPn, lap]. 0 = not reached.</summary>
+    static double[] Splits(Dictionary<string, double> splits, TimingState s) =>
+        s.TimingPoints.Select(tp => tp.Id).Append("M").Select(id => Math.Round(splits.GetValueOrDefault(id), 4)).ToArray();
+
+    /// <summary>
+    /// Best-lap splits if the lap was seen live; otherwise what Natsoft tells us anyway (best intermediates
+    /// and best lap), so comparisons still work at those points for laps set before we connected.
+    /// </summary>
+    static double[] BestSplits(CarState c, TimingState s)
+    {
+        var splits = Splits(c.BestLapSplits, s);
+        if (splits[^1] > 0 || c.BestLap <= 0) return splits;
+        var ids = s.TimingPoints.Select(tp => tp.Id).ToList();
+        if (ids.IndexOf(s.Intermediate1 ?? "") is int i1 && i1 >= 0) splits[i1] = c.BestI1;
+        if (ids.IndexOf(s.Intermediate2 ?? "") is int i2 && i2 >= 0) splits[i2] = c.BestI2;
+        splits[^1] = c.BestLap;
+        return splits;
+    }
+
     static string Manufacturer(string? vehicle) => vehicle switch
     {
         null or "" => "",
@@ -106,4 +127,6 @@ public sealed record CarRow(
     double LiveGap, int LiveGapLaps, double LiveInterval, int LiveIntervalLaps,
     double S1, double S2, double S3, double BestS1, double BestS2, double BestS3,
     int Speed, int PitStops, bool InPit, string LastPoint, double LastPointAt,
-    IReadOnlyList<double> SegmentSeconds);
+    IReadOnlyList<double> SegmentSeconds,
+    double LapStartAt, int LapsSincePit,
+    IReadOnlyList<double> CurrentSplits, IReadOnlyList<double> LastLapSplits, IReadOnlyList<double> BestLapSplits);

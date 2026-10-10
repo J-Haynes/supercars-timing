@@ -93,6 +93,18 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Broadcast delay (`useDelayedUpdate.ts`) buffers updates client-side and shows the one from N seconds ago.
   The whole UI reads the delayed update; only the connection/feed indicator uses the live one.
 - Highlights are keyed by car number (stable across sessions), hover by Natsoft car ID.
+- On-track (Shootout) card (`ShootoutCard.tsx`): shown automatically when the session name/type matches
+  `isShootout()` in `session.ts` (/shoot-out|top 10|top ten/), or forced On/Off from the controls bar. It focuses
+  the car on its flying lap (`lapsSincePit === 1`), else the most recently active car on track, and compares its
+  splits with provisional pole's best-lap splits at each timing point.
+- Lap splits (`CarState.CurrentLapSplits/LastLapSplits/BestLapSplits`): seconds from the line at each timing point,
+  "M" = lap time. Exact I1/I2 at the track's intermediate points (`<T PI1 PI2>`), Natsoft's lap time at the line,
+  message time elsewhere. Snapshots send them as arrays `[TP1..TPn, lap]`; best splits fall back to F1/F2/FI.
+  `LapsSincePit`: 0 out-lap, 1 first flying lap, resets on pit entry.
+- Map view (`TrackMap.tsx`): everything is drawn in rotated screen coordinates (`makeView`) so text stays upright.
+  Rotation is saved per track in settings; zoom/pan (wheel, pinch, drag, buttons) is per page view.
+- Outside races, map pace is capped at ~1.12× the track file's typical segment time, so flying laps after slow
+  out-laps animate smoothly.
 
 ## Rules
 

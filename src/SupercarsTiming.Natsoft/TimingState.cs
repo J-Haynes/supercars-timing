@@ -21,6 +21,10 @@ public sealed class TimingState
     /// <summary>Timing points in lap order. The control line "M" is implicit before the first.</summary>
     public List<TimingPoint> TimingPoints { get; } = [];
 
+    /// <summary>Timing point IDs where Natsoft's exact intermediate times (I1/I2) are measured, e.g. "3" and "5" at Bathurst.</summary>
+    public string? Intermediate1 { get; private set; }
+    public string? Intermediate2 { get; private set; }
+
     /// <summary>Entry list keyed by Natsoft's internal car ID (R ID), not the car number.</summary>
     public Dictionary<string, Entry> Entries { get; } = [];
 
@@ -80,6 +84,8 @@ public sealed class TimingState
                 TrackName = Str(e, "N") ?? "";
                 TimingPoints.Clear();
                 TimingPoints.AddRange(e.Elements("TP").Select(tp => new TimingPoint(Str(tp, "ID") ?? "", Str(tp, "Y") ?? "")));
+                Intermediate1 = Str(e, "PI1");
+                Intermediate2 = Str(e, "PI2");
                 break;
             case "E":
                 SessionCode = Str(e, "C") ?? SessionCode;
@@ -127,8 +133,12 @@ public sealed class TimingState
         if (p.Element("D") is not { } d) return;
 
         // Pit status first, so a pit-lane crossing in the same update isn't counted as racing pace.
-        if (Str(d, "P") is { } inPit) c.InPit = inPit == "Y";
-        if (Str(d, "LP") is { } lp && lp != c.LastPoint) OnTimingPoint(c, lp);
+        if (Str(d, "P") is { } inPit)
+        {
+            var entering = inPit == "Y" && !c.InPit;
+            c.InPit = inPit == "Y";
+            if (entering) { c.LapsSincePit = 0; c.LapStartAt = 0; c.CurrentLapSplits.Clear(); }
+        }
         c.Laps = Int(d, "L") ?? c.Laps;
         c.LastLap = Dbl(d, "I") ?? c.LastLap;
         c.BestLap = Dbl(d, "FI") ?? c.BestLap;
@@ -150,12 +160,18 @@ public sealed class TimingState
         if (Int(d, "SP") is int sp && sp > 0) c.Speed = sp;   // sent as 0 then the value
         c.PitStops = Int(d, "PS") ?? c.PitStops;
         if (Dbl(d, "T") is double crossed && crossed > 0) c.LastLineCrossing = crossed;
+        c.BestI1 = Dbl(d, "F1") ?? c.BestI1;
+        c.BestI2 = Dbl(d, "F2") ?? c.BestI2;
+
+        // Timing point last: the lap time (I), best lap (FI) and intermediates (I1/I2) in this same
+        // update are needed to record the lap's splits.
+        if (Str(d, "LP") is { } lp && lp != c.LastPoint) OnTimingPoint(c, lp, d);
     }
 
     /// <summary>Points in lap order: "M" (control line) then each timing point ID.</summary>
     public IEnumerable<string> PointOrder => TimingPoints.Select(tp => tp.Id).Prepend("M");
 
-    void OnTimingPoint(CarState c, string point)
+    void OnTimingPoint(CarState c, string point, XElement d)
     {
         // Record how long the car took since the previous point, if it's the next one in order
         // (a missed crossing or a pit visit would make the time meaningless).
@@ -168,6 +184,30 @@ public sealed class TimingState
         }
         c.LastPoint = point;
         c.LastPointAt = Now;
+        if (c.InPit) return;
+
+        if (point == "M")
+        {
+            // Completing a timed lap: store its splits, with the official lap time as the last one.
+            if (c.LapStartAt > 0 && Dbl(d, "I") is double lap && lap > 0)
+            {
+                c.CurrentLapSplits["M"] = lap;
+                c.LastLapSplits = new(c.CurrentLapSplits);
+                if (Math.Abs(lap - c.BestLap) < 0.0005) c.BestLapSplits = new(c.CurrentLapSplits);
+            }
+            // A new lap starts. Prefer Natsoft's exact crossing time (D/@T) over the message time.
+            c.LapStartAt = Dbl(d, "T") is double t && t > 0 ? t : Now;
+            c.LapsSincePit++;
+            c.CurrentLapSplits.Clear();
+            return;
+        }
+
+        if (c.LapStartAt <= 0) return; // out-lap: no lap start to measure from
+        // Exact intermediate times where Natsoft gives them, otherwise time since the lap started.
+        double split = point == Intermediate1 && Dbl(d, "I1") is double i1 && i1 > 0 ? i1
+            : point == Intermediate2 && Dbl(d, "I2") is double i2 && i2 > 0 ? i2
+            : Now - c.LapStartAt;
+        c.CurrentLapSplits[point] = split;
     }
 
     static string? Str(XElement e, string a) => e.Attribute(a)?.Value;
@@ -238,5 +278,18 @@ public sealed class CarState
     /// Used to animate the car between points on the track map.
     /// </summary>
     public Dictionary<string, double> SegmentSeconds { get; } = [];
+
+    /// <summary>Natsoft time the current lap started at the control line; 0 when unknown (e.g. an out-lap).</summary>
+    public double LapStartAt { get; set; }
+    /// <summary>Laps started since leaving the pits: 0 = out-lap, 1 = first flying lap (the Shootout lap), 2+ = later.</summary>
+    public int LapsSincePit { get; set; }
+    /// <summary>Seconds from the line to each timing point on the current lap ("M" = lap time once complete).</summary>
+    public Dictionary<string, double> CurrentLapSplits { get; } = [];
+    public Dictionary<string, double> LastLapSplits { get; set; } = [];
+    /// <summary>Splits of the car's best lap, if that lap was seen live.</summary>
+    public Dictionary<string, double> BestLapSplits { get; set; } = [];
+    /// <summary>Best intermediate times (F1/F2), which may come from different laps.</summary>
+    public double BestI1 { get; set; }
+    public double BestI2 { get; set; }
     public double LastLineCrossing { get; set; }
 }

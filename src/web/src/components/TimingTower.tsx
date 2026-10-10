@@ -2,11 +2,7 @@ import type { ReactNode } from 'react'
 import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
 import { TrackProgress } from './TrackProgress'
-
-/** Practice, qualifying and shootouts are ranked by best lap; races by running order. */
-export function isRace(sessionType: string): boolean {
-  return sessionType.toLowerCase().includes('race')
-}
+import { isRace } from '../session'
 
 interface Ctx {
   car: CarRow

@@ -1,11 +1,15 @@
 import { MAX_DELAY_SECONDS } from '../useDelayedUpdate'
 
-export function Controls({ simple, delay, buffered, onSimple, onDelay }: {
+type FocusCard = 'auto' | 'on' | 'off'
+
+export function Controls({ simple, delay, buffered, onSimple, onDelay, focusCard, onFocusCard }: {
   simple: boolean
   delay: number
   buffered: number
   onSimple: (simple: boolean) => void
   onDelay: (seconds: number) => void
+  focusCard: FocusCard
+  onFocusCard: (value: FocusCard) => void
 }) {
   const setDelay = (s: number) => onDelay(Math.min(MAX_DELAY_SECONDS, Math.max(0, Math.round(s))))
   const filling = delay > 0 && buffered < delay - 0.5
@@ -16,6 +20,15 @@ export function Controls({ simple, delay, buffered, onSimple, onDelay }: {
         <input type="checkbox" checked={simple} onChange={(e) => onSimple(e.target.checked)} />
         <span className="track" aria-hidden><span className="thumb" /></span>
         Simple mode
+      </label>
+
+      <label className="focus-select" title="Card showing the car on its run vs provisional pole. Auto = Shootout sessions only.">
+        On-track card
+        <select value={focusCard} onChange={(e) => onFocusCard(e.target.value as FocusCard)}>
+          <option value="auto">Auto</option>
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
       </label>
 
       <div className="delay" title="Hold the timing back so it matches a delayed TV or stream broadcast">

@@ -9,10 +9,14 @@ export interface Settings {
   /** Car numbers the viewer has highlighted (double-click). Car numbers are stable across sessions. */
   pinned: string[]
   tipDismissed: boolean
+  /** On-track (Shootout) card: auto = only in Shootout sessions. */
+  focusCard: 'auto' | 'on' | 'off'
+  /** Map rotation in degrees, per Natsoft track code. */
+  mapRotation: Record<string, number>
 }
 
 const KEY = 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, focusCard: 'auto' }
 
 function load(): Settings {
   try {

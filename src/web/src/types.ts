@@ -69,6 +69,14 @@ export interface CarRow {
   lastPointAt: number
   /** Expected seconds from each point to the next, in point order (M, then timingPoints). 0 = unknown. */
   segmentSeconds: number[]
+  /** Natsoft time the current lap started (control-line crossing); 0 = unknown, e.g. on an out-lap. */
+  lapStartAt: number
+  /** Laps started since leaving the pits: 0 = out-lap, 1 = first flying lap, 2+ = later laps. */
+  lapsSincePit: number
+  /** Cumulative seconds from the line at each timing point, then the lap time last. 0 = not reached/unknown. */
+  currentSplits: number[]
+  lastLapSplits: number[]
+  bestLapSplits: number[]
 }
 
 export interface TimingSnapshot {
