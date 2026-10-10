@@ -20,7 +20,7 @@ export default function App() {
   const [hoverId, setHoverId] = useState<string | null>(null)
 
   const timing = update?.timing
-  const track = useTrack(timing?.session.trackCode || undefined)
+  const track = useTrack(timing?.session.trackCode || undefined, timing?.session.track)
   const hasCars = !!timing && timing.cars.length > 0
   const rate = latest && (latest.feed.state === 'live' || latest.feed.state === 'replaying') ? latest.feed.clockRate ?? 1 : 0
   // The on-track card shows automatically for Shootout sessions (by Natsoft's session name), or when forced on.

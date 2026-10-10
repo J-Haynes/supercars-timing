@@ -1,4 +1,5 @@
 import { MAX_DELAY_SECONDS } from '../useDelayedUpdate'
+import { ManufacturerKey } from './ManufacturerKey'
 
 type FocusCard = 'auto' | 'on' | 'off'
 
@@ -45,6 +46,8 @@ export function Controls({ simple, delay, buffered, onSimple, onDelay, focusCard
         {delay > 0 && <button type="button" className="link" onClick={() => setDelay(0)}>Live</button>}
         {filling && <span className="delay-filling">buffering {Math.floor(buffered)}/{delay}s</span>}
       </div>
+
+      <ManufacturerKey />
     </div>
   )
 }

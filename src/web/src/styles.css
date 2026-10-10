@@ -10,7 +10,7 @@
   --yellow: #ffd23f;
   --red: #ff4d4f;
   --ford: #2f6fdf;
-  --chevrolet: #e0a526;
+  --chevrolet: #f28c1b;
   --toyota: #e5172f;
   color-scheme: dark;
 }
@@ -144,7 +144,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-car text { fill: #fff; font: 700 44px ui-monospace, monospace; text-anchor: middle; pointer-events: none; }
 .map-car.mfr-ford circle { fill: var(--ford); }
 .map-car.mfr-chevrolet circle { fill: var(--chevrolet); }
-.map-car.mfr-chevrolet text { fill: #1d1400; }
+.map-car.mfr-chevrolet text { fill: #241300; }
 .map-car.mfr-toyota circle { fill: var(--toyota); }
 .map-car.dim { opacity: .45; }
 .map-car.hovered circle { stroke: #fff; stroke-width: 10; }
@@ -212,3 +212,22 @@ main { flex: 1; padding: 0 16px 24px; }
 .shootout-foot { color: var(--muted); font-size: 13px; }
 .shootout-foot strong { color: var(--text); }
 .shootout-foot .muted { opacity: .8; }
+
+/* Manufacturer key */
+.mfr-key { display: inline-flex; gap: 14px; margin-left: auto; font-size: 12px; }
+.mfr-key-item { display: inline-flex; align-items: center; gap: 6px; }
+.mfr-swatch { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); }
+.mfr-swatch.mfr-ford { background: var(--ford); }
+.mfr-swatch.mfr-chevrolet { background: var(--chevrolet); }
+.mfr-swatch.mfr-toyota { background: var(--toyota); }
+
+/* Co-drivers */
+.co-driver { color: var(--muted); font-weight: 400; font-size: 12px; }
+.swap-badge { margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #2f6fdf; color: #fff; }
+
+/* Map overlay while calibrating a provisional track */
+.map-overlay {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 70%;
+  background: rgba(11, 13, 16, .85); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 16px; color: var(--muted); font-size: 13px; text-align: center; pointer-events: none;
+}

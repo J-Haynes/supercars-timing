@@ -27,7 +27,10 @@ clever code, and explain non-obvious decisions in comments or the PR description
   - Endpoints: `GET /api/health`, `GET /api/snapshot`, hub `/hubs/timing` (method `snapshot`)
 - `src/web`: React 19 + Vite + TypeScript. `src/types.ts` mirrors the C# DTOs and must be kept in sync
   by hand. `useTiming.ts` handles the SignalR connection.
-  - `src/tracks/<CODE>.json`: generated track files (don't hand-edit; rerun TrackBuilder). `tracks/index.ts` lazy-loads them by Natsoft track code.
+  - `src/tracks/<CODE>.json`: generated track files (don't hand-edit; rerun TrackBuilder). `tracks/index.ts` lazy-loads them
+    by Natsoft track code, falling back to name fragments in `tracks/manifest.json` (also written by TrackBuilder).
+    Provisional tracks (no recording yet, e.g. `SURF` for the Gold Coast) are calibrated in the browser from live pace
+    (`map/calibrate.ts`). Track codes other than `MOUN` are guesses until we see them in the feed.
   - `src/map/`: `trackModel.ts` (geometry, sim-time ↔ distance), `carPosition.ts` (where a car is between timing points),
     `useSessionClock.ts` (smooth session time between server updates).
   - `src/components/TrackMap.tsx`: the SVG map. Wrapped in an `ErrorBoundary` so a map bug can't take down the tower.
@@ -93,6 +96,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Broadcast delay (`useDelayedUpdate.ts`) buffers updates client-side and shows the one from N seconds ago.
   The whole UI reads the delayed update; only the connection/feed indicator uses the live one.
 - Highlights are keyed by car number (stable across sessions), hover by Natsoft car ID.
+- Co-driver events: `CarRow.Drivers` lists every driver; `Driver`/`DriverIndex` is who's in the car (Natsoft `<P D>`).
+  `DriverChangedAt` marks a swap; the tower shows the other driver(s) in detailed mode and a SWAP badge for 3 minutes.
+- Manufacturer colours (CSS vars): Ford blue, Chevrolet orange, Toyota red; `ManufacturerKey` in the controls bar.
 - On-track (Shootout) card (`ShootoutCard.tsx`): shown automatically when the session name/type matches
   `isShootout()` in `session.ts` (/shoot-out|top 10|top ten/), or forced On/Off from the controls bar. It focuses
   the car on its flying lap (`lapsSincePit === 1`), else the most recently active car on track, and compares its

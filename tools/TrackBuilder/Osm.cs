@@ -9,8 +9,12 @@ public sealed class OsmCircuit
 
     public string Name { get; private init; } = "";
     public Dictionary<long, Node> Nodes { get; } = [];
-    /// <summary>Members with role "circuit", in relation order: (way name, node ids).</summary>
+    /// <summary>
+    /// Lap ways in relation order: (way name, node ids, role). Role "circuit" for circuit relations; for road
+    /// routes (e.g. street circuits) "forward"/"backward"/"" give the travel direction along the way.
+    /// </summary>
     public List<(string? Name, List<long> Nodes)> CircuitWays { get; } = [];
+    public List<string> CircuitRoles { get; } = [];
     /// <summary>Members with role "pit_lane", in relation order.</summary>
     public List<List<long>> PitLaneWays { get; } = [];
 
@@ -44,17 +48,68 @@ public sealed class OsmCircuit
 
         var circuit = new OsmCircuit { Name = rel.GetProperty("tags").TryGetProperty("name", out var rn) ? rn.GetString() ?? "" : "" };
         foreach (var kv in nodes) circuit.Nodes[kv.Key] = kv.Value;
-        foreach (var m in rel.GetProperty("members").EnumerateArray())
+        var members = rel.GetProperty("members").EnumerateArray()
+            .Where(m => m.GetProperty("type").GetString() == "way")
+            .Select(m => (Way: ways[m.GetProperty("ref").GetInt64()], Role: m.GetProperty("role").GetString() ?? ""))
+            .ToList();
+        // Circuit relations use role "circuit"; road-route relations use forward/backward/"" for each road.
+        bool hasCircuitRole = members.Any(m => m.Role == "circuit");
+        foreach (var (way, role) in members)
         {
-            if (m.GetProperty("type").GetString() != "way") continue;
-            var w = ways[m.GetProperty("ref").GetInt64()];
-            switch (m.GetProperty("role").GetString())
+            if (role == "pit_lane") circuit.PitLaneWays.Add(way.Nodes);
+            else if (role == "circuit" || (!hasCircuitRole && role is "forward" or "backward" or ""))
             {
-                case "circuit": circuit.CircuitWays.Add(w); break;
-                case "pit_lane": circuit.PitLaneWays.Add(w.Nodes); break;
+                circuit.CircuitWays.Add(way);
+                circuit.CircuitRoles.Add(role);
             }
         }
         return circuit;
+    }
+
+    /// <summary>
+    /// Builds a closed loop from ways listed in any order. Ways with role "forward"/"backward" keep that travel
+    /// direction; others may be flipped to connect. Small gaps between ways are bridged (with a warning).
+    /// Returns node ids; the first id is repeated at the end.
+    /// </summary>
+    public List<long> BuildLoop(Func<long, Point> position)
+    {
+        var segments = CircuitWays.Select((w, i) => (Nodes: CircuitRoles[i] == "backward" ? Enumerable.Reverse(w.Nodes).ToList() : w.Nodes, Fixed: CircuitRoles[i] is "forward" or "backward" or "circuit")).ToList();
+        if (CircuitRoles.All(r => r == "circuit")) return Chain(CircuitWays.Select(w => w.Nodes));
+
+        var used = new bool[segments.Count];
+        var loop = new List<long>(segments[0].Nodes);
+        used[0] = true;
+        for (int step = 1; step < segments.Count; step++)
+        {
+            var end = position(loop[^1]);
+            int best = -1; bool flip = false; double bestGap = double.MaxValue;
+            for (int i = 0; i < segments.Count; i++)
+            {
+                if (used[i]) continue;
+                var gap = Point.Distance(end, position(segments[i].Nodes[0]));
+                if (gap < bestGap) { bestGap = gap; best = i; flip = false; }
+                if (!segments[i].Fixed)
+                {
+                    gap = Point.Distance(end, position(segments[i].Nodes[^1]));
+                    if (gap < bestGap) { bestGap = gap; best = i; flip = true; }
+                }
+            }
+            var next = flip ? Enumerable.Reverse(segments[best].Nodes).ToList() : segments[best].Nodes;
+            if (next[0] == loop[^1]) loop.AddRange(next.Skip(1));
+            else
+            {
+                Console.Error.WriteLine($"warning: bridging a {bestGap:0} m gap between ways at node {loop[^1]} -> {next[0]}");
+                loop.AddRange(next);
+            }
+            used[best] = true;
+        }
+        var closing = Point.Distance(position(loop[^1]), position(loop[0]));
+        if (loop[^1] != loop[0])
+        {
+            if (closing > 1) Console.Error.WriteLine($"warning: closing a {closing:0} m gap to complete the loop");
+            loop.Add(loop[0]);
+        }
+        return loop;
     }
 
     /// <summary>Joins ways end-to-end into one node sequence, reversing ways where needed.</summary>

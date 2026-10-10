@@ -83,7 +83,8 @@ every session on the feed (support categories included) into one file.
 The map shows each car's estimated position. Natsoft only reports when a car passes one of a handful of
 timing points (8 per lap at Bathurst), so the map moves each car towards the next point at its recent pace,
 slowing for corners using a simulated speed profile. See [`tools/TrackBuilder`](tools/TrackBuilder/README.md)
-for how track files are made and how to add a circuit. Available: Mount Panorama (Bathurst).
+for how track files are made and how to add a circuit. Available: Mount Panorama (Bathurst), and Surfers Paradise
+(Gold Coast 500) as a provisional map that places its timing points from live pace during the first session.
 
 ## Configuration
 

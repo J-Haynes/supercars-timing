@@ -77,6 +77,12 @@ export interface CarRow {
   currentSplits: number[]
   lastLapSplits: number[]
   bestLapSplits: number[]
+  /** All drivers entered in the car (two at co-driver events), in Natsoft's order. */
+  drivers: string[]
+  /** Which of `drivers` is in the car: "1", "2"... */
+  driverIndex: string
+  /** Natsoft time of the last driver swap this session; 0 = none. */
+  driverChangedAt: number
 }
 
 export interface TimingSnapshot {

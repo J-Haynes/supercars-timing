@@ -37,7 +37,9 @@ public sealed record TimingSnapshot(
                     c.Speed, c.PitStops, c.InPit, c.LastPoint, c.LastPointAt,
                     ExpectedSegments(c, order, reference),
                     c.LapStartAt, c.LapsSincePit,
-                    Splits(c.CurrentLapSplits, s), Splits(c.LastLapSplits, s), BestSplits(c, s));
+                    Splits(c.CurrentLapSplits, s), Splits(c.LastLapSplits, s), BestSplits(c, s),
+                    e?.Drivers.OrderBy(d => d.Key).Select(d => d.Value).ToArray() ?? [],
+                    c.DriverIndex, c.DriverChangedAt);
             })
             .ToList();
 
@@ -129,4 +131,8 @@ public sealed record CarRow(
     int Speed, int PitStops, bool InPit, string LastPoint, double LastPointAt,
     IReadOnlyList<double> SegmentSeconds,
     double LapStartAt, int LapsSincePit,
-    IReadOnlyList<double> CurrentSplits, IReadOnlyList<double> LastLapSplits, IReadOnlyList<double> BestLapSplits);
+    IReadOnlyList<double> CurrentSplits, IReadOnlyList<double> LastLapSplits, IReadOnlyList<double> BestLapSplits,
+    /// <summary>All drivers entered in the car, in Natsoft's order (co-driver events have two).</summary>
+    IReadOnlyList<string> Drivers,
+    string DriverIndex,
+    double DriverChangedAt);

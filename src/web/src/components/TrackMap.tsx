@@ -5,6 +5,7 @@ import { TrackModel, type Vec } from '../map/trackModel'
 import { carPosition } from '../map/carPosition'
 import { useSessionClock } from '../map/useSessionClock'
 import { isRace } from '../session'
+import { calibrateTimingPoints } from '../map/calibrate'
 
 const CAR_RADIUS = 46 // metres, in map units
 const PIT_SPACING = 70
@@ -70,13 +71,35 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
 }) {
-  const model = useMemo(() => new TrackModel(track), [track])
-  const view = useMemo(() => makeView(model, rotation), [model, rotation])
-  const { zoom, pan, svgRef, handlers, zoomBy, reset } = useZoomPan(view.fit)
-
   const { timing, feed } = update
   const now = useSessionClock(timing.now, feed.state === 'live' || feed.state === 'replaying' ? feed.clockRate ?? 1 : 0)
   const order = useMemo(() => ['M', ...timing.timingPoints.map((p) => p.id)], [timing.timingPoints])
+
+  // Provisional tracks have no timing point positions yet: learn them from live pace, and keep them stable
+  // (only re-place if the typical lap changes by more than 3%, e.g. after a damp start dries out).
+  const calibration = useRef<{ key: string; total: number; points: TrackDefinition['timingPoints'] } | null>(null)
+  const calibrated = useMemo(() => {
+    if (!track.provisional) return null
+    const key = `${track.code}|${timing.session.name}|${order.join(',')}`
+    const names = Object.fromEntries(timing.timingPoints.map((p) => [p.id, p.name]))
+    const points = calibrateTimingPoints(track, order, names, timing.segmentReference)
+    const total = (timing.segmentReference ?? []).reduce((a, b) => a + b, 0)
+    const frozen = calibration.current
+    if (points && (!frozen || frozen.key !== key || Math.abs(total - frozen.total) / frozen.total > 0.03)) {
+      calibration.current = { key, total, points }
+    } else if (frozen && frozen.key !== key) {
+      calibration.current = null
+    }
+    return calibration.current?.points ?? null
+  }, [track, order, timing.session.name, timing.timingPoints, timing.segmentReference])
+  const effective = useMemo(() => (calibrated ? { ...track, timingPoints: calibrated } : track), [track, calibrated])
+  const awaitingCalibration = !!track.provisional && !calibrated
+
+  const geometry = useMemo(() => new TrackModel(track), [track])          // outline only: stable for the view
+  const model = useMemo(() => new TrackModel(effective), [effective])     // with timing points: car positions
+  const view = useMemo(() => makeView(geometry, rotation), [geometry, rotation])
+  const { zoom, pan, svgRef, handlers, zoomBy, reset } = useZoomPan(view.fit)
+
   const baseline = useMemo(
     () => order.map((id) => track.segmentSeconds.find((s) => s.from === id)?.seconds || 0),
     [order, track.segmentSeconds],
@@ -109,7 +132,7 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
         <path d={view.path} className="track-surface" />
         {track.pitLane.length > 1 && <path d={view.pit} className="pit-lane" />}
         <ControlLine view={view} model={model} />
-        {track.timingPoints.filter((p) => p.id !== 'M').map((p) => {
+        {effective.timingPoints.filter((p) => p.id !== 'M').map((p) => {
           const pt = s(p.distance)
           return <circle key={p.id} cx={pt.x} cy={pt.y} r={9} className="timing-point"><title>{p.name}</title></circle>
         })}
@@ -122,7 +145,7 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
           const state = carPosition(car, model, order, fallback, now, cap)
           let p: Vec
           if (state.kind === 'track') p = s(state.distance)
-          else if (state.kind === 'pit' && track.pitLane.length > 1) p = view.toScreen(pitSlot(model, pitIndex++))
+          else if (state.kind === 'pit') p = view.toScreen(track.pitLane.length > 1 ? pitSlot(model, pitIndex++) : pitAreaSlot(model, pitIndex++))
           else return null
           const dim = state.kind === 'pit' || (state.kind === 'track' && state.stale)
           return (
@@ -132,8 +155,14 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
           )
         })}
       </svg>
+      {awaitingCalibration && (
+        <div className="map-overlay">Learning where the timing points are from live pace. Cars appear after a lap or two.</div>
+      )}
       <div className="map-caption">
-        {track.name} · positions estimated between timing points · scroll or pinch to zoom, drag to pan · {track.source.attribution}
+        {track.name} · positions estimated between timing points
+        {track.provisional && ' · provisional map: timing points placed from live pace'}
+        {track.controlLineEstimated && ' · start/finish position estimated'}
+        {' · '}scroll or pinch to zoom, drag to pan · {track.source.attribution}
       </div>
     </div>
   )
@@ -288,6 +317,14 @@ function Label({ view, model, name, distance }: { view: View; model: TrackModel;
   const side = n.x * outward
   const anchor = side > 0.3 ? 'start' : side < -0.3 ? 'end' : 'middle'
   return <text className="corner-label" x={x} y={y} textAnchor={anchor} dy="0.35em">{name}</text>
+}
+
+/** For tracks without a mapped pit lane: a row beside the control line. */
+function pitAreaSlot(model: TrackModel, index: number): Vec {
+  const n = model.normalAt(0)
+  const offset = (Math.ceil(index / 2) * PIT_SPACING * (index % 2 ? 1 : -1))
+  const p = model.pointAt(offset)
+  return { x: p.x + n.x * 110, y: p.y + n.y * 110 }
 }
 
 /** Spreads cars in the pit lane out along it from the middle, so they don't stack on one spot. */

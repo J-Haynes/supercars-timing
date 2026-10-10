@@ -2,7 +2,13 @@
 export interface TrackDefinition {
   code: string
   name: string
-  source: { attribution: string; osmRelation: number; recording: string; built: string }
+  /** Natsoft track-name fragments this file also applies to (when the track code isn't known yet). */
+  match?: string[]
+  /** Timing points not yet learned from a recording: the map places them from live pace. */
+  provisional?: boolean
+  /** The control line position is a guess (no Finish Line in the map data). */
+  controlLineEstimated?: boolean
+  source: { attribution: string; osmRelation: number; recording: string | null; built: string }
   length: number
   /** Metres between samples in `path` and `simTime`. */
   step: number

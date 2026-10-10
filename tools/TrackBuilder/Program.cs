@@ -6,25 +6,31 @@ using TrackBuilder;
 // for the web map (src/web/src/tracks/<CODE>.json). See tools/TrackBuilder/README.md.
 
 var opt = ParseArgs(args);
-if (!opt.TryGetValue("code", out var code) || !opt.TryGetValue("relation", out var relationText) || !opt.TryGetValue("recording", out var recording))
+if (!opt.TryGetValue("code", out var code) || !opt.TryGetValue("relation", out var relationText))
 {
     Console.WriteLine("""
-        usage: TrackBuilder --code MOUN --relation 6942508 --recording data/recordings/<file>.jsonl [options]
+        usage: TrackBuilder --code MOUN --relation 6942508 [--recording data/recordings/<file>.jsonl] [options]
 
+          --recording <file>     Learn timing point positions from a recording. Without one, a *provisional*
+                                 track is written and the web map places timing points from live pace instead.
           --name <text>          Display name (default: OSM relation name)
+          --match <text>         Also use this file for Natsoft track names containing this text (e.g. "SURFERS")
           --sessions <text>      Only learn timing from sessions containing this (default: "Supercars")
           --osm <file>           OSM cache (default: tools/TrackBuilder/osm/<CODE>.osm.json; downloaded if missing)
           --control-node <id>    OSM node for the timing control line (default: node named "Finish Line", then "Start Line")
+          --control-way <name>   Otherwise: put the control line at the middle of the road with this name
+          --lap-time <seconds>   Provisional tracks: typical lap time for the speed profile (default: fit 2.3 g grip)
           --out <file>           Output (default: src/web/src/tracks/<CODE>.json)
         """);
     return 1;
 }
+opt.TryGetValue("recording", out var recording);
 
 var root = FindRepoRoot();
 var relationId = long.Parse(relationText);
 var osmPath = Path.Combine(root, opt.GetValueOrDefault("osm") ?? $"tools/TrackBuilder/osm/{code}.osm.json");
 var outPath = Path.Combine(root, opt.GetValueOrDefault("out") ?? $"src/web/src/tracks/{code}.json");
-var recordingPath = Path.Combine(root, recording);
+var recordingPath = recording is null ? null : Path.Combine(root, recording);
 const double Step = 5;   // metres between samples
 
 // 1. Circuit geometry from OSM
@@ -35,31 +41,59 @@ if (!File.Exists(osmPath))
     await File.WriteAllTextAsync(osmPath, await OsmCircuit.DownloadAsync(relationId));
 }
 var osm = OsmCircuit.Parse(await File.ReadAllTextAsync(osmPath));
-var loopIds = OsmCircuit.Chain(osm.CircuitWays.Select(w => w.Nodes));
-if (loopIds[0] != loopIds[^1]) throw new InvalidOperationException("Circuit ways don't form a closed loop");
-
-var projection = new Projection(loopIds.Average(id => osm.Nodes[id].Lat), loopIds.Average(id => osm.Nodes[id].Lon));
+var allIds = osm.CircuitWays.SelectMany(w => w.Nodes).ToList();
+var projection = new Projection(allIds.Average(id => osm.Nodes[id].Lat), allIds.Average(id => osm.Nodes[id].Lon));
 Point P(long id) => projection.ToMetres(osm.Nodes[id].Lat, osm.Nodes[id].Lon);
+var loopIds = osm.BuildLoop(P);
+if (loopIds[0] != loopIds[^1]) throw new InvalidOperationException("Circuit ways don't form a closed loop");
 var ring = new Ring(loopIds.Select(P).ToList());
 
 // 2. Start the lap at the timing control line ("M")
 var controlNode = opt.TryGetValue("control-node", out var cn) ? osm.Nodes[long.Parse(cn)]
     : osm.Nodes.Values.FirstOrDefault(n => n.Name == "Finish Line") ?? osm.Nodes.Values.FirstOrDefault(n => n.Name == "Start Line");
-if (controlNode is null) Console.WriteLine("warning: no Finish/Start Line node; control line placed at the first circuit node");
-else ring = ring.RotateTo(ring.Project(P(controlNode.Id)));
+var controlEstimated = false;
+if (controlNode is not null) ring = ring.RotateTo(ring.Project(P(controlNode.Id)));
+else if (opt.TryGetValue("control-way", out var controlWay))
+{
+    // Middle of the named road's stretch of the lap (e.g. the pit straight).
+    var along = osm.CircuitWays.Where(w => w.Name == controlWay).SelectMany(w => w.Nodes).Select(id => ring.Project(P(id))).Order().ToList();
+    if (along.Count == 0) throw new InvalidOperationException($"No circuit way named '{controlWay}'");
+    // Handle a stretch that wraps past distance 0 by using the largest gap as the break.
+    var gaps = along.Zip(along.Skip(1).Append(along[0] + ring.Length), (a, b) => b - a).ToList();
+    int breakAt = gaps.IndexOf(gaps.Max());
+    var start = along[(breakAt + 1) % along.Count];
+    var span = ring.Length - gaps[breakAt];
+    ring = ring.RotateTo(start + span / 2);
+    controlEstimated = true;
+    Console.WriteLine($"Control line estimated at the middle of {controlWay} ({span:0} m of the lap)");
+}
+else { controlEstimated = true; Console.WriteLine("warning: no Finish/Start Line node; control line placed at the first circuit node"); }
 var samples = ring.Resample(Step);
 Console.WriteLine($"{osm.Name}: {ring.Length:0} m, {samples.Count} samples");
 
 // 3. Measured pace between timing points, and a lap simulation matched to it
-var seg = SegmentTimes.FromRecording(recordingPath, code, opt.GetValueOrDefault("sessions") ?? "Supercars");
+var seg = recordingPath is null ? null : SegmentTimes.FromRecording(recordingPath, code, opt.GetValueOrDefault("sessions") ?? "Supercars");
 var sim = new LapSimulator(samples, Step);
-var grip = sim.FitLapTime(seg.LapTime);
-Console.WriteLine($"Measured lap {seg.LapTime:0.00} s from {seg.Samples.Sum()} segment samples; simulated grip {grip:0.00} g");
+if (seg is not null)
+{
+    var grip = sim.FitLapTime(seg.LapTime);
+    Console.WriteLine($"Measured lap {seg.LapTime:0.00} s from {seg.Samples.Sum()} segment samples; simulated grip {grip:0.00} g");
+}
+else if (opt.TryGetValue("lap-time", out var lapText))
+{
+    var grip = sim.FitLapTime(double.Parse(lapText, CultureInfo.InvariantCulture));
+    Console.WriteLine($"Provisional: speed profile fitted to a {lapText} s lap (grip {grip:0.00} g)");
+}
+else
+{
+    sim.Run(2.3);
+    Console.WriteLine($"Provisional: default speed profile, simulated lap {sim.LapTime:0.00} s");
+}
 
 // 4. Place each timing point where the simulated car is at the measured time into the lap
 var timingPoints = new List<object>();
 double elapsed = 0;
-for (int i = 0; i < seg.PointOrder.Count; i++)
+for (int i = 0; seg is not null && i < seg.PointOrder.Count; i++)
 {
     var id = seg.PointOrder[i];
     var distance = sim.DistanceAtTime(elapsed);
@@ -68,7 +102,8 @@ for (int i = 0; i < seg.PointOrder.Count; i++)
     timingPoints.Add(new { id, name = seg.PointNames.GetValueOrDefault(id) ?? id, distance = Math.Round(distance, 1) });
     elapsed += seg.Seconds[i];
 }
-Console.WriteLine($"  Fastest speed trap in recording: {seg.TopSpeed} km/h");
+if (seg is not null) Console.WriteLine($"  Fastest speed trap in recording: {seg.TopSpeed} km/h");
+else Console.WriteLine("  No recording: timing points will be placed by the web map from live pace (provisional track)");
 
 // 5. Labels: named nodes, then circuit way names at their midpoint (first one wins per name)
 var labels = new Dictionary<string, (string Name, double Distance)>(StringComparer.OrdinalIgnoreCase);
@@ -97,11 +132,16 @@ var track = new
 {
     code,
     name = opt.GetValueOrDefault("name") ?? osm.Name,
+    // Natsoft track-name fragments this file also applies to, for when the track code isn't known yet.
+    match = opt.TryGetValue("match", out var match) ? new[] { match } : Array.Empty<string>(),
+    // True when timing points haven't been learned from a recording yet.
+    provisional = seg is null,
+    controlLineEstimated = controlEstimated,
     source = new
     {
         attribution = "Track geometry © OpenStreetMap contributors (ODbL)",
         osmRelation = relationId,
-        recording = Path.GetFileName(recordingPath),
+        recording = recordingPath is null ? null : Path.GetFileName(recordingPath),
         built = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
     },
     length = R(ring.Length),
@@ -112,13 +152,23 @@ var track = new
     simTime = sim.Time.Select(t => Math.Round(t, 3)),
     timingPoints,
     // Representative seconds from each timing point to the next, used when a car has no recent pace.
-    segmentSeconds = seg.PointOrder.Select((id, i) => new { from = id, seconds = Math.Round(seg.Seconds[i], 3) }),
+    segmentSeconds = seg is null
+        ? Enumerable.Empty<object>()
+        : seg.PointOrder.Select((id, i) => (object)new { from = id, seconds = Math.Round(seg.Seconds[i], 3) }),
     labels = labels.Values.OrderBy(l => l.Distance).Select(l => new { name = l.Name, distance = R(l.Distance) }),
     pitLane = pitIds.Select(id => { var p = P(id); return new[] { R(p.X), R(p.Y) }; }),
 };
 
 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
 await File.WriteAllTextAsync(outPath, JsonSerializer.Serialize(track, new JsonSerializerOptions { WriteIndented = false }) + "\n");
+
+// manifest.json: track code -> name fragments, so the web app can find a track by name without loading every file.
+var manifestPath = Path.Combine(Path.GetDirectoryName(outPath)!, "manifest.json");
+var manifest = File.Exists(manifestPath)
+    ? JsonSerializer.Deserialize<SortedDictionary<string, string[]>>(await File.ReadAllTextAsync(manifestPath)) ?? []
+    : new SortedDictionary<string, string[]>();
+manifest[code] = track.match;
+await File.WriteAllTextAsync(manifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }) + "\n");
 Console.WriteLine($"Wrote {Path.GetRelativePath(root, outPath)} ({new FileInfo(outPath).Length / 1024} KB)");
 return 0;
 

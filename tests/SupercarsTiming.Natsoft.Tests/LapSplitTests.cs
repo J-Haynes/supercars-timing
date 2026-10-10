@@ -88,3 +88,29 @@ public class LapSplitTests
         Assert.Equal(0, car.LapStartAt);
     }
 }
+
+public class DriverChangeTests
+{
+    const string Snapshot = """
+        <New T="1000.0000">
+          <T C="MOUN" N="MOUNT PANORAMA - BATHURST"><TP ID="1" Y="Pos1" /></T>
+          <E C="R30" D="Race 30" Y="Race" />
+          <RL><R ID="1" N="1" V="Toyota GR Supra A90"><V ID="1" N="Chaz Mostert" /><V ID="2" N="Fabian Coulthard" /></R></RL>
+        </New>
+        """;
+
+    [Fact]
+    public void Driver_swap_is_detected_and_both_drivers_are_listed()
+    {
+        var s = new TimingState();
+        s.Apply(Snapshot);
+        s.Apply("""<L T="1100.0000" Y="p"><P L="1" C="1" D="1"><D LP="1" /></P></L>""");
+        Assert.Equal(0, s.Cars["1"].DriverChangedAt);             // first value seen isn't a swap
+
+        s.Apply("""<L T="2500.0000" Y="p"><P L="1" C="1" D="2"><D P="Y" /></P></L>""");
+        var row = TimingSnapshot.From(s).Cars.Single();
+        Assert.Equal(2500, row.DriverChangedAt, 3);
+        Assert.Equal("Fabian Coulthard", row.Driver);
+        Assert.Equal(["Chaz Mostert", "Fabian Coulthard"], row.Drivers);
+    }
+}

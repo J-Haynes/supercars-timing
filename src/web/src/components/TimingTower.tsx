@@ -6,6 +6,8 @@ import { isRace } from '../session'
 
 interface Ctx {
   car: CarRow
+  now: number
+  simple: boolean
   isFirst: boolean
   race: boolean
   best: TimingSnapshot['best']
@@ -27,6 +29,8 @@ interface Column {
 // GI/GNI in every session type. In races they match Natsoft's running order, whereas the LGI/LGNI fields
 // often disagree with it (checked against the SuperUte race, Bathurst 2026). In practice and qualifying
 // GI is the gap to the fastest lap.
+const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
+
 const gapOf = (c: Ctx) => ({ gap: c.car.gap, laps: c.car.gapLaps, int: c.car.interval, intLaps: c.car.intervalLaps })
 
 const COLUMNS: Record<string, Column> = {
@@ -37,7 +41,19 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car }) => <>{car.driver}{car.inPit && <span className="pit-badge">PIT</span>}</>,
+    cell: ({ car, now, simple }) => {
+      // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
+      const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
+      const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
+      return (
+        <>
+          {car.driver}
+          {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
+          {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
+          {car.inPit && <span className="pit-badge">PIT</span>}
+        </>
+      )
+    },
   },
   best: {
     key: 'best', header: 'Best', numeric: true,
@@ -125,7 +141,7 @@ export function TimingTower({ timing, simple, hoverId, pinned, onHover, onToggle
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, isFirst: i === 0, race, best, points: timingPoints }
+            const ctx: Ctx = { car, now: timing.now, simple, isFirst: i === 0, race, best, points: timingPoints }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr

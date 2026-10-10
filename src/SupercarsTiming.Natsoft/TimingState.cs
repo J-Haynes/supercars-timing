@@ -128,7 +128,13 @@ public sealed class TimingState
         if (!Cars.TryGetValue(id, out var c)) Cars[id] = c = new CarState { Id = id };
 
         c.Position = Int(p, "L") ?? c.Position;
-        c.DriverIndex = Str(p, "D") ?? c.DriverIndex;
+        if (Str(p, "D") is { } driver && driver != c.DriverIndex)
+        {
+            // A change after the first value we see is a driver swap (co-driver events, practice changeovers).
+            if (c.DriverSeen) c.DriverChangedAt = Now;
+            c.DriverIndex = driver;
+        }
+        c.DriverSeen = true;
 
         if (p.Element("D") is not { } d) return;
 
@@ -240,6 +246,9 @@ public sealed class CarState
     public int Position { get; set; }
     /// <summary>Key into <see cref="Entry.Drivers"/> for the driver currently in the car.</summary>
     public string DriverIndex { get; set; } = "1";
+    internal bool DriverSeen { get; set; }
+    /// <summary>Natsoft time of the last driver swap in this session; 0 if none seen.</summary>
+    public double DriverChangedAt { get; set; }
     public int Laps { get; set; }
     public double LastLap { get; set; }
     public double BestLap { get; set; }
