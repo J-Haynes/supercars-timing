@@ -50,7 +50,7 @@ export interface CarRow {
   gapLaps: number
   interval: number
   intervalLaps: number
-  /** Gap/interval updated at every timing point. Prefer these during races. */
+  /** LGI/LGNI fields: meaning unclear, often out of step with race order. Not shown in the UI. */
   liveGap: number
   liveGapLaps: number
   liveInterval: number

@@ -1,4 +1,4 @@
-import type { TimingUpdate } from '../types'
+import type { FeedStatus, TimingUpdate } from '../types'
 import type { ConnectionState } from '../useTiming'
 import { clock } from '../format'
 
@@ -10,9 +10,13 @@ const FLAG_CLASS: Record<string, string> = {
   ended: 'flag-ended',
 }
 
-export function SessionHeader({ update, connection }: { update: TimingUpdate | null; connection: ConnectionState }) {
+/** `update` is what's on screen (possibly delayed); `feed` is the live connection status. */
+export function SessionHeader({ update, feed, connection }: {
+  update: TimingUpdate | null
+  feed: FeedStatus | undefined
+  connection: ConnectionState
+}) {
   const session = update?.timing.session
-  const feed = update?.feed
   const flag = session?.flag ?? ''
 
   return (

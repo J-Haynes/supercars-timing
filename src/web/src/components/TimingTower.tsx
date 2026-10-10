@@ -1,86 +1,155 @@
+import type { ReactNode } from 'react'
 import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
 import { TrackProgress } from './TrackProgress'
 
-export function TimingTower({ timing, highlightId, onHighlight }: {
+/** Practice, qualifying and shootouts are ranked by best lap; races by running order. */
+export function isRace(sessionType: string): boolean {
+  return sessionType.toLowerCase().includes('race')
+}
+
+interface Ctx {
+  car: CarRow
+  isFirst: boolean
+  race: boolean
+  best: TimingSnapshot['best']
+  points: TimingSnapshot['timingPoints']
+}
+
+interface Column {
+  key: string
+  header: string
+  numeric?: boolean
+  /** Extra class on header and cells, e.g. to emphasise the column that ranks the session. */
+  className?: (race: boolean) => string
+  cell: (c: Ctx) => ReactNode
+  /** Cell class (colours etc.). Values whose cell should flash when they change return a key too. */
+  cellClass?: (c: Ctx) => string
+  flashKey?: (c: Ctx) => string | number
+}
+
+// GI/GNI in every session type. In races they match Natsoft's running order, whereas the LGI/LGNI fields
+// often disagree with it (checked against the SuperUte race, Bathurst 2026). In practice and qualifying
+// GI is the gap to the fastest lap.
+const gapOf = (c: Ctx) => ({ gap: c.car.gap, laps: c.car.gapLaps, int: c.car.interval, intLaps: c.car.intervalLaps })
+
+const COLUMNS: Record<string, Column> = {
+  pos: { key: 'pos', header: 'Pos', numeric: true, cell: ({ car }) => car.position || '', cellClass: () => 'pos' },
+  car: {
+    key: 'car', header: 'Car',
+    cell: ({ car }) => <span className={`car mfr-${car.manufacturer.toLowerCase()}`} title={car.vehicle}>{car.carNumber}</span>,
+  },
+  driver: {
+    key: 'driver', header: 'Driver', cellClass: () => 'driver',
+    cell: ({ car }) => <>{car.driver}{car.inPit && <span className="pit-badge">PIT</span>}</>,
+  },
+  best: {
+    key: 'best', header: 'Best', numeric: true,
+    // In practice/qualifying the best lap *is* the result, so make it the most prominent column.
+    className: (race) => (race ? '' : 'primary'),
+    cell: ({ car }) => lapTime(car.bestLap),
+    cellClass: ({ car, best }) => (timeClass(car.bestLap, car.bestLap, best.lap) === 'session-best' ? 'session-best' : ''),
+    flashKey: ({ car }) => car.bestLap,
+  },
+  gap: {
+    key: 'gap', header: 'Gap', numeric: true,
+    className: (race) => (race ? 'primary' : ''),
+    cell: (c) => { const g = gapOf(c); return gapText(g.gap, g.laps, c.isFirst) },
+  },
+  int: {
+    key: 'int', header: 'Int', numeric: true,
+    cell: (c) => {
+      const g = gapOf(c)
+      if (c.isFirst) return ''
+      if (g.intLaps > 0) return `+${g.intLaps}L`
+      const s = seconds(g.int)
+      return s && `+${s}`
+    },
+  },
+  last: {
+    key: 'last', header: 'Last', numeric: true,
+    cell: ({ car }) => lapTime(car.lastLap),
+    cellClass: ({ car, best }) => timeClass(car.lastLap, car.bestLap, best.lap),
+    flashKey: ({ car }) => car.lastLap,
+  },
+  s1: {
+    key: 's1', header: 'S1', numeric: true, cell: ({ car }) => seconds(car.s1),
+    cellClass: ({ car, best }) => timeClass(car.s1, car.bestS1, best.s1), flashKey: ({ car }) => car.s1,
+  },
+  s2: {
+    key: 's2', header: 'S2', numeric: true, cell: ({ car }) => seconds(car.s2),
+    cellClass: ({ car, best }) => timeClass(car.s2, car.bestS2, best.s2), flashKey: ({ car }) => car.s2,
+  },
+  s3: {
+    key: 's3', header: 'S3', numeric: true, cell: ({ car }) => seconds(car.s3),
+    cellClass: ({ car, best }) => timeClass(car.s3, car.bestS3, best.s3), flashKey: ({ car }) => car.s3,
+  },
+  speed: {
+    key: 'speed', header: 'Speed', numeric: true, cell: ({ car }) => car.speed || '',
+    cellClass: ({ car, best }) => (best.speed && car.speed === best.speed ? 'session-best' : ''),
+  },
+  pits: { key: 'pits', header: 'Pits', numeric: true, cell: ({ car }) => car.pitStops || '' },
+  laps: { key: 'laps', header: 'Laps', numeric: true, cell: ({ car }) => car.laps || '' },
+  progress: { key: 'progress', header: 'Lap progress', cell: ({ car, points }) => <TrackProgress lastPoint={car.lastPoint} points={points} /> },
+}
+
+/** Which columns to show, in order, for each session kind and display mode. */
+const LAYOUTS = {
+  timed: {
+    detailed: ['pos', 'car', 'driver', 'best', 'gap', 'int', 'last', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'progress'],
+    simple: ['pos', 'car', 'driver', 'best', 'gap', 'last', 'pits', 'laps'],
+  },
+  race: {
+    detailed: ['pos', 'car', 'driver', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'progress'],
+    simple: ['pos', 'car', 'driver', 'gap', 'int', 'last', 'pits', 'laps'],
+  },
+}
+
+export function TimingTower({ timing, simple, hoverId, pinned, onHover, onTogglePin }: {
   timing: TimingSnapshot
-  highlightId: string | null
-  onHighlight: (id: string | null) => void
+  simple: boolean
+  hoverId: string | null
+  pinned: string[]
+  onHover: (id: string | null) => void
+  onTogglePin: (carNumber: string) => void
 }) {
   const { cars, best, timingPoints } = timing
-  // Races: use the per-timing-point gaps. Practice/qualifying: gaps are to the fastest lap.
-  const live = timing.session.type.toLowerCase() === 'race'
+  const race = isRace(timing.session.type)
+  const columns = LAYOUTS[race ? 'race' : 'timed'][simple ? 'simple' : 'detailed'].map((k) => COLUMNS[k])
+
   return (
-    <div className="tower-wrap">
+    <div className={`tower-wrap${simple ? ' simple' : ''}`}>
       <table className="tower">
         <thead>
           <tr>
-            <th className="num">Pos</th>
-            <th>Car</th>
-            <th>Driver</th>
-            <th className="num">Laps</th>
-            <th className="num">Gap</th>
-            <th className="num">Int</th>
-            <th className="num">Last</th>
-            <th className="num">Best</th>
-            <th className="num">S1</th>
-            <th className="num">S2</th>
-            <th className="num">S3</th>
-            <th className="num">Speed</th>
-            <th className="num">Pits</th>
-            <th>Lap progress</th>
+            {columns.map((col) => (
+              <th key={col.key} className={[col.numeric ? 'num' : '', col.className?.(race) ?? ''].join(' ')}>{col.header}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {cars.map((c, i) => (
-            <Row key={c.id} car={c} isFirst={i === 0} live={live} best={best} points={timingPoints}
-              highlighted={c.id === highlightId} onHighlight={onHighlight} />
-          ))}
+          {cars.map((car, i) => {
+            const ctx: Ctx = { car, isFirst: i === 0, race, best, points: timingPoints }
+            const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', pinned.includes(car.carNumber) && 'pinned']
+            return (
+              <tr
+                key={car.id}
+                className={classes.filter(Boolean).join(' ')}
+                onMouseEnter={() => onHover(car.id)}
+                onMouseLeave={() => onHover(null)}
+                onDoubleClick={() => onTogglePin(car.carNumber)}
+              >
+                {columns.map((col) => {
+                  const cls = [col.numeric ? 'num' : '', col.className?.(race) ?? '', col.cellClass?.(ctx) ?? '', col.flashKey ? 'flash' : '']
+                  // Keying on the value re-mounts the cell when a new time arrives, which replays the flash animation.
+                  const key = col.flashKey ? `${col.key}-${col.flashKey(ctx)}` : col.key
+                  return <td key={key} className={cls.join(' ')}>{col.cell(ctx)}</td>
+                })}
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
-  )
-}
-
-function Row({ car: c, isFirst, live, best, points, highlighted, onHighlight }: {
-  car: CarRow
-  isFirst: boolean
-  live: boolean
-  highlighted: boolean
-  onHighlight: (id: string | null) => void
-  best: TimingSnapshot['best']
-  points: TimingSnapshot['timingPoints']
-}) {
-  const gap = live ? c.liveGap : c.gap
-  const gapLaps = live ? c.liveGapLaps : c.gapLaps
-  const interval = live ? c.liveInterval : c.interval
-  const intervalLaps = live ? c.liveIntervalLaps : c.intervalLaps
-  return (
-    <tr
-      className={`${c.inPit ? 'in-pit' : ''} ${highlighted ? 'highlighted' : ''}`}
-      onMouseEnter={() => onHighlight(c.id)}
-      onMouseLeave={() => onHighlight(null)}
-    >
-      <td className="num pos">{c.position || ''}</td>
-      <td>
-        <span className={`car mfr-${c.manufacturer.toLowerCase()}`} title={c.vehicle}>{c.carNumber}</span>
-      </td>
-      <td className="driver">
-        {c.driver}
-        {c.inPit && <span className="pit-badge">PIT</span>}
-      </td>
-      <td className="num">{c.laps || ''}</td>
-      <td className="num">{gapText(gap, gapLaps, isFirst)}</td>
-      <td className="num">{isFirst ? '' : intervalLaps > 0 ? `+${intervalLaps}L` : seconds(interval) && `+${seconds(interval)}`}</td>
-      {/* key on the value so the cell re-mounts and flashes when a new time arrives */}
-      <td key={`last-${c.lastLap}`} className={`num flash ${timeClass(c.lastLap, c.bestLap, best.lap)}`}>{lapTime(c.lastLap)}</td>
-      <td className={`num ${timeClass(c.bestLap, c.bestLap, best.lap) === 'session-best' ? 'session-best' : ''}`}>{lapTime(c.bestLap)}</td>
-      <td key={`s1-${c.s1}`} className={`num flash ${timeClass(c.s1, c.bestS1, best.s1)}`}>{seconds(c.s1)}</td>
-      <td key={`s2-${c.s2}`} className={`num flash ${timeClass(c.s2, c.bestS2, best.s2)}`}>{seconds(c.s2)}</td>
-      <td key={`s3-${c.s3}`} className={`num flash ${timeClass(c.s3, c.bestS3, best.s3)}`}>{seconds(c.s3)}</td>
-      <td className={`num ${best.speed && c.speed === best.speed ? 'session-best' : ''}`}>{c.speed || ''}</td>
-      <td className="num">{c.pitStops || ''}</td>
-      <td><TrackProgress lastPoint={c.lastPoint} points={points} /></td>
-    </tr>
   )
 }

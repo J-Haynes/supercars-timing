@@ -64,6 +64,16 @@ dotnet run --project tools/NatsoftRecorder -- decode <file>    # dump decoded XM
 Start it a few minutes before a session and leave it running. It reconnects by itself and captures
 every session on the feed (support categories included) into one file.
 
+## Using the dashboard
+
+- **Session-aware tower.** Practice and qualifying lead with each driver's best lap and the gap to the fastest;
+  races lead with the gap to the leader and the interval to the car ahead.
+- **Simple mode** (toggle above the tower) cuts the tower down to the essentials. Detailed is the default.
+- **Broadcast delay** slider (0–120 s, with ± buttons for fine-tuning up to 300 s) holds the timing back so it
+  matches your TV or stream. Find a moment you can see on both, like a car crossing the line, and nudge the delay
+  until they line up. The app keeps a rolling buffer, so changing the delay takes effect immediately.
+- **Highlight drivers** by double-clicking them in the tower or on the map. Highlights are remembered.
+
 ## Track map
 
 The map shows each car's estimated position. Natsoft only reports when a car passes one of a handful of

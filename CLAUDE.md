@@ -67,7 +67,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - `T` timestamps are track-local wall-clock time encoded as Unix seconds (AEDT = Unix + 39600).
 - Each session starts with its own `<New>` snapshot, which must reset state. Support categories share the `V8SUPER` feed.
 - `SP` (speed trap) is sent as `0` and then the real value. Ignore the zero.
-- `GI`/`GNI` gaps vs `LGI`/`LGNI` "live" gaps: the UI uses live gaps for `Race` sessions. Not yet confirmed.
+- Use `GI`/`GNI` for gaps in every session type. `LGI`/`LGNI` update more often in races but are frequently out of
+  order with Natsoft's positions (checked against the Bathurst SuperUte race), so they're kept in the model but not shown.
 - Sector fields reset to 0 at the start of a lap. 0 means "no time yet" everywhere.
 
 ## Track map essentials
@@ -82,6 +83,16 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Timing point positions per track are estimates from TrackBuilder's lap simulation. If they look wrong on a
   track, fix the inputs (OSM relation, control-line node, recording) and rebuild rather than hand-editing the JSON.
 - `FeedStatus.ClockRate` (replay speed) drives the client-side clock, so replays at 10× animate correctly.
+
+## UI essentials
+
+- Tower columns are defined once in `TimingTower.tsx` (`COLUMNS`) and arranged per session kind and mode in `LAYOUTS`.
+  Practice/qualifying ("timed") lead with Best then Gap; races lead with Gap then Int. `isRace()` decides.
+- Viewer preferences (`settings.ts`: simple mode, broadcast delay, highlighted car numbers, tip dismissed) live in
+  localStorage, wrapped in try/catch so the app still works where storage is blocked.
+- Broadcast delay (`useDelayedUpdate.ts`) buffers updates client-side and shows the one from N seconds ago.
+  The whole UI reads the delayed update; only the connection/feed indicator uses the live one.
+- Highlights are keyed by car number (stable across sessions), hover by Natsoft car ID.
 
 ## Rules
 

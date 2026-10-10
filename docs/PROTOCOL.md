@@ -106,8 +106,8 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red fla
 | `F1`, `F2`, `FS1`–`FS3` | Best intermediates and sectors |
 | `GI`, `GL` | Gap to leader (time / laps). Practice: gap to fastest lap |
 | `GNI`, `GNL` | Interval to car ahead (time / laps) |
-| `LGI`, `LGL` | *Unconfirmed:* live gap to leader, updated at each timing point. The most frequent gap field in races |
-| `LGNI`, `LGNL` | *Unconfirmed:* live interval to car ahead |
+| `LGI`, `LGL` | *Unconfirmed.* Updates more often than `GI` in races, but is frequently out of order with positions (up to 7 inversions in a 21-car field in the SuperUte race, vs 0–1 for `GI`). Use `GI` |
+| `LGNI`, `LGNL` | *Unconfirmed.* Companion of `LGI` |
 | `P` | `Y` = in pit lane |
 | `PS` | Pit stop count |
 | `PI`, `PT`, `PF` | Pit-in time, pit time, pit flag |
@@ -118,7 +118,7 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Checkered`, `Ended`. Red fla
 
 ## Open questions
 
-- Confirm `LGI`/`LGNI` vs `GI`/`GNI` against a broadcast during a race.
+- What `LGI`/`LGNI` actually represent (gap at the last timing point crossed?).
 - Safety car and red flag representation (`S` values, `SC` field).
 - Driver changes mid-race (`D` index switching).
 - Qualifying and Top Ten Shootout session types.

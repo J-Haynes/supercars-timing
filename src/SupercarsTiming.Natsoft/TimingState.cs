@@ -211,8 +211,8 @@ public sealed class CarState
     public double Interval { get; set; }
     public int IntervalLaps { get; set; }
     /// <summary>
-    /// Gap to the leader updated at every timing point (LGI). In races this updates far more often than
-    /// <see cref="Gap"/>, which appears to update at the control line. Unconfirmed; see docs/PROTOCOL.md.
+    /// LGI field. Updates more often than <see cref="Gap"/> in races but is frequently out of step with
+    /// race order, so the UI uses <see cref="Gap"/>. Meaning unconfirmed; see docs/PROTOCOL.md.
     /// </summary>
     public double LiveGap { get; set; }
     public int LiveGapLaps { get; set; }

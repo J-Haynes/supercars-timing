@@ -10,11 +10,13 @@ const PIT_SPACING = 70
 // Labels that would sit on top of the start/finish area and its cars.
 const HIDDEN_LABELS = /line$|^pit straight$/i
 
-export function TrackMap({ track, update, highlightId, onHighlight }: {
+export function TrackMap({ track, update, hoverId, pinned, onHover, onTogglePin }: {
   track: TrackDefinition
   update: TimingUpdate
-  highlightId: string | null
-  onHighlight: (id: string | null) => void
+  hoverId: string | null
+  pinned: string[]
+  onHover: (id: string | null) => void
+  onTogglePin: (carNumber: string) => void
 }) {
   const model = useMemo(() => new TrackModel(track), [track])
   const geometry = useMemo(() => {
@@ -38,8 +40,9 @@ export function TrackMap({ track, update, highlightId, onHighlight }: {
     [order, timing.segmentReference, track.segmentSeconds],
   )
 
-  // Leader drawn last so it sits on top; the highlighted car above everything.
-  const cars = [...timing.cars].sort((a, b) => (b.position || 99) - (a.position || 99))
+  // Draw order: later = on top. Leader above the field, pinned cars above that, the hovered car above all.
+  const layer = (c: CarRow) => (c.id === hoverId ? 2 : pinned.includes(c.carNumber) ? 1 : 0)
+  const cars = [...timing.cars].sort((a, b) => layer(a) - layer(b) || (b.position || 99) - (a.position || 99))
   let pitIndex = 0
 
   return (
@@ -69,14 +72,9 @@ export function TrackMap({ track, update, highlightId, onHighlight }: {
           const dim = state.kind === 'pit' || (state.kind === 'track' && state.stale)
           return (
             <CarDot key={car.id} car={car} x={x} y={y} dim={dim}
-              highlighted={car.id === highlightId} onHighlight={onHighlight} />
+              hovered={car.id === hoverId} pinned={pinned.includes(car.carNumber)}
+              onHover={onHover} onTogglePin={onTogglePin} />
           )
-        })}
-        {highlightId && cars.filter((c) => c.id === highlightId).map((car) => {
-          const state = carPosition(car, model, order, fallback, now)
-          if (state.kind !== 'track') return null
-          const p = model.pointAt(state.distance)
-          return <CarDot key={`hl-${car.id}`} car={car} x={p.x} y={-p.y} dim={false} highlighted onHighlight={onHighlight} />
         })}
       </svg>
       <div className="map-caption">
@@ -86,19 +84,23 @@ export function TrackMap({ track, update, highlightId, onHighlight }: {
   )
 }
 
-function CarDot({ car, x, y, dim, highlighted, onHighlight }: {
-  car: CarRow; x: number; y: number; dim: boolean; highlighted: boolean
-  onHighlight: (id: string | null) => void
+function CarDot({ car, x, y, dim, hovered, pinned, onHover, onTogglePin }: {
+  car: CarRow; x: number; y: number; dim: boolean; hovered: boolean; pinned: boolean
+  onHover: (id: string | null) => void
+  onTogglePin: (carNumber: string) => void
 }) {
+  const classes = ['map-car', `mfr-${car.manufacturer.toLowerCase()}`, dim && 'dim', hovered && 'hovered', pinned && 'pinned']
   return (
     <g
       transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}
-      className={`map-car mfr-${car.manufacturer.toLowerCase()}${dim ? ' dim' : ''}${highlighted ? ' highlighted' : ''}`}
-      onMouseEnter={() => onHighlight(car.id)}
-      onMouseLeave={() => onHighlight(null)}
+      className={classes.filter(Boolean).join(' ')}
+      onMouseEnter={() => onHover(car.id)}
+      onMouseLeave={() => onHover(null)}
+      onDoubleClick={() => onTogglePin(car.carNumber)}
     >
       <title>{`P${car.position} #${car.carNumber} ${car.driver}${car.inPit ? ' (pit)' : ''}`}</title>
-      <circle r={highlighted ? CAR_RADIUS * 1.35 : CAR_RADIUS} />
+      {pinned && <circle r={CAR_RADIUS * 1.7} className="pin-ring" />}
+      <circle r={hovered || pinned ? CAR_RADIUS * 1.3 : CAR_RADIUS} />
       <text dy="0.36em">{car.carNumber}</text>
     </g>
   )

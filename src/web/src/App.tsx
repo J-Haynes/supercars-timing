@@ -1,29 +1,58 @@
 import { useState } from 'react'
 import { useTiming } from './useTiming'
+import { useDelayedUpdate } from './useDelayedUpdate'
+import { useSettings } from './settings'
 import { SessionHeader } from './components/SessionHeader'
+import { Controls } from './components/Controls'
 import { TimingTower } from './components/TimingTower'
 import { TrackMap } from './components/TrackMap'
+import { TipBar } from './components/TipBar'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { useTrack } from './tracks'
 
 export default function App() {
-  const { update, connection } = useTiming()
-  const [highlightId, setHighlightId] = useState<string | null>(null)
+  const { update: latest, connection } = useTiming()
+  const { settings, update: updateSettings, togglePinned } = useSettings()
+  // Everything below shows the delayed update, so the tower, map and clock stay in sync with the broadcast.
+  const { update, buffered } = useDelayedUpdate(latest, settings.delay)
+  const [hoverId, setHoverId] = useState<string | null>(null)
+
   const timing = update?.timing
   const track = useTrack(timing?.session.trackCode || undefined)
   const hasCars = !!timing && timing.cars.length > 0
 
   return (
     <div className="app">
-      <SessionHeader update={update} connection={connection} />
+      <SessionHeader update={update} feed={latest?.feed} connection={connection} />
+      <Controls
+        simple={settings.simple}
+        delay={settings.delay}
+        buffered={buffered}
+        onSimple={(simple) => updateSettings({ simple })}
+        onDelay={(delay) => updateSettings({ delay })}
+      />
       <main>
         {hasCars && update ? (
           <div className="layout">
-            <TimingTower timing={timing} highlightId={highlightId} onHighlight={setHighlightId} />
+            <TimingTower
+              timing={timing}
+              simple={settings.simple}
+              hoverId={hoverId}
+              pinned={settings.pinned}
+              onHover={setHoverId}
+              onTogglePin={togglePinned}
+            />
             <aside className="map-panel">
               {track ? (
                 <ErrorBoundary fallback={<div className="map-missing">The track map hit an error. Check the browser console.</div>}>
-                  <TrackMap track={track} update={update} highlightId={highlightId} onHighlight={setHighlightId} />
+                  <TrackMap
+                    track={track}
+                    update={update}
+                    hoverId={hoverId}
+                    pinned={settings.pinned}
+                    onHover={setHoverId}
+                    onTogglePin={togglePinned}
+                  />
                 </ErrorBoundary>
               ) : (
                 <div className="map-missing">
@@ -33,9 +62,10 @@ export default function App() {
             </aside>
           </div>
         ) : (
-          <EmptyState state={update?.feed.state} detail={update?.feed.detail} connection={connection} />
+          <EmptyState state={latest?.feed.state} detail={latest?.feed.detail} connection={connection} />
         )}
       </main>
+      {!settings.tipDismissed && <TipBar onDismiss={() => updateSettings({ tipDismissed: true })} />}
     </div>
   )
 }
