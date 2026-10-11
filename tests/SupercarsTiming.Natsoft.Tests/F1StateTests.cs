@@ -43,6 +43,23 @@ public class F1StateTests
         Assert.Equal(6, car.Laps);
     }
 
+    [Fact]
+    public void A_new_session_drops_the_old_sessions_timing()
+    {
+        // Singapore 2026: the race's lines arrived fresh (no lap count, no pit stops yet) but were merged onto
+        // qualifying's, so every car started the race on its qualifying laps and pit stops, "in the pit" for minutes.
+        var s = Session();
+        s.Apply(Msg(10, "TimingData", """{"Lines":{"3":{"NumberOfPitStops":5,"InPit":true}}}"""));
+        s.Apply(Msg(20, "SessionInfo", """{"Key":11390,"Type":"Race","Name":"Race","GmtOffset":"08:00:00"}"""));
+        s.Apply(Msg(24, "TimingData", """{"Lines":{"3":{"Position":"1","InPit":true,"PitOut":false}}}"""));
+
+        var car = s.Snapshot().Cars.Single();
+        Assert.Equal(0, car.Laps);
+        Assert.Equal(0, car.PitStops);
+        Assert.True(car.InPit);
+        Assert.Empty(car.PitLog); // in the garage before the start: not a pit stop
+    }
+
     [Theory]
     [InlineData("FIA STEWARDS: 5 SECOND TIME PENALTY FOR CAR 87 (BEA) - CAUSING A COLLISION", "87", "5 seconds")]
     [InlineData("FIA STEWARDS: DRIVE THROUGH PENALTY FOR CAR 4 (NOR) - PIT LANE SPEEDING", "4", "drive through")]

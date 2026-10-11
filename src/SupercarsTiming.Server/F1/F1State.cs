@@ -44,10 +44,15 @@ public sealed partial class F1State
             var key = m.Data["Key"]?.ToString();
             if (key is not null && key != _sessionKey)
             {
-                // A different session: start our own tracking again. The topics stay: F1 patches the new session onto
-                // the old state like its own clients (it may not resend the full driver list), and the patches
-                // replace the old session's values.
-                if (_sessionKey != "") ResetTracking();
+                // A different session: start our own tracking again. The driver list and weather stay (F1 may not
+                // resend them in full), but the timing topics go: F1 sends the new session's lines fresh, and merging
+                // them onto the old ones kept qualifying's laps, pit stops and tyres in the race (Singapore 2026).
+                if (_sessionKey != "")
+                {
+                    ResetTracking();
+                    if (!m.Snapshot)
+                        foreach (var topic in SessionTopics) _topics.Remove(topic);
+                }
                 _sessionKey = key;
             }
             if ((string?)m.Data["GmtOffset"] is { } offset && TimeSpan.TryParse(offset, out var o)) _gmtOffset = o;
@@ -73,6 +78,10 @@ public sealed partial class F1State
                 break;
         }
     }
+
+    /// <summary>Topics that belong to one session, dropped when a new session starts.</summary>
+    static readonly string[] SessionTopics =
+        ["TimingData", "TimingAppData", "TimingStats", "LapCount", "RaceControlMessages", "SessionData", "ExtrapolatedClock"];
 
     void ResetTracking()
     {
@@ -284,6 +293,8 @@ public sealed partial class F1State
             var name = DriverName(number);
             var retired = (bool?)line["Retired"] == true;
             var expected = ExpectedSegments(car, order);
+            // Not time in the garage before the start: cars sit "in the pit" until they go to the grid.
+            var pitLog = car.PitLog.Where(p => !IsRace || (_greenAt > 0 && p.InAt >= _greenAt)).ToArray();
 
             rows.Add(new CarRow(
                 number, pos, number, name, team, team,
@@ -296,7 +307,7 @@ public sealed partial class F1State
                 gap, gapLaps, interval, intervalLaps,
                 Sector(0), Sector(1), Sector(2), BestSector(0), BestSector(1), BestSector(2),
                 ParseInt(line["Speeds"]?["ST"]?["Value"]),
-                (int?)line["NumberOfPitStops"] ?? car.PitLog.Count,
+                (int?)line["NumberOfPitStops"] ?? pitLog.Length,
                 car.InPit || (bool?)line["InPit"] == true,
                 car.LastPointIndex is { } li ? order[li] : "",
                 car.LastPointAt,
@@ -307,8 +318,7 @@ public sealed partial class F1State
                 Round(car.CurrentSegments, order.Count), Round(car.LastLapSegments, order.Count), Round(car.BestSegments, order.Count),
                 [car.Laps], 0,
                 car.Laps - car.StintStartLap,
-                car.PitLog.Where(p => !IsRace || _greenAt == 0 || p.InAt >= _greenAt) // not garage runs before the start
-                    .Select(p => new PitStopRow(p.Lap, p.InAt, p.OutAt, Math.Round(p.Seconds, 1), name, name)).ToArray(),
+                pitLog.Select(p => new PitStopRow(p.Lap, p.InAt, p.OutAt, Math.Round(p.Seconds, 1), name, name)).ToArray(),
                 retired ? 0 : pos,
                 penalties[number].ToArray(),
                 Tyre: (string?)stint?["Compound"] ?? "",
