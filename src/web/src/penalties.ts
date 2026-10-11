@@ -12,12 +12,25 @@ export interface CarPenalty {
 }
 
 /**
+ * Whether a penalty could be served at this stop: not if the SC, FCY or red flag was out at any point during it
+ * (Natsoft shows those as a non-green session flag). Without a flag history (older server) we assume green.
+ */
+function servable(stop: PitStopRow, timing: TimingSnapshot): boolean {
+  const history = timing.flagHistory ?? []
+  const flagAt = (t: number) => [...history].reverse().find((f) => f.time <= t)?.flag ?? 'Green'
+  if (flagAt(stop.inAt) !== 'Green') return false
+  return !history.some((f) => f.time > stop.inAt && f.time <= stop.outAt && f.flag !== 'Green')
+}
+
+/**
  * A car's penalties from race control, and whether each has been served.
  *
  * Natsoft never says a penalty was served, and the pit-lane time doesn't show it reliably: Payne's stop after his
  * 5 s penalty took 66.1 s, a normal time (less other work, presumably), yet the broadcast shows him held for it.
- * So this follows the procedure instead: a penalty is served at the car's first completed pit stop that started
- * after it was issued. With no stop after it, it stays unserved (a time penalty is then added to the race time).
+ * So this follows the rule instead (Supercars B7.7.1.7, as amended for Bathurst 2024): a time penalty "must be
+ * served at the Car's next Pit Stop" unless the stewards direct otherwise, but "may not be served while the SC, FCY
+ * boards or Red Flag are displayed", so it carries over past a stop made under those. With no stop after it, it
+ * stays unserved (it's then added to the race time).
  */
 export function carPenalties(car: CarRow, timing: TimingSnapshot): CarPenalty[] {
   const out: CarPenalty[] = []
@@ -27,7 +40,7 @@ export function carPenalties(car: CarRow, timing: TimingSnapshot): CarPenalty[] 
     const what = p[2].trim()
     const seconds = Number(what.match(/(\d+)\s*sec/i)?.[1] ?? 0)
     const used = new Set(out.map((x) => x.servedAt))
-    const servedAt = (car.pitLog ?? []).find((s) => s.inAt > m.time && s.outAt > 0 && !used.has(s))
+    const servedAt = (car.pitLog ?? []).find((s) => s.inAt > m.time && s.outAt > 0 && !used.has(s) && servable(s, timing))
     out.push({ what, seconds, issuedAt: m.time, servedAt })
   }
   return out
@@ -36,4 +49,15 @@ export function carPenalties(car: CarRow, timing: TimingSnapshot): CarPenalty[] 
 /** Seconds of time penalties still to be added to the car's race time. */
 export function unservedSeconds(car: CarRow, timing: TimingSnapshot): number {
   return carPenalties(car, timing).filter((p) => !p.servedAt).reduce((s, p) => s + p.seconds, 0)
+}
+
+/** "Penalty served" lines for the race control feed, one per served penalty, at the time the car left the pits. */
+export function servedMessages(timing: TimingSnapshot): { time: number; text: string; served: true }[] {
+  return timing.cars.flatMap((car) => carPenalties(car, timing)
+    .filter((p) => p.servedAt)
+    .map((p) => ({
+      time: p.servedAt!.outAt,
+      text: `Penalty served: Car ${car.carNumber} (${car.driver}) - ${p.what} at the lap ${p.servedAt!.lap} pit stop`,
+      served: true as const,
+    })))
 }

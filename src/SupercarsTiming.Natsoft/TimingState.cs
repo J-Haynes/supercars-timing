@@ -17,6 +17,11 @@ public sealed class TimingState
     public string SessionType { get; private set; } = "";
     /// <summary>Race control messages (<c>&lt;G R&gt;</c>), oldest first: incidents, investigations, penalties.</summary>
     public List<RaceControlMessage> RaceControl { get; } = [];
+    /// <summary>
+    /// Every flag change this session (<c>&lt;S S I&gt;</c>), oldest first. Needed afterwards to know what the flag was
+    /// at a given moment, e.g. a penalty can't be served at a pit stop under SC/FCY/red (Supercars B7.7.1.7).
+    /// </summary>
+    public List<FlagChange> FlagHistory { get; } = [];
     /// <summary>Natsoft time of the first green flag (<c>&lt;S S="Green" I&gt;</c>): the race start. 0 = not seen.</summary>
     public double GreenAt { get; private set; }
     /// <summary>Lap record for this session type at this track (<c>&lt;E RI RC RV&gt;</c>); null when not sent.</summary>
@@ -99,6 +104,7 @@ public sealed class TimingState
                 {
                     // A new session: race control and the start time belonged to the last one.
                     RaceControl.Clear();
+                    FlagHistory.Clear();
                     GreenAt = 0;
                 }
                 break;
@@ -141,6 +147,8 @@ public sealed class TimingState
                 }
                 break;
             case "S":
+                if (Str(e, "S") is { Length: > 0 } flag && (FlagHistory.Count == 0 || FlagHistory[^1].Flag != flag))
+                    FlagHistory.Add(new FlagChange(Dbl(e, "I") is double at && at > 0 ? at : Now, flag));
                 Flag = Str(e, "S") ?? Flag;
                 // I = when the flag changed. The first green is the race start (later greens follow safety cars).
                 if (Flag == "Green" && GreenAt == 0 && Dbl(e, "I") is double greenAt && greenAt > 0) GreenAt = greenAt;
@@ -487,6 +495,8 @@ public sealed class CarState
 }
 
 public sealed record RaceControlMessage(double Time, string Text);
+
+public sealed record FlagChange(double Time, string Flag);
 
 public sealed record LapRecord(double Seconds, string Driver, string Vehicle);
 

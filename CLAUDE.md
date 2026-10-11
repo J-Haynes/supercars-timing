@@ -165,8 +165,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   the fastest-lap car in the tower. Penalties are parsed
   from the text (`TimingSnapshot.Penalty()`, best effort) into `CarRow.Penalties` and badged in the tower ("+5s").
   Served or not (`penalties.ts`): Natsoft never says, and pit-lane time doesn't show it (Payne's serving stop was a
-  normal 66 s), so a penalty counts as served at the car's first completed pit stop that started after it was
-  issued (badge turns muted "5s ✓"; the ladder stops adding it).
+  normal 66 s), so it follows Supercars B7.7.1.7 (Bathurst 2024 wording): served at the car's next pit stop, but not
+  while SC/FCY/red is out (non-green flag in `TimingSnapshot.FlagHistory` during the stop), so it carries over.
+  Served penalties leave the tower and appear in race control as "Penalty served" (`servedMessages`).
   Race time in the header = now − `SessionInfo.GreenAt` (first green flag).
 - Insights ticker (`InsightsTicker.tsx`, races, above the tower; logic in `insights.ts`): recent events (new fastest
   lap, lead change, race control penalties/incidents), battles (< 1 s on the road, trains of 3+), closing trends (gap

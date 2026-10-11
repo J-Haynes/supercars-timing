@@ -1,5 +1,6 @@
 import type { TimingSnapshot } from '../types'
 import { lapTime } from '../format'
+import { servedMessages } from '../penalties'
 
 /** Natsoft time is track-local wall-clock time encoded as Unix seconds, so format it as UTC to get track time. */
 const trackTime = (t: number) => new Date(t * 1000).toISOString().slice(11, 19)
@@ -9,7 +10,10 @@ const trackTime = (t: number) => new Date(t * 1000).toISOString().slice(11, 19)
  * Penalties are highlighted; the tower also badges the car.
  */
 export function RaceControl({ timing, limit = 12 }: { timing: TimingSnapshot; limit?: number }) {
-  const messages = (timing.raceControl ?? []).slice(0, limit)
+  // Natsoft's messages plus our own "Penalty served" lines (penalties.ts), newest first.
+  const messages = [...(timing.raceControl ?? []), ...servedMessages(timing)]
+    .sort((a, b) => b.time - a.time)
+    .slice(0, limit)
   const record = timing.session.lapRecord
   // Today's fastest lap. Natsoft's "record" (<E RI RC>) is the stored race lap record for this track and category,
   // not today's: viewers read "Lap record: Will Brown" as the fastest lap, so both are labelled.
@@ -38,7 +42,8 @@ export function RaceControl({ timing, limit = 12 }: { timing: TimingSnapshot; li
       ) : (
         <ul>
           {messages.map((m) => (
-            <li key={`${m.time}-${m.text}`} className={/penalty/i.test(m.text) ? 'penalty' : ''}>
+            <li key={`${m.time}-${m.text}`} className={'served' in m ? 'served' : /penalty/i.test(m.text) ? 'penalty' : ''}
+              title={'served' in m ? 'Worked out from the pit stops (Natsoft doesn\'t send this)' : undefined}>
               <span className="rc-time">{trackTime(m.time)}</span>
               <span className="rc-text">{m.text}</span>
             </li>

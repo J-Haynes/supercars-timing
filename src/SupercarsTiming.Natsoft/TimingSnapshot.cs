@@ -16,11 +16,13 @@ public sealed record TimingSnapshot(
     IReadOnlyList<double> SegmentBest,
     /// <summary>Latest race control messages, newest first (at most <see cref="RaceControlLimit"/>).</summary>
     IReadOnlyList<RaceControlMessage> RaceControl,
+    /// <summary>Flag changes this session, oldest first.</summary>
+    IReadOnlyList<FlagChange> FlagHistory,
     double Now,
     long MessageCount)
 {
     public static TimingSnapshot Empty { get; } =
-        new(new SessionInfo("", "", "", "", "", "", null, null, 0, 0, null), [], new BestTimes(null, null, null, null, null), [], [], [], [], 0, 0);
+        new(new SessionInfo("", "", "", "", "", "", null, null, 0, 0, null), [], new BestTimes(null, null, null, null, null), [], [], [], [], [], 0, 0);
 
     public const int RaceControlLimit = 50;
 
@@ -81,7 +83,7 @@ public sealed record TimingSnapshot(
             new SessionInfo(s.Meeting, s.SessionName, s.SessionType, s.TrackName, s.TrackCode, s.Flag, s.ClockRemaining, s.ClockElapsed,
                 s.ScheduledLaps, s.GreenAt, s.Record),
             s.TimingPoints.ToList(), best, cars, reference, SessionBestSegments(s, order),
-            s.RaceControl.AsEnumerable().Reverse().Take(RaceControlLimit).ToList(), s.Now, s.MessageCount);
+            s.RaceControl.AsEnumerable().Reverse().Take(RaceControlLimit).ToList(), s.FlagHistory.ToList(), s.Now, s.MessageCount);
     }
 
     /// <summary>

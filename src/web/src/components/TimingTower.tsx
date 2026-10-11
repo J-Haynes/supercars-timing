@@ -100,11 +100,8 @@ const COLUMNS: Record<string, Column> = {
           {race && best.lap && Math.abs(car.bestLap - best.lap) < 0.0005 && (
             <span className="fastest-badge" title={`Fastest lap: ${lapTime(car.bestLap)}`} aria-label="Fastest lap"><StopwatchIcon /></span>
           )}
-          {carPenalties(car, timing).map((p, i) => p.servedAt ? (
-            <span key={i} className="penalty-badge served" title={`Penalty ${p.what}: served at the lap ${p.servedAt.lap} pit stop`}>
-              {penaltyBadge(p.what).replace(/^\+/, '')} ✓
-            </span>
-          ) : (
+          {/* Served penalties leave the tower; race control logs them as served. */}
+          {carPenalties(car, timing).filter((p) => !p.servedAt).map((p, i) => (
             <span key={i} className="penalty-badge" title={`Penalty: ${p.what} (not served yet)`}>{penaltyBadge(p.what)}</span>
           ))}
           {car.inPit && <span className="pit-badge" title="In the pit lane">PIT{pitSeconds(car, now)}</span>}

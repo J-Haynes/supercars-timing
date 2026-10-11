@@ -142,6 +142,8 @@ export interface TimingSnapshot {
   segmentBest: number[]
   /** Latest race control messages, newest first. */
   raceControl?: RaceControlMessage[]
+  /** Flag changes this session, oldest first (`time` is Natsoft time). Optional: older servers don't send it. */
+  flagHistory?: { time: number; flag: string }[]
   now: number
   messageCount: number
 }

@@ -99,4 +99,16 @@ public class RaceControlTests
         Assert.Empty(s.RaceControl);
         Assert.Equal(0, s.GreenAt);
     }
+
+    [Fact]
+    public void Flag_changes_are_kept_with_their_times()
+    {
+        var s = Fresh();
+        s.Apply("""<S T="1790.0000" S="WaitStart" I="0.0000" />""");
+        s.Apply("""<S T="1800.5000" S="Green" I="1800.3107" />""");
+        s.Apply("""<S T="1801.0000" S="Green" I="1800.3107" />""");   // repeat: not a change
+        s.Apply("""<S T="2500.2000" S="Yellow" I="2500.0000" />""");
+        Assert.Equal(["WaitStart", "Green", "Yellow"], s.FlagHistory.Select(f => f.Flag));
+        Assert.Equal(2500, TimingSnapshot.From(s).FlagHistory[^1].Time, 3);
+    }
 }
