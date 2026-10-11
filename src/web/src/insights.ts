@@ -1,5 +1,5 @@
 import type { CarRow, TimingSnapshot } from './types'
-import { liveGap, parkedAtLine, roadOrder } from './liveGaps'
+import { liveGap, parkedAtLine, raceOrder } from './liveGaps'
 import { startPosition } from './startingGrid'
 import { cautionPeriods, minDriverLaps, raceLaps } from './session'
 import { lapTime } from './format'
@@ -45,7 +45,7 @@ const MOVER_PLACES = 5
  */
 export function buildInsights(timing: TimingSnapshot, memory: InsightMemory): Insight[] {
   const order = ['M', ...timing.timingPoints.map((p) => p.id)]
-  const cars = roadOrder(timing.cars, order)
+  const cars = raceOrder(timing)
   if (cars.length === 0) return []
   const now = timing.now
   const leader = cars[0]

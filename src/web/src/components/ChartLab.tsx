@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { LapHistory, TimingSnapshot } from '../types'
-import { roadOrder } from '../liveGaps'
+import { raceOrder } from '../liveGaps'
 import { raceLaps } from '../session'
 import { lapTime } from '../format'
 import { SLOTS, gapPoints, lapTimePoints, positionPoints, shortLap, surname } from '../chartData'
@@ -40,8 +40,7 @@ export function ChartLab({ timing, history, initialCars, initialKind, onClose }:
   const [xDomain, setXDomain] = useState<Domain | null>(null)
   const [yDomain, setYDomain] = useState<Domain | null>(null)
   const [cleanLaps, setCleanLaps] = useState(true)
-  const order = ['M', ...timing.timingPoints.map((p) => p.id)]
-  const running = roadOrder(timing.cars, order)
+  const running = raceOrder(timing)
   const [a, setA] = useState(initialCars[0] ?? running[0]?.id ?? '')
   const [b, setB] = useState(initialCars[1] ?? running[1]?.id ?? '')
 

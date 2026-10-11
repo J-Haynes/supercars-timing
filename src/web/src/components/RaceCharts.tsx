@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import type { CarLaps, LapHistory, TimingSnapshot } from '../types'
 import { useLapHistory } from '../useLapHistory'
-import { roadOrder } from '../liveGaps'
+import { raceOrder } from '../liveGaps'
 import { raceLaps } from '../session'
 import { lapTime } from '../format'
 import { SLOTS, battlePoints, gapPoints, lapTimePoints, linearFit, shortLap, surname, trendLaps } from '../chartData'
@@ -22,8 +22,7 @@ export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
   const history = useLapHistory(timing.session.name)
   const [tab, setTab] = useState<Tab>('gaps')
   const [expanded, setExpanded] = useState(false)
-  const order = ['M', ...timing.timingPoints.map((p) => p.id)]
-  const running = roadOrder(timing.cars, order)
+  const running = raceOrder(timing)
   // Lap axis runs to the race distance (161 at Bathurst) when it's known, so the charts show how much race is left.
   const xMax = raceLaps(timing.session) || undefined
 

@@ -1,5 +1,5 @@
 import type { CarRow, SessionInfo, TimingSnapshot } from './types'
-import { liveGap, roadOrder } from './liveGaps'
+import { liveGap, raceOrder, raceFinished } from './liveGaps'
 import { unservedSeconds } from './penalties'
 
 /**
@@ -70,9 +70,10 @@ export function championshipFor(session: SessionInfo): RaceChampionship | undefi
  */
 export function projectedFinish(timing: TimingSnapshot): CarRow[] {
   const order = ['M', ...timing.timingPoints.map((p) => p.id)]
-  const cars = roadOrder(timing.cars, order)
+  const cars = raceOrder(timing)
   const leader = cars[0]
   if (!leader) return []
+  if (raceFinished(timing)) return cars
   const lead = cars.filter((c) => c.gapLaps === 0)
   const lapped = cars.filter((c) => c.gapLaps > 0)
   const gap = (c: CarRow) => (c === leader ? 0 : liveGap(c, leader, order) ?? (c.liveGapLaps === 0 && c.liveGap > 0 ? c.liveGap : c.gap))

@@ -1,4 +1,5 @@
-import type { CarRow } from './types'
+import type { CarRow, TimingSnapshot } from './types'
+import { flagKind } from './session'
 
 /**
  * Race gaps that update at every timing point, not just once a lap.
@@ -82,4 +83,20 @@ export function roadOrder(cars: CarRow[], order: string[]): CarRow[] {
     || order.indexOf(b.lastPoint) - order.indexOf(a.lastPoint)
     || latestCrossing(a, order) - latestCrossing(b, order)
     || (a.position || 999) - (b.position || 999))
+}
+
+/**
+ * The race order to show: the road order while racing, and Natsoft's official classification once the chequered flag
+ * is out. After the finish Natsoft stops counting laps but keeps sending timing points from the cool-down lap, and
+ * stops updating stopped cars' road positions, so the road order would rank cars by how far round the cool-down lap
+ * they are (Bathurst 1000: the winner dropped down the tower after the flag).
+ */
+export function raceOrder(timing: TimingSnapshot): CarRow[] {
+  if (raceFinished(timing)) return [...timing.cars].sort((a, b) => (a.position || 999) - (b.position || 999))
+  return roadOrder(timing.cars, ['M', ...timing.timingPoints.map((p) => p.id)])
+}
+
+/** True once the session's chequered flag is out (positions and gaps are then Natsoft's official ones). */
+export function raceFinished(timing: TimingSnapshot): boolean {
+  return flagKind(timing.session.flag) === 'finished'
 }

@@ -6,7 +6,7 @@ import { isRace, minDriverLaps, raceLaps } from '../session'
 import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
 import { startPosition } from '../startingGrid'
 import { carPenalties } from '../penalties'
-import { liveGap, parkedAtLine, roadOrder } from '../liveGaps'
+import { liveGap, parkedAtLine, raceFinished, raceOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
 import { useSessionClock } from '../map/useSessionClock'
 
@@ -19,6 +19,8 @@ interface Ctx {
   isFirst: boolean
   /** Position shown: road order in races (see roadOrder), Natsoft's otherwise. */
   rank: number
+  /** The race has finished (chequered flag): show official positions and gaps. */
+  finished: boolean
   /** Race leader and the car ahead, for live gaps. */
   leader?: CarRow
   ahead?: CarRow
@@ -55,7 +57,8 @@ const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
 // tell (e.g. just out of the pits). Practice/qualifying: GI is the gap to the fastest lap, so it stays as is.
 const gapOf = (c: Ctx) => {
   const { car } = c
-  if (!c.race) return { gap: car.gap, laps: car.gapLaps, int: car.interval, intLaps: car.intervalLaps, status: '' }
+  // Practice/qualifying, and races once finished: Natsoft's official gaps (live ones would follow the cool-down lap).
+  if (!c.race || c.finished) return { gap: car.gap, laps: car.gapLaps, int: car.interval, intLaps: car.intervalLaps, status: '' }
   // In the pit lane, or out of it but not yet at a timing point: no meaningful gap until the next point.
   const status = car.inPit ? 'PIT' : parkedAtLine(car) ? 'OUT' : ''
   const gap = car.gapLaps === 0 && c.leader ? liveGap(car, c.leader, c.order) : null
@@ -284,7 +287,9 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   const race = isRace(timing.session.type)
   const order = ['M', ...timingPoints.map((p) => p.id)]
   // Races: order by progress on the road, which updates at every timing point (Natsoft re-orders at the line).
-  const cars = race ? roadOrder(timing.cars, order) : timing.cars
+  // Road order while racing; Natsoft's official classification after the chequered flag (raceOrder).
+  const finished = race && raceFinished(timing)
+  const cars = race ? raceOrder(timing) : timing.cars
   const rowRef = useRowMoves(cars.map((c) => c.id))
   // Driver laps only matter when cars are shared (co-driver events).
   const shared = cars.some((c) => (c.drivers?.length ?? 0) > 1)
@@ -309,7 +314,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race ? i + 1 : car.position, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr
