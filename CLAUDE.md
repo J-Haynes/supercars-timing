@@ -164,6 +164,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   not today's lap, so it's labelled "Race lap record"), purple if beaten. Races also get a purple stopwatch badge on
   the fastest-lap car in the tower. Penalties are parsed
   from the text (`TimingSnapshot.Penalty()`, best effort) into `CarRow.Penalties` and badged in the tower ("+5s").
+  Served or not (`penalties.ts`): Natsoft never says, and pit-lane time doesn't show it (Payne's serving stop was a
+  normal 66 s), so a penalty counts as served at the car's first completed pit stop that started after it was
+  issued (badge turns muted "5s ✓"; the ladder stops adding it).
   Race time in the header = now − `SessionInfo.GreenAt` (first green flag).
 - Insights ticker (`InsightsTicker.tsx`, races, above the tower; logic in `insights.ts`): recent events (new fastest
   lap, lead change, race control penalties/incidents), battles (< 1 s on the road, trains of 3+), closing trends (gap

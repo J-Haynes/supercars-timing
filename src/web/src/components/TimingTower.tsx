@@ -5,6 +5,7 @@ import { MiniSectors } from './MiniSectors'
 import { isRace, minDriverLaps, raceLaps } from '../session'
 import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
 import { startPosition } from '../startingGrid'
+import { carPenalties } from '../penalties'
 import { liveGap, parkedAtLine, roadOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
 
@@ -24,6 +25,7 @@ interface Ctx {
   best: TimingSnapshot['best']
   points: TimingSnapshot['timingPoints']
   session: TimingSnapshot['session']
+  timing: TimingSnapshot
   /** Minimum laps per driver (0 = no rule) and laps left in the race (0 = unknown). */
   minLaps: number
   lapsLeft: number
@@ -84,7 +86,7 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple, race, best }) => {
+    cell: ({ car, now, simple, race, best, timing }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
@@ -98,8 +100,12 @@ const COLUMNS: Record<string, Column> = {
           {race && best.lap && Math.abs(car.bestLap - best.lap) < 0.0005 && (
             <span className="fastest-badge" title={`Fastest lap: ${lapTime(car.bestLap)}`} aria-label="Fastest lap"><StopwatchIcon /></span>
           )}
-          {(car.penalties ?? []).map((p, i) => (
-            <span key={i} className="penalty-badge" title={`Penalty: ${p}`}>{penaltyBadge(p)}</span>
+          {carPenalties(car, timing).map((p, i) => p.servedAt ? (
+            <span key={i} className="penalty-badge served" title={`Penalty ${p.what}: served at the lap ${p.servedAt.lap} pit stop`}>
+              {penaltyBadge(p.what).replace(/^\+/, '')} ✓
+            </span>
+          ) : (
+            <span key={i} className="penalty-badge" title={`Penalty: ${p.what} (not served yet)`}>{penaltyBadge(p.what)}</span>
           ))}
           {car.inPit && <span className="pit-badge" title="In the pit lane">PIT{pitSeconds(car, now)}</span>}
         </>
@@ -275,7 +281,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race ? i + 1 : car.position, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, minLaps, lapsLeft }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race ? i + 1 : car.position, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, minLaps, lapsLeft }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr

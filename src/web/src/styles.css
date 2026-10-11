@@ -390,6 +390,7 @@ main { flex: 1; padding: 0 16px 24px; }
 }
 
 /* Penalty badge next to the driver (from race control messages). */
+.penalty-badge.served { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 0 4px; }
 .penalty-badge { margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--red); color: #fff; }
 /* Fastest lap in a race: same box as the penalty badge, in session-best purple, with a stopwatch. */
 .fastest-badge { margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--purple); color: #fff; display: inline-flex; align-items: center; vertical-align: 1px; }

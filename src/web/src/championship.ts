@@ -1,5 +1,6 @@
 import type { CarRow, SessionInfo, TimingSnapshot } from './types'
 import { liveGap, roadOrder } from './liveGaps'
+import { unservedSeconds } from './penalties'
 
 /**
  * Championship data that isn't in the timing feed: standings coming into a race and its points scale.
@@ -59,12 +60,10 @@ export function championshipFor(session: SessionInfo): RaceChampionship | undefi
   return RACES.find((r) => r.meeting.test(session.meeting) && r.session.test(session.name))
 }
 
-/** Seconds from a penalty like "5 seconds"; 0 for anything else. */
-const penaltySeconds = (car: CarRow) => (car.penalties ?? []).reduce((s, p) => s + Number(p.match(/(\d+)\s*sec/i)?.[1] ?? 0), 0)
 
 /**
- * Finishing order if the race ended now: the road order, with time penalties added to the gap of cars on the lead
- * lap (so Payne's +5 s puts him behind anyone within 5 s). Lapped cars keep their order behind.
+ * Finishing order if the race ended now: the road order, with time penalties not yet served added to the gap of
+ * cars on the lead lap (an unserved +5 s puts a car behind anyone within 5 s). Lapped cars keep their order behind.
  */
 export function projectedFinish(timing: TimingSnapshot): CarRow[] {
   const order = ['M', ...timing.timingPoints.map((p) => p.id)]
@@ -74,7 +73,7 @@ export function projectedFinish(timing: TimingSnapshot): CarRow[] {
   const lead = cars.filter((c) => c.gapLaps === 0)
   const lapped = cars.filter((c) => c.gapLaps > 0)
   const gap = (c: CarRow) => (c === leader ? 0 : liveGap(c, leader, order) ?? (c.liveGapLaps === 0 && c.liveGap > 0 ? c.liveGap : c.gap))
-  const adjusted = lead.map((c, i) => ({ c, t: gap(c) + penaltySeconds(c), i })).sort((a, b) => a.t - b.t || a.i - b.i).map((x) => x.c)
+  const adjusted = lead.map((c, i) => ({ c, t: gap(c) + unservedSeconds(c, timing), i })).sort((a, b) => a.t - b.t || a.i - b.i).map((x) => x.c)
   return [...adjusted, ...lapped]
 }
 
