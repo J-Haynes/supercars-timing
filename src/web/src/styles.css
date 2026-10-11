@@ -342,7 +342,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .pit-log-empty { color: var(--muted); font-size: 13px; padding: 4px 0; }
 
 /* Primary / co-driver in the car, as on the broadcast: hollow white circle = primary, green dot = co-driver. */
-.driver-marker { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-left: 7px; vertical-align: 1px; box-sizing: border-box; }
+.driver-marker { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; box-sizing: border-box; }
 .driver-marker.primary { border: 1.5px solid #fff; }
 .driver-marker.co-driver { background: var(--green); }
 
@@ -368,3 +368,8 @@ main { flex: 1; padding: 0 16px 24px; }
 .column-list label { flex: 1; display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .column-list button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 4px; width: 28px; height: 26px; cursor: pointer; }
 .column-list button:disabled { opacity: .3; cursor: default; }
+
+/* Positions gained / lost since the start. */
+.pos-up { color: var(--green); font-weight: 700; }
+.pos-down { color: var(--red); font-weight: 700; }
+.pos-same { color: var(--muted); }

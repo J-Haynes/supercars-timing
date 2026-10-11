@@ -4,6 +4,7 @@ import { gapText, lapTime, seconds, timeClass } from '../format'
 import { MiniSectors } from './MiniSectors'
 import { isRace, minDriverLaps, raceLaps } from '../session'
 import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
+import { startPosition } from '../startingGrid'
 
 interface Ctx {
   car: CarRow
@@ -15,6 +16,7 @@ interface Ctx {
   race: boolean
   best: TimingSnapshot['best']
   points: TimingSnapshot['timingPoints']
+  session: TimingSnapshot['session']
   /** Minimum laps per driver (0 = no rule) and laps left in the race (0 = unknown). */
   minLaps: number
   lapsLeft: number
@@ -41,6 +43,18 @@ const gapOf = (c: Ctx) => ({ gap: c.car.gap, laps: c.car.gapLaps, int: c.car.int
 
 const COLUMNS: Record<string, Column> = {
   pos: { key: 'pos', header: 'Pos', numeric: true, cell: ({ car }) => car.position || '', cellClass: () => 'pos' },
+  posChange: {
+    key: 'posChange', header: '+/−', numeric: true,
+    cell: ({ car, session }) => {
+      const start = startPosition(session, car.carNumber)
+      if (!start || !car.position) return ''
+      const change = start - car.position
+      const title = `Started P${start}`
+      if (change > 0) return <span className="pos-up" title={title}>▲{change}</span>
+      if (change < 0) return <span className="pos-down" title={title}>▼{-change}</span>
+      return <span className="pos-same" title={title}>–</span>
+    },
+  },
   car: {
     key: 'car', header: 'Car',
     cell: ({ car }) => <span className={`car mfr-${car.manufacturer.toLowerCase()}`} title={car.vehicle}>{car.carNumber}</span>,
@@ -53,8 +67,8 @@ const COLUMNS: Record<string, Column> = {
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
       return (
         <>
-          {car.driver}
           <DriverMarker car={car} />
+          {car.driver}
           {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
           {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
           {car.inPit && <span className="pit-badge">PIT</span>}
@@ -199,7 +213,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHo
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, race, best, points: timingPoints, minLaps, lapsLeft }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, race, best, points: timingPoints, session: timing.session, minLaps, lapsLeft }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr

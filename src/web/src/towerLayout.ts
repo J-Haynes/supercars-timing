@@ -8,6 +8,7 @@ export type SessionKind = 'timed' | 'race'
 /** Every column, with the name shown in the settings panel. */
 export const COLUMN_LABELS: Record<string, string> = {
   pos: 'Position',
+  posChange: 'Positions gained/lost (races)',
   car: 'Car number',
   driver: 'Driver',
   driverLaps: 'Driver laps (co-driver events)',
@@ -36,8 +37,8 @@ export const DEFAULT_LAYOUTS: Record<SessionKind, { detailed: string[]; simple: 
   },
   race: {
     // Driver laps next to the names: at endurance races it's what decides strategy, so keep it on screen.
-    detailed: ['pos', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'stint', 'laps', 'minis'],
-    simple: ['pos', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'pits', 'stint', 'laps'],
+    detailed: ['pos', 'posChange', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'stint', 'laps', 'minis'],
+    simple: ['pos', 'posChange', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'pits', 'stint', 'laps'],
   },
 }
 

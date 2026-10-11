@@ -115,7 +115,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Co-driver events: `CarRow.Drivers` lists every driver; `Driver`/`DriverIndex` is who's in the car (Natsoft `<P D>`).
   `DriverChangedAt` marks a swap; the tower shows the other driver(s) in detailed mode and a SWAP badge for 3 minutes.
   Natsoft driver `1` is the primary (full-time) driver in every entry. As on the broadcast, the tower marks who's in
-  the car: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
+  the car, left of the name: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
+- Positions gained/lost (`posChange`, races): from `startingGrid.ts`, a hand-made grid per session taken from our
+  recording (Natsoft's order before the green). Stopgap: the server should send each car's grid position instead.
 - Manufacturer colours (CSS vars): Ford blue, Chevrolet orange, Toyota red; `ManufacturerKey` in the controls bar.
 - Menu (`Menu.tsx`, ☰ in the header): live, results of previous Supercars sessions (`ResultsView.tsx`), upcoming
   events from `calendar.ts` with countdowns and map status from `tracks/manifest.json`. Update `calendar.ts` when
