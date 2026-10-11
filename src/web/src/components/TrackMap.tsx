@@ -6,6 +6,7 @@ import { carPosition } from '../map/carPosition'
 import { useSessionClock } from '../map/useSessionClock'
 import { isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from '../map/calibrate'
+import { usePositionSync } from '../map/usePositionSync'
 
 const CAR_RADIUS = 46 // metres, in map units
 const PIT_SPACING = 70
@@ -94,6 +95,9 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
   }, [track, order, timing.session.name, timing.timingPoints, timing.segmentReference])
   const effective = useMemo(() => (calibrated ? { ...track, timingPoints: calibrated } : track), [track, calibrated])
   const awaitingCalibration = !!track.provisional && !calibrated
+  // Just after the page loads, positions come from crossings made before it; say so until most cars have updated.
+  const flagNow = timing.session.flag.toLowerCase()
+  const sync = usePositionSync(timing.cars, `${timing.session.meeting}|${timing.session.name}`, flagNow === 'green' || flagNow === 'yellow')
 
   const geometry = useMemo(() => new TrackModel(track), [track])          // outline only: stable for the view
   const model = useMemo(() => new TrackModel(effective), [effective])     // with timing points: car positions
@@ -164,6 +168,12 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
           )
         })}
       </svg>
+      {!awaitingCalibration && !sync.synced && (
+        <div className="map-sync" role="status">
+          <span className="map-sync-dot" aria-hidden />
+          Syncing car positions · {sync.updated}/{sync.total} cars
+        </div>
+      )}
       {awaitingCalibration && (
         <div className="map-overlay">Learning where the timing points are from live pace. Cars appear after a lap or two.</div>
       )}

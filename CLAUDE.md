@@ -106,6 +106,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Timing point positions per track are estimates from TrackBuilder's lap simulation. If they look wrong on a
   track, fix the inputs (OSM relation, control-line node, recording) and rebuild rather than hand-editing the JSON.
 - `FeedStatus.ClockRate` (replay speed) drives the client-side clock, so replays at 10× animate correctly.
+- After a page load the map shows "Syncing car positions · n/N cars" (`usePositionSync`) until 90% of on-track cars have
+  passed a timing point since (max 45 s), only while the flag is green or yellow.
 
 ## UI essentials
 
