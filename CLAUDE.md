@@ -104,7 +104,10 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   otherwise the field median) plus `SegmentReference`.
 - The frontend moves a car the same fraction through the *simulated* segment time as it is through the expected
   real time, which makes cars slow for corners. Cars that are late hold at 99% of the segment, and dim once
-  they're 2.5× overdue. On out-laps the expected time is the track's typical time × the car's pace through its
+  they're 2.5× overdue. For drawing only, the expected time gets 4% slack (`VISUAL_SLACK`) and the step at each
+  new crossing fades out over 0.3 s (`map/smoothing.ts`); the session clock blends server corrections in over
+  0.5 s (`map/sessionClock.ts`). Measured live: stops at points 137 → 6, single-frame teleports 264 → 1 per 3 min.
+  `overdue`/`stale` don't use the slack. On out-laps the expected time is the track's typical time × the car's pace through its
   previous stretch (1.3× before it has one), so cars in the pit-exit queue keep moving.
 - Timing point positions per track are estimates from TrackBuilder's lap simulation. If they look wrong on a
   track, fix the inputs (OSM relation, control-line node, recording) and rebuild rather than hand-editing the JSON.

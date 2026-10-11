@@ -7,6 +7,7 @@ import { useSessionClock } from '../map/useSessionClock'
 import { flagKind, isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from '../map/calibrate'
 import { usePositionSync } from '../map/usePositionSync'
+import { smoothPosition, type Smoothed } from '../map/smoothing'
 
 const CAR_RADIUS = 46 // metres, in map units
 const PIT_SPACING = 70
@@ -97,6 +98,8 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
   }, [track, order, timing.session.name, timing.timingPoints, timing.segmentReference])
   const effective = useMemo(() => (calibrated ? { ...track, timingPoints: calibrated } : track), [track, calibrated])
   const awaitingCalibration = !!track.provisional && !calibrated
+  // Per-car dot smoothing across timing point crossings (map/smoothing.ts). Visual only.
+  const smoothing = useRef(new Map<string, Smoothed>())
   // Just after the page loads, positions come from crossings made before it; say so until most cars have updated.
   const flagNow = flagKind(timing.session.flag)
   const sync = usePositionSync(timing.cars, `${timing.session.meeting}|${timing.session.name}`, flagNow === 'green' || flagNow === 'caution')
@@ -159,7 +162,11 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
           const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap, baseline)
           if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) return null
           let p: Vec
-          if (state.kind === 'track') p = s(state.distance)
+          if (state.kind === 'track') {
+            const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, state.distance, now, model.length)
+            smoothing.current.set(car.id, sm)
+            p = s(sm.shown)
+          }
           else if (state.kind === 'pit') p = view.toScreen(track.pitLane.length > 1 ? pitSlot(model, pitIndex++) : pitAreaSlot(model, pitIndex++))
           else return null
           const dim = state.kind === 'pit' || (state.kind === 'track' && state.stale)

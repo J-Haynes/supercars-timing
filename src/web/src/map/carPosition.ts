@@ -6,6 +6,9 @@ export type CarMapState =
   | { kind: 'pit' }
   | { kind: 'unknown' }
 
+/** Visual pacing allowance (see where it's used). Doesn't affect `overdue`/`stale`, which other logic relies on. */
+export const VISUAL_SLACK = 1.04
+
 /** Out-lap pace (x typical) before the car has completed a stretch. Checked against Bathurst recordings. */
 const OUT_LAP_PACE = 1.3
 
@@ -53,7 +56,10 @@ export function carPosition(
 
   const elapsed = Math.max(0, now - car.lastPointAt)
   // Hold just short of the next point if the car is late: it hasn't crossed yet, so it can't be past it.
-  const fraction = Math.min(elapsed / expected, 0.99)
+  // For the animation only, assume the stretch takes a little longer than last time: a car a few tenths slower
+  // would otherwise reach 99% and wait there until its crossing arrives (measured at every timing point, median
+  // 0.4 s). Arriving a few metres "early" is taken up by the smoothing in map/smoothing.ts instead.
+  const fraction = Math.min(elapsed / (expected * VISUAL_SLACK), 0.99)
   const stale = elapsed > expected * 2.5
   const overdue = elapsed > expected
 
