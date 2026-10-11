@@ -202,8 +202,9 @@ the server in live mode by hand.
 
 ## F1
 
-- **Two apps, one project:** Supercars at `/`, F1 at `/f1`; the header's Supercars | F1 switch is a link (full page
-  load) and `/` remembers the last choice. Everything branches on `isF1` from `series.ts`; settings are stored
+- **Two apps, one project:** Supercars at `/`, F1 at `/f1`; the header's switch (the two logos, `src/web/src/assets`,
+  sources in `SessionHeader.tsx`) is a link (full page load) and `/` remembers the last choice. Keep the header
+  identical in both apps (it always has three title lines; `scrollbar-gutter: stable`) so nothing moves on switching. Everything branches on `isF1` from `series.ts`; settings are stored
   per series. The F1 menu has Live and Upcoming (`F1_UPCOMING` in `calendar.ts`, from the Jolpica API, cited;
   `SERIES_UPCOMING` picks the series) but no Results yet (those come from Natsoft recordings). The F1 app hides
   the ladders and the manufacturer key; it adds team colours (`teamStyle`), a tyre column and grid positions (from `CarRow`'s

@@ -669,9 +669,20 @@ button.upcoming:hover { border-color: var(--muted); }
 .tyre-wet::before { border-color: #0072c6; }
 
 /* Supercars | F1 switch in the header: each is its own app (a full page load). */
-.series-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 12px; font-weight: 700; }
-.series-switch a { padding: 4px 10px; color: var(--muted); text-decoration: none; }
-.series-switch a.active { background: var(--line); color: var(--text, #fff); }
+.series-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; height: 36px; }
+.series-switch a { display: flex; align-items: center; justify-content: center; width: 52px; text-decoration: none; }
+.series-switch a.active { background: var(--line); }
+.series-logo { display: block; }
+.series-logo-v8 { height: 20px; }
+.series-logo-f1 { height: 12px; }
+/* The other series' logo is greyed until hovered. */
+.series-switch a:not(.active) .series-logo { filter: grayscale(1) brightness(2.6); opacity: .5; transition: opacity .15s, filter .15s; }
+.series-switch a:not(.active):hover .series-logo { filter: none; opacity: 1; }
 
 /* Menu button and series switch share a row (on phones the header stacks). */
 .session-nav { display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* Same layout in both apps: reserve the scrollbar's space (the F1 page scrolls, an empty Supercars page doesn't, and
+   the whole page shifted sideways when switching), and keep the status row as tall as its flag badge. */
+html { scrollbar-gutter: stable; }
+.session-status { min-height: 28px; }

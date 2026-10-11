@@ -1,4 +1,10 @@
 import { isF1, SERIES, SERIES_HOME, SERIES_LABEL, type Series } from '../series'
+// Logos: F1 from Wikimedia Commons (File:F1.svg); the Supercars "S" mark cropped from the championship logo on
+// Wikipedia (File:Supercars_Championship_Logo_2021.png). Trademarks of their owners; used here for a personal app.
+import f1Logo from '../assets/f1-logo.svg'
+import supercarsMark from '../assets/supercars-mark.png'
+
+const SERIES_LOGO: Record<Series, string> = { v8: supercarsMark, f1: f1Logo }
 import type { FeedStatus, TimingUpdate } from '../types'
 import type { ConnectionState } from '../useTiming'
 import { clock } from '../format'
@@ -75,7 +81,8 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
       <div className="session-title">
         <div className="meeting">{session?.meeting || update?.timing.session.meeting || (isF1 ? 'F1 Timing' : 'Supercars Timing')}</div>
         <h1>{session?.name || (hideSession ? 'Waiting for the next Supercars session' : '—')}</h1>
-        <div className="track">{session?.track}</div>
+        {/* Always three lines, so the header keeps its height between sessions and between the two apps. */}
+        <div className="track">{session?.track || '\u00A0'}</div>
       </div>
       <div className="session-status">
         {flag && <span className={`flag ${FLAG_CLASS[flag.toLowerCase()] ?? ''}`}>{FLAG_LABEL[flag.toLowerCase()] ?? flag}</span>}
@@ -102,7 +109,10 @@ function SeriesSwitch() {
   return (
     <nav className="series-switch" aria-label="Series">
       {(['v8', 'f1'] as const).map((s) => (
-        <a key={s} href={SERIES_HOME[s]} className={s === SERIES ? 'active' : ''} onClick={() => choose(s)}>{SERIES_LABEL[s]}</a>
+        <a key={s} href={SERIES_HOME[s]} className={s === SERIES ? 'active' : ''} onClick={() => choose(s)}
+          title={SERIES_LABEL[s]} aria-current={s === SERIES ? 'page' : undefined}>
+          <img src={SERIES_LOGO[s]} alt={SERIES_LABEL[s]} className={`series-logo series-logo-${s}`} />
+        </a>
       ))}
     </nav>
   )
