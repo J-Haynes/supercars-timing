@@ -1,3 +1,5 @@
+import { isF1 } from './series'
+
 /**
  * Upcoming Repco Supercars Championship events, from https://www.supercars.com/calendar.
  * Supercars hadn't published session times when this was written, so countdowns run to the start of
@@ -65,6 +67,112 @@ export const UPCOMING: UpcomingEvent[] = [
     format: 'Finals round 3',
   },
 ]
+
+/**
+ * Remaining 2026 Formula 1 rounds. Session times from the Jolpica F1 API (the community continuation of Ergast),
+ * fetched 11 Oct 2026, converted to local track time with the UTC offsets F1's live timing used at these circuits
+ * in 2025 (Austin -05:00, Mexico City -06:00, São Paulo -03:00, Las Vegas -08:00, Lusail +03:00, Yas Marina +04:00).
+ * Practice and qualifying are shown as an hour long. Track maps were built from each circuit's 2025 qualifying
+ * (tools/F1TrackBuilder); rebuild them after Practice 1 if F1 changes the mini-sectors.
+ */
+const SOURCE = 'https://api.jolpi.ca/ergast/f1/2026/races/'
+
+export const F1_UPCOMING: UpcomingEvent[] = [
+  {
+    name: 'Singapore Grand Prix', venue: 'Marina Bay Street Circuit', location: 'Singapore',
+    startDate: '2026-10-09', endDate: '2026-10-11', utcOffset: '+08:00', trackCode: 'F1-61',
+    format: 'Round 17',
+    sessionsSource: SOURCE,
+    sessions: [
+      { name: 'Practice 1', start: '2026-10-09T16:30', end: '2026-10-09T17:30' },
+      { name: 'Sprint Qualifying', start: '2026-10-09T20:30', end: '2026-10-09T21:30' },
+      { name: 'Sprint', start: '2026-10-10T17:00' },
+      { name: 'Qualifying', start: '2026-10-10T21:30', end: '2026-10-10T22:30' }, // F1's session index (Jolpica: 21:00)
+      { name: 'Race', start: '2026-10-11T20:00' },
+    ],
+  },
+  {
+    name: 'United States Grand Prix', venue: 'Circuit of the Americas', location: 'Austin, Texas',
+    startDate: '2026-10-23', endDate: '2026-10-25', utcOffset: '-05:00', trackCode: 'F1-9',
+    format: 'Round 18',
+    sessionsSource: SOURCE,
+    sessions: [
+      { name: 'Practice 1', start: '2026-10-23T12:30', end: '2026-10-23T13:30' },
+      { name: 'Practice 2', start: '2026-10-23T16:00', end: '2026-10-23T17:00' },
+      { name: 'Practice 3', start: '2026-10-24T12:30', end: '2026-10-24T13:30' },
+      { name: 'Qualifying', start: '2026-10-24T16:00', end: '2026-10-24T17:00' },
+      { name: 'Race', start: '2026-10-25T15:00' },
+    ],
+  },
+  {
+    name: 'Mexico City Grand Prix', venue: 'Autódromo Hermanos Rodríguez', location: 'Mexico City',
+    startDate: '2026-10-30', endDate: '2026-11-01', utcOffset: '-06:00', trackCode: 'F1-65',
+    format: 'Round 19',
+    sessionsSource: SOURCE,
+    sessions: [
+      { name: 'Practice 1', start: '2026-10-30T12:30', end: '2026-10-30T13:30' },
+      { name: 'Practice 2', start: '2026-10-30T16:00', end: '2026-10-30T17:00' },
+      { name: 'Practice 3', start: '2026-10-31T11:30', end: '2026-10-31T12:30' },
+      { name: 'Qualifying', start: '2026-10-31T15:00', end: '2026-10-31T16:00' },
+      { name: 'Race', start: '2026-11-01T14:00' },
+    ],
+  },
+  {
+    name: 'Brazilian Grand Prix', venue: 'Autódromo José Carlos Pace (Interlagos)', location: 'São Paulo',
+    startDate: '2026-11-06', endDate: '2026-11-08', utcOffset: '-03:00', trackCode: 'F1-14',
+    format: 'Round 20',
+    sessionsSource: SOURCE,
+    sessions: [
+      { name: 'Practice 1', start: '2026-11-06T12:30', end: '2026-11-06T13:30' },
+      { name: 'Practice 2', start: '2026-11-06T16:00', end: '2026-11-06T17:00' },
+      { name: 'Practice 3', start: '2026-11-07T11:30', end: '2026-11-07T12:30' },
+      { name: 'Qualifying', start: '2026-11-07T15:00', end: '2026-11-07T16:00' },
+      { name: 'Race', start: '2026-11-08T14:00' },
+    ],
+  },
+  {
+    name: 'Las Vegas Grand Prix', venue: 'Las Vegas Strip Circuit', location: 'Las Vegas, Nevada',
+    startDate: '2026-11-19', endDate: '2026-11-21', utcOffset: '-08:00', trackCode: 'F1-152',
+    format: 'Round 21',
+    sessionsSource: SOURCE,
+    sessions: [
+      { name: 'Practice 1', start: '2026-11-19T16:30', end: '2026-11-19T17:30' },
+      { name: 'Practice 2', start: '2026-11-19T20:00', end: '2026-11-19T21:00' },
+      { name: 'Practice 3', start: '2026-11-20T16:30', end: '2026-11-20T17:30' },
+      { name: 'Qualifying', start: '2026-11-20T20:00', end: '2026-11-20T21:00' },
+      { name: 'Race', start: '2026-11-21T20:00' },
+    ],
+  },
+  {
+    name: 'Qatar Grand Prix', venue: 'Lusail International Circuit', location: 'Lusail',
+    startDate: '2026-11-27', endDate: '2026-11-29', utcOffset: '+03:00', trackCode: 'F1-150',
+    format: 'Round 22',
+    sessionsSource: SOURCE,
+    sessions: [
+      { name: 'Practice 1', start: '2026-11-27T16:30', end: '2026-11-27T17:30' },
+      { name: 'Practice 2', start: '2026-11-27T20:00', end: '2026-11-27T21:00' },
+      { name: 'Practice 3', start: '2026-11-28T17:30', end: '2026-11-28T18:30' },
+      { name: 'Qualifying', start: '2026-11-28T21:00', end: '2026-11-28T22:00' },
+      { name: 'Race', start: '2026-11-29T19:00' },
+    ],
+  },
+  {
+    name: 'Abu Dhabi Grand Prix', venue: 'Yas Marina Circuit', location: 'Abu Dhabi',
+    startDate: '2026-12-04', endDate: '2026-12-06', utcOffset: '+04:00', trackCode: 'F1-70',
+    format: 'Round 23',
+    sessionsSource: SOURCE,
+    sessions: [
+      { name: 'Practice 1', start: '2026-12-04T13:30', end: '2026-12-04T14:30' },
+      { name: 'Practice 2', start: '2026-12-04T17:00', end: '2026-12-04T18:00' },
+      { name: 'Practice 3', start: '2026-12-05T14:30', end: '2026-12-05T15:30' },
+      { name: 'Qualifying', start: '2026-12-05T18:00', end: '2026-12-05T19:00' },
+      { name: 'Race', start: '2026-12-06T17:00' },
+    ],
+  },
+]
+
+/** Upcoming events for the app on screen (Supercars or F1). */
+export const SERIES_UPCOMING = isF1 ? F1_UPCOMING : UPCOMING
 
 export function eventStart(e: UpcomingEvent): Date {
   return new Date(`${e.startDate}T00:00:00${e.utcOffset}`)

@@ -17,5 +17,35 @@
     "name": "Marina Bay",
     "match": [],
     "provisional": false
+  },
+  "F1-70": {
+    "name": "Yas Island",
+    "match": [],
+    "provisional": false
+  },
+  "F1-152": {
+    "name": "Las Vegas",
+    "match": [],
+    "provisional": false
+  },
+  "F1-65": {
+    "name": "Mexico City",
+    "match": [],
+    "provisional": false
+  },
+  "F1-150": {
+    "name": "Lusail",
+    "match": [],
+    "provisional": false
+  },
+  "F1-14": {
+    "name": "S\u00e3o Paulo",
+    "match": [],
+    "provisional": false
+  },
+  "F1-9": {
+    "name": "Austin",
+    "match": [],
+    "provisional": false
   }
 }

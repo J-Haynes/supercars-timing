@@ -64,7 +64,7 @@ export default function App() {
 
   return (
     <div className={`app${frame}`}>
-      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={isF1 ? undefined : () => setMenuOpen(true)} hideSession={supportSession} />
+      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} hideSession={supportSession} />
       <Menu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}

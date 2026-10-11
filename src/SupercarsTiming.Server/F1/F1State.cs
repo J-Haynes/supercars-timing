@@ -122,11 +122,10 @@ public sealed partial class F1State
         var car = Car(number);
         if (patch["Sectors"] is JsonNode sectors)
         {
-            if (snapshot && sectors is JsonArray full)
-            {
-                _segmentsPerSector = full.Select(s => (s?["Segments"] as JsonArray)?.Count ?? 0).ToArray();
-                if (SegmentCount == 0) _segmentsPerSector = [8, 8, 8];
-            }
+            // Mini-sectors per sector differ by circuit: learn them from any full list (the state on connecting,
+            // or the start of an archive).
+            if (sectors is JsonArray full && full.All(x => (x?["Segments"] as JsonArray)?.Count > 0))
+                _segmentsPerSector = full.Select(x => ((JsonArray)x!["Segments"]!).Count).ToArray();
 
             var crossed = new List<int>();
             for (var s = 0; s < _segmentsPerSector.Length; s++)

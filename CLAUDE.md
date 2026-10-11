@@ -204,8 +204,9 @@ the server in live mode by hand.
 
 - **Two apps, one project:** Supercars at `/`, F1 at `/f1`; the header's Supercars | F1 switch is a link (full page
   load) and `/` remembers the last choice. Everything branches on `isF1` from `series.ts`; settings are stored
-  per series. The F1 app hides the menu (results/replay/events are Supercars only), the ladders and the
-  manufacturer key; it adds team colours (`teamStyle`), a tyre column and grid positions (from `CarRow`'s
+  per series. The F1 menu has Live and Upcoming (`F1_UPCOMING` in `calendar.ts`, from the Jolpica API, cited;
+  `SERIES_UPCOMING` picks the series) but no Results yet (those come from Natsoft recordings). The F1 app hides
+  the ladders and the manufacturer key; it adds team colours (`teamStyle`), a tyre column and grid positions (from `CarRow`'s
   optional F1 fields `Tyre`, `TyreLaps`, `TeamColour`, `GridPosition`, `Retired`; defaults keep Natsoft unchanged).
 - **Server:** the F1 feed runs alongside Natsoft (config section `F1`, `F1:Enabled=false` turns it off). One
   connection to F1's hub, 10 s / 30 s reconnects. Recording, warm start (all F1 files from the last 3 h) and
@@ -216,8 +217,11 @@ the server in live mode by hand.
   and in the pit lane); the first lap count seen isn't a crossing. Tests: `F1StateTests`.
 - **Gaps:** F1's `GapToLeader`/`IntervalToPositionAhead` are already live, so the tower uses them as sent.
   Flags: TrackStatus 4 = "Safety Car", 6/7 = "VSC" (both cautions in `flagKind`), 2 is a local yellow (green).
-- **Maps:** `F1-61.json` (Marina Bay) was built from Singapore 2026 qualifying positions. Other circuits need
-  `build_track.py` run on an archived session there (it finds the ~2.6 s timing delay itself). No pit lane yet.
+- **Maps:** `F1-<circuit key>.json`, built by `build_track.py` from archived qualifying positions: Marina Bay (61)
+  from 2026; Austin (9), Mexico City (65), Interlagos (14), Las Vegas (152), Lusail (150), Yas Marina (70) from 2025.
+  Mini-sectors per sector differ by circuit (read from the data). The pit lane is traced from cars' positions while
+  `InPit` (Interlagos has a stray branch into the infield). Cars in the pits are drawn along it. Rebuild a circuit
+  from its Practice 1 archive if the 2026 mini-sectors differ from 2025's (tower ids won't match the map's).
 - **Car positions (Position.z) need an F1 TV login:** not used; see `docs/PLANNING.md` before building on it.
 
 ## Next round: Gold Coast 500 (23-25 Oct 2026)

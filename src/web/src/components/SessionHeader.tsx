@@ -68,8 +68,10 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
 
   return (
     <header className="session">
-      {onMenu && <button type="button" className="menu-button" onClick={onMenu} aria-label="Open menu">☰</button>}
-      <SeriesSwitch />
+      <div className="session-nav">
+        {onMenu && <button type="button" className="menu-button" onClick={onMenu} aria-label="Open menu">☰</button>}
+        <SeriesSwitch />
+      </div>
       <div className="session-title">
         <div className="meeting">{session?.meeting || update?.timing.session.meeting || (isF1 ? 'F1 Timing' : 'Supercars Timing')}</div>
         <h1>{session?.name || (hideSession ? 'Waiting for the next Supercars session' : '—')}</h1>

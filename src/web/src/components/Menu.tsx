@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { RecordedSession } from '../types'
-import { UPCOMING, eventEnd, eventStart, type UpcomingEvent } from '../calendar'
+import { SERIES_UPCOMING, eventEnd, eventStart, type UpcomingEvent } from '../calendar'
 import { trackManifest } from '../tracks'
+import { isF1 } from '../series'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
 export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPreview }: {
@@ -19,7 +20,7 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
 
   // Refresh the list each time the menu opens: new sessions get recorded all weekend.
   useEffect(() => {
-    if (!open) return
+    if (!open || isF1) return
     fetch('/api/sessions').then((r) => (r.ok ? r.json() : [])).then(setSessions).catch(() => setSessions([]))
   }, [open])
 
@@ -36,7 +37,7 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
       <div className={`menu-backdrop${open ? ' open' : ''}`} onClick={onClose} />
       <nav className={`menu${open ? ' open' : ''}`} aria-hidden={!open} aria-label="Menu">
         <div className="menu-head">
-          <span>Supercars Timing</span>
+          <span>{isF1 ? 'F1 Timing' : 'Supercars Timing'}</span>
           <button type="button" onClick={onClose} aria-label="Close menu">×</button>
         </div>
 
@@ -47,7 +48,8 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
           </button>
         </section>
 
-        <section>
+        {/* Results and replays come from our Natsoft recordings; F1 sessions aren't listed there yet. */}
+        {!isF1 && <section>
           <h2>Results</h2>
           {sessions === null && <p className="menu-muted">Loading…</p>}
           {sessions?.length === 0 && <p className="menu-muted">No results yet. Supercars sessions appear here once they've been recorded.</p>}
@@ -71,12 +73,12 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
               ))}
             </div>
           ))}
-        </section>
+        </section>}
 
         <section>
           <h2>Upcoming</h2>
           {/* Listed until the last day is over, so the weekend that's under way stays at the top. */}
-          {UPCOMING.filter((e) => eventEnd(e).getTime() > now).map((e) => {
+          {SERIES_UPCOMING.filter((e) => eventEnd(e).getTime() > now).map((e) => {
             const map = e.trackCode ? trackManifest[e.trackCode] : undefined
             const underWay = eventStart(e).getTime() <= now
             return (

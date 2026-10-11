@@ -62,9 +62,9 @@ The app has a second, separate F1 app at `/f1` on F1's public live timing (`docs
   It's a paid service, so discuss before building on it (same rule as MySupercars+). Implementation would mean
   storing the token on the server and sending it with the negotiate/WebSocket (FastF1 does this).
 - **Same data-use rules as Natsoft:** one connection, slow reconnects, personal use, our server fans out.
-- **Not built yet for F1:** results/replay pages (the menu is Supercars only), championship standings, track maps
-  for other circuits (run `tools/F1TrackBuilder` on a practice or qualifying archive at each new circuit), pit-lane
-  path on the map, team radio, weather.
+- **Not built yet for F1:** results/replay pages (the menu has Live and Upcoming only), championship standings,
+  maps for 2027 circuits not raced in 2025/2026 (run `tools/F1TrackBuilder` on an archived session there), team
+  radio, weather.
 
 ## Ideas not built yet
 

@@ -60,8 +60,21 @@ def load(folder):
 
     # Crossings per car: (t, flat segment index) in order, forward moves only (colours are re-sent later in a lap),
     # and line crossings (lap count up).
-    seg_counts = None
-    crossings, laps = {}, {}
+    # Mini-sectors per sector differ by circuit (8/8/8 at Singapore): the highest segment index seen in each sector.
+    highest = {}
+    for _, raw in lines(os.path.join(folder, 'TimingData.jsonStream')):
+        for line in json.loads(raw).get('Lines', {}).values():
+            sectors = line.get('Sectors') if isinstance(line, dict) else None
+            items = sectors.items() if isinstance(sectors, dict) else enumerate(sectors or [])
+            for si, sec in items:
+                segs = (sec or {}).get('Segments') if isinstance(sec, dict) else None
+                keys = segs.keys() if isinstance(segs, dict) else range(len(segs or []))
+                for k in keys:
+                    highest[int(si)] = max(highest.get(int(si), 0), int(k))
+    seg_counts = [highest[si] + 1 for si in sorted(highest)] or None
+    seg_counts = seg_counts or [8, 8, 8]
+    total = sum(seg_counts)
+    crossings, laps, pit = {}, {}, {}
     last_flat = {}
     for t, raw in lines(os.path.join(folder, 'TimingData.jsonStream')):
         for car, line in json.loads(raw).get('Lines', {}).items():
@@ -69,12 +82,12 @@ def load(folder):
                 continue
             if 'NumberOfLaps' in line:
                 laps.setdefault(car, []).append((t, line['NumberOfLaps']))
+            if 'InPit' in line:
+                pit.setdefault(car, []).append((t, bool(line['InPit'])))
             sectors = line.get('Sectors')
             if not sectors:
                 continue
             items = sectors.items() if isinstance(sectors, dict) else enumerate(sectors)
-            if isinstance(sectors, list) and all(isinstance(s, dict) and s.get('Segments') for s in sectors):
-                seg_counts = [len(s['Segments']) for s in sectors]
             for s, sec in items:
                 segs = (sec or {}).get('Segments')
                 if not segs:
@@ -82,13 +95,13 @@ def load(folder):
                 seg_items = segs.items() if isinstance(segs, dict) else enumerate(segs)
                 for i, seg in seg_items:
                     if (seg or {}).get('Status', 0) > 0:
-                        flat = int(s) * 8 + int(i)
+                        flat = sum(seg_counts[:int(s)]) + int(i)
                         prev = last_flat.get(car, -1)
-                        fwd = (flat - prev) % 24
-                        if prev < 0 or 0 < fwd <= 12:
+                        fwd = (flat - prev) % total
+                        if prev < 0 or 0 < fwd <= total // 2:
                             crossings.setdefault(car, []).append((t, flat))
                             last_flat[car] = flat
-    return start, pos, crossings, laps, seg_counts or [8, 8, 8]
+    return start, pos, crossings, laps, pit, seg_counts
 
 
 def at(samples, t):
@@ -113,6 +126,46 @@ def best_lap(laps):
     return best
 
 
+def build_pit_lane(pos, pit, delay, path, length):
+    """
+    The pit lane: every position sample taken while a car was in the pit lane (TimingData InPit, shifted by the
+    timing delay) and away from the track, ordered by where it sits alongside the track (unwrapped around the
+    line, since the lane crosses it), then the median position every 10 m. Garages and the odd stray sample
+    average out; bins with few samples are dropped.
+    """
+    samples = []
+    for car, changes in pit.items():
+        if car not in pos:
+            continue
+        windows, start = [], None
+        for t, inside in changes:
+            if inside and start is None:
+                start = t
+            elif not inside and start is not None:
+                windows.append((start - delay, t - delay))
+                start = None
+        for t0, t1 in windows:
+            samples += [(x, y) for t, x, y in pos[car] if t0 <= t <= t1]
+    bins = {}
+    for x, y in samples:
+        k = min(range(0, len(path), 2), key=lambda i: (path[i][0] - x) ** 2 + (path[i][1] - y) ** 2)
+        off = math.hypot(path[k][0] - x, path[k][1] - y)
+        if off < 6 or off > 200:
+            continue  # on the track itself (entry/exit merges) or nowhere near it
+        d = k * STEP
+        if d > length / 2:
+            d -= length  # the lane runs across the line: entry before it (negative), exit after it
+        bins.setdefault(round(d / 10), []).append((x, y))
+    if not bins:
+        return []
+    need = max(5, statistics.median(len(v) for v in bins.values()) * 0.2)
+    lane = [[round(statistics.median(p[0] for p in v), 1), round(statistics.median(p[1] for p in v), 1)]
+            for k, v in sorted(bins.items()) if len(v) >= need]
+    # Light smoothing (garages pull the medians sideways a little).
+    return [[round(sum(q[0] for q in lane[max(0, i - 2):i + 3]) / len(lane[max(0, i - 2):i + 3]), 1),
+             round(sum(q[1] for q in lane[max(0, i - 2):i + 3]) / len(lane[max(0, i - 2):i + 3]), 1)] for i in range(len(lane))]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('folder')
@@ -125,7 +178,7 @@ def main():
     code = f"F1-{circuit['Key']}"
     name = info['Meeting'].get('Location') or circuit['ShortName']
 
-    start, pos, crossings, laps, seg_counts = load(args.folder)
+    start, pos, crossings, laps, pit, seg_counts = load(args.folder)
     n_points = sum(seg_counts) - 1  # the last mini-sector ends at the line
 
     car, lap_start, lap_end = best_lap(laps)
@@ -197,12 +250,15 @@ def main():
     dists = [0.0] + [p['distance'] for p in points] + [length]
     segment_seconds = [{'from': ids[i], 'seconds': round(sim_at(min(dists[i + 1], length - 0.01)) - sim_at(dists[i]), 3)} for i in range(len(ids))]
 
+    pit_lane = build_pit_lane(pos, pit, delay, path, length)
+    print(f'Pit lane: {len(pit_lane)} points')
+
     track = {
         'code': code, 'name': name, 'match': [], 'provisional': False, 'controlLineEstimated': False,
         'source': {'attribution': 'Positions from F1 live timing (livetiming.formula1.com)', 'osmRelation': 0,
                    'recording': info.get('Path', ''), 'built': datetime.now().strftime('%Y-%m-%d')},
         'length': round(length, 1), 'step': STEP, 'path': path, 'simTime': sim,
-        'timingPoints': points, 'segmentSeconds': segment_seconds, 'labels': [], 'pitLane': [],
+        'timingPoints': points, 'segmentSeconds': segment_seconds, 'labels': [], 'pitLane': pit_lane,
     }
     out = os.path.join(args.out, f'{code}.json')
     with open(out, 'w') as f:

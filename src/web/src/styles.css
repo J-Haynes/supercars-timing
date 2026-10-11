@@ -672,3 +672,6 @@ button.upcoming:hover { border-color: var(--muted); }
 .series-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 12px; font-weight: 700; }
 .series-switch a { padding: 4px 10px; color: var(--muted); text-decoration: none; }
 .series-switch a.active { background: var(--line); color: var(--text, #fff); }
+
+/* Menu button and series switch share a row (on phones the header stacks). */
+.session-nav { display: flex; align-items: center; gap: 8px; flex: none; }
