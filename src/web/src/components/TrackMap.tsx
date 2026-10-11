@@ -9,6 +9,7 @@ import { cautionPeriods, flagKind, isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from '../map/calibrate'
 import { usePositionSync } from '../map/usePositionSync'
 import { TAU, TAU_CAUTION, smoothPosition, type Smoothed } from '../map/smoothing'
+import { CrossingLog, knownPosition } from '../map/crossingLog'
 
 const CAR_RADIUS = 46 // metres, in map units
 const PIT_SPACING = 70
@@ -62,9 +63,12 @@ function makeView(model: TrackModel, rotationDeg: number) {
   }
 }
 
-export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note }: {
+export function TrackMap({ track, update, live, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
+  /** The live (undelayed) update. With a broadcast delay it's ahead of `update`: cars are placed between the
+   * crossings either side of the time shown instead of estimated (map/crossingLog.ts). */
+  live?: TimingUpdate | null
   hoverId: string | null
   /** Cars named by the insight under the mouse. */
   highlightIds?: string[]
@@ -101,6 +105,10 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
   }, [track, order, timing.session.name, timing.timingPoints, timing.segmentReference])
   const effective = useMemo(() => (calibrated ? { ...track, timingPoints: calibrated } : track), [track, calibrated])
   const awaitingCalibration = !!track.provisional && !calibrated
+  const crossings = useRef(new CrossingLog())
+  useEffect(() => {
+    if (live) crossings.current.add(live)
+  }, [live])
   // Per-car dot smoothing across timing point crossings (map/smoothing.ts). Visual only.
   const smoothing = useRef(new Map<string, Smoothed>())
   // Just after the page loads, positions come from crossings made before it; say so until most cars have updated.
@@ -165,7 +173,11 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
             <Label key={l.name} view={view} model={model} name={l.name} distance={l.distance} />
           ))}
         </g>
-        {cars.map((car) => {
+        {cars.map((row) => {
+          // With a broadcast delay the live feed may already have a newer crossing than the delayed snapshot (the
+          // snapshot only shows it a moment after it happened): estimate on from that one, or the car stepped back.
+          const seen = live && !row.inPit ? crossings.current.latest(row.id, now) : undefined
+          const car = seen && seen.at > row.lastPointAt ? { ...row, lastPoint: seen.point, lastPointAt: seen.at } : row
           if (shootout && car.inPit) return null
           const inLap = shootout && car.lapsSincePit >= 2
           // In-laps are slow: don't cap them at racing pace.
@@ -173,7 +185,10 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
           if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) return null
           let p: Vec
           if (state.kind === 'track') {
-            const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, state.distance, now, model.length, caution ? TAU_CAUTION : TAU)
+            // Known from the live feed (broadcast delay): where the car really was between two crossings.
+            const pair = live ? crossings.current.around(car.id, now) : undefined
+            const distance = (pair && knownPosition(model, pair[0], pair[1], now)) ?? state.distance
+            const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, caution ? TAU_CAUTION : TAU)
             smoothing.current.set(car.id, sm)
             p = s(sm.shown)
           }

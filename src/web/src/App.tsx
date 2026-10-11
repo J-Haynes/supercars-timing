@@ -133,6 +133,7 @@ export default function App() {
                         <TrackMap
                           track={track}
                           update={update}
+                          live={latest}
                           hoverId={hoverId}
                           highlightIds={highlightIds}
                           focusId={focusId}

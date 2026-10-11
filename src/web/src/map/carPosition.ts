@@ -220,7 +220,7 @@ function ease(raw: number, caution: CautionPace | undefined, pacing: Pacing): nu
 }
 
 /** Distance at `fraction` of the *simulated* time through the stretch from `from` to point `toId`. */
-function place(track: TrackModel, from: number, toId: string, fraction: number): number {
+export function place(track: TrackModel, from: number, toId: string, fraction: number): number {
   let to = track.pointDistance.get(toId) ?? from
   if (to <= from) to += track.length // the segment crosses the control line
   const lap = track.lapSimTime

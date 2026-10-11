@@ -181,6 +181,12 @@ the server in live mode by hand.
 - **Layout:** wide screens: the left column (insights, tower, tips) sticks at the bottom of the screen while the
   right column scrolls (`useStickToBottom.ts`; don't make the right column sticky). Phones (< 760 px): `MobileTabs`
   (Leaderboard | Map | Race | Charts), sticky driver column, trimmed header.
+- **Map with a broadcast delay** (both apps): the live feed is ahead of what's shown, so `map/crossingLog.ts` logs
+  every crossing from the live update and the map places each car between the crossings either side of the time
+  shown (`knownPosition`); it only estimates when the next crossing isn't in yet, and then from the newest crossing
+  the log has (the delayed snapshot can be older). Live Singapore GP, 5 s delay: next crossing known 91 % of the time.
+  The session clock slows down (never backwards) when it's > 2.5 s ahead of the data, until within 0.3 s: before
+  that it stayed ~5 s ahead of the delayed data after a page load with a delay set.
 - **Map:** cars are placed by fraction of the *simulated* stretch time vs expected real time (`carPosition.ts`). Visual
   only (never changes timing data): 4% slack on expected times, the step at each crossing fades out (0.3 s green,
   0.8 s caution, `smoothing.ts`), the clock blends server corrections over 0.5 s. Out-laps use the car's previous
@@ -227,8 +233,7 @@ the server in live mode by hand.
   is assumed past a skipped mini-sector (F1 skips ~4 % of crossings; they froze dots), late cars ease in under green
   too. Tuned with `tools/F1MapEval/evalmap.py`, which replays archived races (they include real positions) and scores
   placements against them: measure any map change there first. Findings: the car's own last time through a
-  stretch beat smarter pace guesses; the big remaining lever is drawing the map a few seconds behind live
-  (interpolating between known crossings: 3 s halves speed glitches and cuts SC error 26 -> 17 m), not built.
+  stretch beat smarter pace guesses; knowing the next crossing beats any guess (below).
 - **Car positions (Position.z) need an F1 TV login:** not used; see `docs/PLANNING.md` before building on it.
 
 ## Next round: Gold Coast 500 (23-25 Oct 2026)

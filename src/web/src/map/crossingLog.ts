@@ -1,0 +1,84 @@
+import type { TimingUpdate } from '../types'
+import type { TrackModel } from './trackModel'
+import { place } from './carPosition'
+import { MAX_DELAY_SECONDS } from '../useDelayedUpdate'
+
+export interface Crossing {
+  point: string
+  /** Session time (track-local seconds) the car crossed the point. */
+  at: number
+}
+
+/**
+ * Every timing point crossing seen in the live feed, per car. With a broadcast delay the page shows the timing from
+ * a few seconds ago, but the live feed already has what happened next: the crossing at the end of the stretch each
+ * car is in. Then the map doesn't need to guess the car's pace through the stretch, it knows when the car got to
+ * the next point (see knownPosition).
+ *
+ * Measured on five 2025 F1 races against real car positions (tools/F1MapEval): 3 s of delay halves the moments the
+ * dots' speed is visibly wrong (5.9 % -> 2.6 %) and cuts the error under a safety car from 26 to 17 m. In the live
+ * 2026 Singapore GP (page internals sampled every frame): with a 5 s delay the next crossing was known 91 % of the
+ * time, and dots moving faster than 110 m/s fell from 4.8 % of quarter-seconds (no delay) to 0.7 %.
+ */
+export class CrossingLog {
+  private cars = new Map<string, Crossing[]>()
+  private session = ''
+
+  add(update: TimingUpdate) {
+    const { timing } = update
+    const session = `${timing.session.meeting}|${timing.session.name}`
+    if (session !== this.session) {
+      this.cars.clear()
+      this.session = session
+    }
+    for (const car of timing.cars) {
+      if (!car.lastPoint || !car.lastPointAt) continue
+      let list = this.cars.get(car.id)
+      if (!list) this.cars.set(car.id, (list = []))
+      const last = list[list.length - 1]
+      if (last && car.lastPointAt <= last.at) continue
+      list.push({ point: car.lastPoint, at: car.lastPointAt })
+      // Keep what the longest delay can still show, plus a stretch before it.
+      while (list.length > 2 && list[1].at < car.lastPointAt - MAX_DELAY_SECONDS - 120) list.shift()
+    }
+  }
+
+  /** The car's latest crossing at or before `now` (may be newer than the delayed snapshot's: it arrived live). */
+  latest(carId: string, now: number): Crossing | undefined {
+    const list = this.cars.get(carId)
+    if (!list) return undefined
+    for (let k = list.length - 1; k >= 0; k--) if (list[k].at <= now) return list[k]
+    return undefined
+  }
+
+  /** The crossings either side of `now` for a car, if both are known. */
+  around(carId: string, now: number): [Crossing, Crossing] | undefined {
+    const list = this.cars.get(carId)
+    if (!list || list.length < 2) return undefined
+    let hi = list.length - 1
+    if (list[hi].at <= now) return undefined // the next crossing hasn't happened yet: predict instead
+    let lo = 0
+    if (list[0].at > now) return undefined
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1
+      if (list[mid].at <= now) lo = mid
+      else hi = mid
+    }
+    return [list[lo], list[hi]]
+  }
+}
+
+/**
+ * Where a car was at `now`, between two crossings we know the times of: the same fraction of the simulated time
+ * between the two points (corners slow, straights fast), as carPosition does with its estimate. Works across a point
+ * the feed skipped. Undefined if the pair doesn't look like one stretch of normal running (a long gap, or more than
+ * half a lap: pit stops, missed messages).
+ */
+export function knownPosition(track: TrackModel, a: Crossing, b: Crossing, now: number): number | undefined {
+  const from = track.pointDistance.get(a.point)
+  const to = track.pointDistance.get(b.point)
+  const span = b.at - a.at
+  if (from === undefined || to === undefined || a.point === b.point || span <= 0 || span > 60) return undefined
+  if (track.wrap(to - from) > track.length / 2) return undefined
+  return place(track, from, b.point, Math.min(Math.max((now - a.at) / span, 0), 1))
+}
