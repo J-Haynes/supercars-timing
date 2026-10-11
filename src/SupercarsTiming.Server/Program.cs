@@ -34,6 +34,9 @@ app.MapGet("/api/sessions", (SessionCatalog catalog, bool? all) => Results.Ok(ca
 // Final classification of a recorded session.
 app.MapGet("/api/sessions/{id}/results", (SessionCatalog catalog, string id) =>
     catalog.Results(id) is { } results ? Results.Ok(results) : Results.NotFound());
+// Lap history of a recorded session (charts on the results page).
+app.MapGet("/api/sessions/{id}/laps", (SessionCatalog catalog, string id) =>
+    catalog.Laps(id) is { } laps ? Results.Ok(laps) : Results.NotFound());
 app.MapHub<TimingHub>(TimingHub.Path);
 
 // Production: serve the built React app from wwwroot (npm run build in src/web writes there).

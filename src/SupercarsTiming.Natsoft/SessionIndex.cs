@@ -28,14 +28,17 @@ public static class SessionIndex
         sessionName.Contains("Supercars Championship", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Final state of a session: the classification as it stood at the last message.</summary>
-    public static TimingSnapshot Results(RecordedSession session)
+    public static TimingSnapshot Results(RecordedSession session) => TimingSnapshot.From(Replay(session));
+
+    /// <summary>The session's timing state after replaying every message (results, lap history, pit stops, ...).</summary>
+    public static TimingState Replay(RecordedSession session)
     {
         var state = new TimingState();
         foreach (var m in Read(session))
         {
             try { state.Apply(m); } catch { /* skip malformed frames */ }
         }
-        return TimingSnapshot.From(state);
+        return state;
     }
 
     /// <summary>Gap under which two parts with the same meeting and session name are treated as one session.</summary>

@@ -18,8 +18,13 @@ type Tab = 'gaps' | 'laps' | 'battle'
  * two cars with the trend over the last 10 laps. Data comes from GET /api/laps (refreshed every 10 s). "Expand"
  * opens the large chart view (ChartLab) with more cars, zoom and editable axes.
  */
-export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
-  const history = useLapHistory(timing.session.name)
+export function RaceCharts({ timing, history: given }: {
+  timing: TimingSnapshot
+  /** Lap history to chart (results pages); otherwise the live history is fetched. */
+  history?: LapHistory | null
+}) {
+  const live = useLapHistory(timing.session.name, { enabled: given === undefined })
+  const history = given === undefined ? live : given
   const [tab, setTab] = useState<Tab>('gaps')
   const [expanded, setExpanded] = useState(false)
   const running = raceOrder(timing)
