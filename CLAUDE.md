@@ -165,9 +165,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   the fastest-lap car in the tower. Penalties are parsed
   from the text (`TimingSnapshot.Penalty()`, best effort) into `CarRow.Penalties` and badged in the tower ("+5s").
   Served or not (`penalties.ts`): Natsoft never says, and pit-lane time doesn't show it (Payne's serving stop was a
-  normal 66 s), so it follows Supercars B7.7.1.7 (Bathurst 2024 wording): served at the car's next pit stop, but not
-  while SC/FCY/red is out (non-green flag in `TimingSnapshot.FlagHistory` during the stop), so it carries over.
-  Served penalties leave the tower and appear in race control as "Penalty served" (`servedMessages`).
+  normal 66 s), so it follows the rule instead. Served penalties leave the tower and appear in race control as
+  "Penalty served" (`servedMessages`). See "Decision: when a penalty counts as served" below.
   Race time in the header = now − `SessionInfo.GreenAt` (first green flag).
 - Insights ticker (`InsightsTicker.tsx`, races, above the tower; logic in `insights.ts`): recent events (new fastest
   lap, lead change, race control penalties/incidents), battles (< 1 s on the road, trains of 3+), closing trends (gap
@@ -178,8 +177,12 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   (by car number, full-time drivers only) + points for each car's projected finish (road order, time penalties
   added to the gap). Top 10 (`finalsCut`) in a gold border: they go to the Finals. Data is entered by hand with its
   sources in the comment; update it each round. Enduro scale only lists 25 places (26th = 0), no Enduro Cup bonus.
-- Pit badge counts time in the pit lane ("PIT 23s") from the open pit stop's pit-in time.
-- Tips live in `tips.ts` (one string each) and render in `TipsPanel` at the bottom of the page; closing is remembered.
+- Pit badge counts time in the pit lane ("PIT 23.4s") from the open pit stop's pit-in time.
+- Tips live in `tips.ts` (one string each) and render in `TipsPanel`, under the tower in the live view (bottom of the
+  page elsewhere); closing is remembered.
+- Wide-screen layout: the left column (insights, tower, tips) scrolls with the page until its bottom reaches the bottom
+  of the screen, then stays while the taller right column keeps scrolling: CSS sticky with a negative `top` from
+  `--stick-height` (`useStickToBottom.ts`). Don't make the right column sticky; it's taller than the screen.
 - Shootout: the map shows cars on out-lap, flying lap and in-lap, and hides them once they're in the pits. Natsoft
   doesn't flag that pit entry: an in-lap car past the last timing point and overdue at the line is treated as in
   the pit lane. The card's mini-sector bars are purple (fastest of anyone through that stretch), green (faster
@@ -196,6 +199,28 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   Rotation is saved per track in settings; zoom/pan (wheel, pinch, drag, buttons) is per page view.
 - Outside races, map pace is capped at ~1.12× the track file's typical segment time, so flying laps after slow
   out-laps animate smoothly.
+
+## Decision: when a penalty counts as served
+
+Decided with the owner during the Bathurst 1000 (11 Oct 2026). Natsoft only sends the penalty itself (a `<G>` race
+control message, e.g. "Stewards: Penalty Car 19 - 5 seconds - driving infringement"), never that it was served, and
+the pit-lane time can't show it: Payne's serving stop took a normal 66.1 s, yet the broadcast shows him held in the
+pit lane for the 5 s. So `penalties.ts` follows the sporting rule:
+
+- **Rule:** Supercars Operations Manual **B7.7.1.7**, as amended for Bathurst 2024 and quoted by Supercars:
+  "Unless otherwise directed by the Stewards, a Time Penalty imposed during a Race must be served at the Car's next
+  Pit Stop." It "may not be served while the SC, FCY boards or Red Flag are displayed or while the Race is
+  suspended" and "must be served after the completion of all work being performed on the Car during the Pit Stop."
+  Source: https://www.supercars.com/news/bathurst-supercars-penalty-loophole-closed-with-regulations-tweak
+  (3 Oct 2024; prompted by Brad Jones Racing serving a penalty under the Safety Car at Sandown). Speedcafe:
+  https://speedcafe.com/supercars-news-penalty-rule-loophole-bathurst-1000/ ; older coverage
+  (https://speedcafe.com/new-penalty-for-supercars-false-starts/) says an unserved time penalty carries over or is
+  added to the race time.
+- **What the code does:** a penalty is served at the car's first completed pit stop that started after race control
+  issued it, skipping stops with a non-green flag at any point (Natsoft's `Yellow` assumed to mean SC/FCY; not yet
+  confirmed in a Supercars race). With no such stop it stays unserved, and the ladder adds a time penalty to the gap.
+- **Known limits:** a stewards' direction to serve it differently can't be seen in the data. The 2024 wording may
+  have changed in the 2026 manual (not found online). Re-check the rule each season.
 
 ## Rules
 

@@ -57,7 +57,8 @@ export function servedMessages(timing: TimingSnapshot): { time: number; text: st
     .filter((p) => p.servedAt)
     .map((p) => ({
       time: p.servedAt!.outAt,
-      text: `Penalty served: Car ${car.carNumber} (${car.driver}) - ${p.what} at the lap ${p.servedAt!.lap} pit stop`,
+      // The driver at that stop, not whoever is in the car now (co-drivers swap at later stops).
+      text: `Penalty served: Car ${car.carNumber} (${p.servedAt!.driverIn || car.driver}) - ${p.what} at the lap ${p.servedAt!.lap} pit stop`,
       served: true as const,
     })))
 }

@@ -17,6 +17,7 @@ import { InsightsTicker } from './components/InsightsTicker'
 import { Ladder } from './components/Ladder'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useTrack } from './tracks'
+import { useStickToBottom } from './useStickToBottom'
 import { isRace, isShootout, isSupercarsSession } from './session'
 import type { RecordedSession } from './types'
 
@@ -28,6 +29,7 @@ export default function App() {
   const [hoverId, setHoverId] = useState<string | null>(null)
   // Cars named by the insight under the mouse, highlighted in the tower and on the map.
   const [highlightIds, setHighlightIds] = useState<string[]>([])
+  const towerColumn = useStickToBottom<HTMLDivElement>()
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // null = live timing; otherwise the recorded session whose results are on screen.
@@ -84,7 +86,7 @@ export default function App() {
               <>
                 {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
                 <div className="layout">
-                  <div className="tower-column">
+                  <div className="tower-column" ref={towerColumn}>
                   {isRace(timing.session.type) && <InsightsTicker timing={timing} onHighlight={setHighlightIds} />}
                   <TimingTower
                     timing={timing}
@@ -95,6 +97,11 @@ export default function App() {
                     pinned={settings.pinned}
                     onHover={setHoverId}
                     onTogglePin={togglePinned}
+                  />
+                  <TipsPanel
+                    open={!settings.tipDismissed}
+                    onClose={() => updateSettings({ tipDismissed: true })}
+                    onOpen={() => updateSettings({ tipDismissed: false })}
                   />
                   </div>
                   <aside className="map-panel">
@@ -130,11 +137,14 @@ export default function App() {
           </main>
         </>
       )}
-      <TipsPanel
-        open={!settings.tipDismissed}
-        onClose={() => updateSettings({ tipDismissed: true })}
-        onOpen={() => updateSettings({ tipDismissed: false })}
-      />
+      {/* In the live view the tips sit under the tower instead. */}
+      {!(hasCars && !results) && (
+        <TipsPanel
+          open={!settings.tipDismissed}
+          onClose={() => updateSettings({ tipDismissed: true })}
+          onOpen={() => updateSettings({ tipDismissed: false })}
+        />
+      )}
     </div>
   )
 }

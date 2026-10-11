@@ -183,10 +183,10 @@ function DriverMarker({ car }: { car: CarRow }) {
   )
 }
 
-/** " 23s": time in the pit lane so far, from the open pit stop's pit-in time; "" if we don't know it. */
+/** " 23.4s": time in the pit lane so far, from the open pit stop's pit-in time; "" if we don't know it. */
 function pitSeconds(car: CarRow, now: number): string {
   const stop = [...(car.pitLog ?? [])].reverse().find((s) => s.outAt === 0)
-  return stop && stop.inAt > 0 && now >= stop.inAt ? ` ${Math.floor(now - stop.inAt)}s` : ''
+  return stop && stop.inAt > 0 && now >= stop.inAt ? ` ${(now - stop.inAt).toFixed(1)}s` : ''
 }
 
 /** Small stopwatch for the fastest lap badge; uses the text colour so it suits the badge. */

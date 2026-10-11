@@ -103,7 +103,10 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-panel { order: -1; }
 @media (min-width: 1500px) {
   .layout { grid-template-columns: minmax(0, 1fr) minmax(380px, 30%); align-items: start; }
-  .map-panel { order: 0; position: sticky; top: 12px; }
+  .map-panel { order: 0; }
+  /* The left column scrolls with the page until its bottom reaches the bottom of the screen, then stays there while
+     the taller right column keeps scrolling (--stick-height comes from useStickToBottom). */
+  .tower-column { position: sticky; top: min(12px, calc(100vh - var(--stick-height, 0px) - 12px)); align-self: start; }
 }
 .tower tbody { user-select: none; } /* double-click highlights a driver; don't select text */
 .tower tbody tr { cursor: default; }
@@ -474,3 +477,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .ladder-finals .ladder-pos { color: var(--gold); }
 .ladder-note { color: var(--muted); font-size: 11px; margin: 8px 2px 0; line-height: 1.4; }
 .race-control li.served .rc-text { color: var(--green); }
+
+/* Tips under the tower (live view) line up with the column instead of the page margins. */
+.tower-column .tips { margin: 0; }
+.tower-column .page-footer { margin: 0; padding: 0 2px; }
