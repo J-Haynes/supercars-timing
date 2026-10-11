@@ -107,6 +107,13 @@ main { flex: 1; padding: 0 16px 24px; }
   /* The left column scrolls with the page until its bottom reaches the bottom of the screen, then stays there while
      the taller right column keeps scrolling (--stick-height comes from useStickToBottom). */
   .tower-column { position: sticky; top: min(12px, calc(100vh - var(--stick-height, 0px) - 12px)); align-self: start; }
+  /* Simple mode has few columns: the tower only takes the width its columns need and the map gets the rest
+     (at 1900 px the tower was 1280 px wide, mostly empty, and the map 540 px). The ticker and the other panels in the
+     column don't count towards its width (contain), so the column is as wide as the table. */
+  .layout.simple { grid-template-columns: fit-content(1100px) minmax(380px, 1fr); }
+  .layout.simple .tower-column > :not(.tower-wrap) { contain: inline-size; }
+  /* The charts scale with their width: in the wider column their text doubled. Keep them their usual height. */
+  .layout.simple .panel-charts .line-chart:not(.zoomable) svg { max-height: 300px; }
 }
 .tower tbody { user-select: none; } /* double-click highlights a driver; don't select text */
 .tower tbody tr { cursor: default; }

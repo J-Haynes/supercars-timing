@@ -105,7 +105,7 @@ export default function App() {
               <>
                 {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
                 <MobileTabs tab={mobileTab} race={isRace(timing.session.type)} onTab={(t) => { setMobileTab(t); saveMobileTab(t) }} />
-                <div className="layout" data-tab={mobileTab}>
+                <div className={settings.simple ? 'layout simple' : 'layout'} data-tab={mobileTab}>
                   <div className="tower-column" ref={towerColumn}>
                   {isRace(timing.session.type) && <SafetyCarBanner timing={timing} />}
                   {isRace(timing.session.type) && <InsightsTicker timing={timing} onHighlight={setHighlightIds} />}
