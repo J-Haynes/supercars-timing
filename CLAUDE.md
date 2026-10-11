@@ -107,7 +107,15 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   they're 2.5× overdue. For drawing only, the expected time gets 4% slack (`VISUAL_SLACK`) and the step at each
   new crossing fades out over 0.3 s (`map/smoothing.ts`); the session clock blends server corrections in over
   0.5 s (`map/sessionClock.ts`). Measured live: stops at points 137 → 6, single-frame teleports 264 → 1 per 3 min.
-  `overdue`/`stale` don't use the slack. On out-laps the expected time is the track's typical time × the car's pace through its
+  `overdue`/`stale` don't use the slack.
+- Under a safety car / FCY (Natsoft sends `Yellow`; confirmed at the Bathurst 1000) cars take ~1.7-2.9x normal per
+  stretch, varying by stretch. `cautionPace()` (map/carPosition.ts) gives per-stretch times cars took under this
+  caution (75th percentile, recent stretches, no out-laps); each car's expected time is that, scaled by how it
+  compared with the field last stretch (cars still closing up are much quicker), and only for stretches started
+  after the caution came out. With no caution data for a stretch, the car's own latest pace. Late cars ease in
+  from 85% instead of freezing at 99%, and the crossing glide is 0.8 s (`TAU_CAUTION`). Tuned offline on the
+  replayed first safety car: waiting at points 1,239 s -> 11 s; typical catch-up at a crossing 13 m -> 54 m (glided).
+  Settings in `CAUTION_TUNING`. On out-laps the expected time is the track's typical time × the car's pace through its
   previous stretch (1.3× before it has one), so cars in the pit-exit queue keep moving.
 - Timing point positions per track are estimates from TrackBuilder's lap simulation. If they look wrong on a
   track, fix the inputs (OSM relation, control-line node, recording) and rebuild rather than hand-editing the JSON.

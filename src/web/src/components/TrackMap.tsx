@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import type { CarRow, TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
 import { TrackModel, type Vec } from '../map/trackModel'
-import { carPosition } from '../map/carPosition'
+import { carPosition, cautionPace } from '../map/carPosition'
 import { useSessionClock } from '../map/useSessionClock'
-import { flagKind, isRace, isShootout } from '../session'
+import { cautionPeriods, flagKind, isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from '../map/calibrate'
 import { usePositionSync } from '../map/usePositionSync'
-import { smoothPosition, type Smoothed } from '../map/smoothing'
+import { TAU, TAU_CAUTION, smoothPosition, type Smoothed } from '../map/smoothing'
 
 const CAR_RADIUS = 46 // metres, in map units
 const PIT_SPACING = 70
@@ -115,6 +115,11 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
   )
   const fallback = useMemo(() => order.map((_, i) => timing.segmentReference?.[i] || baseline[i]), [order, timing.segmentReference, baseline])
   const cap = isRace(timing.session.type) ? undefined : baseline
+  // Safety car / FCY out now: pace cars at the field's caution pace (map/carPosition.ts, cautionPace).
+  const openCaution = cautionPeriods(timing.flagHistory).at(-1)
+  const caution = flagKind(timing.session.flag) === 'caution' && openCaution && openCaution.end === undefined
+    ? cautionPace(timing.cars, order, baseline, openCaution.start, timing.now)
+    : undefined
 
   // Draw order: later = on top. Leader above the field, then pinned, focused, and the hovered car on top.
   const layer = (c: CarRow) => (c.id === hoverId || highlightIds.includes(c.id) ? 3 : c.id === focusId ? 2 : pinned.includes(c.carNumber) ? 1 : 0)
@@ -159,11 +164,11 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
           if (shootout && car.inPit) return null
           const inLap = shootout && car.lapsSincePit >= 2
           // In-laps are slow: don't cap them at racing pace.
-          const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap, baseline)
+          const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap, baseline, caution)
           if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) return null
           let p: Vec
           if (state.kind === 'track') {
-            const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, state.distance, now, model.length)
+            const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, state.distance, now, model.length, caution ? TAU_CAUTION : TAU)
             smoothing.current.set(car.id, sm)
             p = s(sm.shown)
           }

@@ -27,7 +27,10 @@ function loopDiff(a: number, b: number, length: number): number {
   return d
 }
 
-export function smoothPosition(prev: Smoothed | undefined, key: number, target: number, now: number, length: number): Smoothed {
+/** Longer fade under a safety car: cars are typically ~50 m behind when a crossing arrives (see carPosition). */
+export const TAU_CAUTION = 0.8
+
+export function smoothPosition(prev: Smoothed | undefined, key: number, target: number, now: number, length: number, tau = TAU): Smoothed {
   if (!prev || length <= 0) return { key, offset0: 0, t0: now, shown: target }
   let { offset0, t0 } = prev
   if (key !== prev.key) {
@@ -36,7 +39,7 @@ export function smoothPosition(prev: Smoothed | undefined, key: number, target: 
     t0 = now
     if (Math.abs(offset0) > SNAP) offset0 = 0
   }
-  const residual = offset0 * Math.exp(-Math.max(0, now - t0) / TAU)
+  const residual = offset0 * Math.exp(-Math.max(0, now - t0) / tau)
   const shown = ((target + residual) % length + length) % length
   return { key, offset0, t0, shown }
 }
