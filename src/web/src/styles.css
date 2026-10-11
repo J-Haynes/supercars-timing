@@ -567,3 +567,36 @@ main { flex: 1; padding: 0 16px 24px; }
   .controls .focus-select, .controls .delay input[type="range"], .controls .delay-label { display: none; }
   .controls .mfr-key { display: none; }
 }
+
+/* Large chart view (ChartLab): a dialog over the app, which is blurred behind it. */
+.charts-head-right { display: flex; align-items: center; gap: 8px; }
+.expand-button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 4px; padding: 2px 8px; font: inherit; font-size: 12px; cursor: pointer; }
+.expand-button:hover { border-color: var(--muted); }
+.chart-lab-backdrop {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: rgba(5, 7, 9, .55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.chart-lab {
+  width: min(1240px, 100%); max-height: 100%; overflow: auto; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px 18px 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+}
+.chart-lab-head { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+.chart-lab-head h2 { margin: 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.chart-lab-head .segmented { margin: 0; flex: 0 1 520px; }
+.chart-lab-close { margin-left: auto; background: none; border: 0; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; }
+.chart-lab-close:hover { color: var(--text); }
+.chart-lab .chart-cars { max-height: 72px; overflow-y: auto; }
+.chart-lab-axes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin: 8px 0; font-size: 12px; color: var(--muted); }
+.axis-inputs { display: inline-flex; align-items: center; gap: 6px; }
+.axis-label { color: var(--text); font-weight: 600; }
+.axis-inputs input { width: 72px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font: inherit; font-variant-numeric: tabular-nums; }
+.chart-lab-check { display: inline-flex; align-items: center; gap: 6px; color: var(--text); cursor: pointer; }
+.chart-lab-hint { margin-left: auto; font-size: 11px; }
+.chart-lab-plot .chart-axis { font-size: 11px; }
+.line-chart.zoomable svg { cursor: grab; }
+.line-chart.zoomable svg:active { cursor: grabbing; }
+@media (max-width: 760px) {
+  .chart-lab-backdrop { padding: 8px; }
+  .chart-lab-head { flex-wrap: wrap; }
+  .chart-lab-hint { display: none; }
+}

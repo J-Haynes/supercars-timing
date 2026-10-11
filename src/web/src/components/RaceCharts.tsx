@@ -1,27 +1,26 @@
 import { useMemo, useRef, useState } from 'react'
-import type { CarLaps, TimingSnapshot } from '../types'
+import type { CarLaps, LapHistory, TimingSnapshot } from '../types'
 import { useLapHistory } from '../useLapHistory'
 import { roadOrder } from '../liveGaps'
 import { lapTime } from '../format'
+import { SLOTS, battlePoints, gapPoints, lapTimePoints, linearFit, shortLap, surname, trendLaps } from '../chartData'
 import { LineChart, type Series } from './LineChart'
+import { ChartLab } from './ChartLab'
 
-/**
- * Categorical slots for chart lines, in fixed order (dark-surface steps of the reference palette; validated against
- * our panel colour #12161b: all checks pass for five adjacent series). A car keeps its slot while selected.
- */
-const SLOTS = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181']
-const MAX_CARS = SLOTS.length
+/** Cars at once in the small panel (the large view takes up to eight). */
+const MAX_CARS = 5
 
 type Tab = 'gaps' | 'laps' | 'battle'
-const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
 
 /**
  * Race charts under the map: gap to the leader and lap times per lap for the chosen cars, and a battle graph for
- * two cars with the trend over the last 10 laps. Data comes from GET /api/laps (refreshed every 10 s).
+ * two cars with the trend over the last 10 laps. Data comes from GET /api/laps (refreshed every 10 s). "Expand"
+ * opens the large chart view (ChartLab) with more cars, zoom and editable axes.
  */
 export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
   const history = useLapHistory(timing.session.name)
   const [tab, setTab] = useState<Tab>('gaps')
+  const [expanded, setExpanded] = useState(false)
   const order = ['M', ...timing.timingPoints.map((p) => p.id)]
   const running = roadOrder(timing.cars, order)
 
@@ -53,20 +52,20 @@ export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
   }
 
   const cars = selected.map((id) => byId.get(id)).filter((c): c is CarLaps => !!c)
-  const gapSeries: Series[] = cars.map((c) => ({
-    id: c.id, label: label(c.id), color: colorOf(c.id),
-    points: c.laps.map((l) => ({ x: l.lap, y: l.gapLaps === 0 ? l.gap : null, marked: l.pitted })),
-  }))
-  const lapSeries: Series[] = cars.map((c) => ({ id: c.id, label: label(c.id), color: colorOf(c.id), points: cleanLapTimes(c) }))
+  const gapSeries: Series[] = cars.map((c) => ({ id: c.id, label: label(c.id), color: colorOf(c.id), points: gapPoints(c) }))
+  const lapSeries: Series[] = cars.map((c) => ({ id: c.id, label: label(c.id), color: colorOf(c.id), points: lapTimePoints(c) }))
 
   return (
     <section className="race-charts" aria-label="Race charts">
       <div className="charts-head">
         <h2>Charts</h2>
-        <div className="segmented small" role="tablist">
-          {([['gaps', 'Gap to leader'], ['laps', 'Lap times'], ['battle', 'Battle']] as const).map(([k, name]) => (
-            <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''} onClick={() => setTab(k)}>{name}</button>
-          ))}
+        <div className="charts-head-right">
+          <div className="segmented small" role="tablist">
+            {([['gaps', 'Gap to leader'], ['laps', 'Lap times'], ['battle', 'Battle']] as const).map(([k, name]) => (
+              <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''} onClick={() => setTab(k)}>{name}</button>
+            ))}
+          </div>
+          <button type="button" className="expand-button" onClick={() => setExpanded(true)} title="Open the large chart view: more cars, zoom, editable axes">⤢ Expand</button>
         </div>
       </div>
       {tab !== 'battle' && (
@@ -93,95 +92,67 @@ export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
         </>
       )}
       {tab === 'battle' && <Battle history={history} running={running.map((c) => c.id)} label={label} />}
+      {expanded && (
+        <ChartLab timing={timing} history={history} initialCars={selected} initialKind={tab === 'laps' ? 'laps' : tab}
+          onClose={() => setExpanded(false)} />
+      )}
     </section>
   )
 }
 
-/** 129.27 -> "2:09.3" for the axis (the tooltip shows thousandths). */
-const shortLap = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`
-
-/** Lap times with pit laps, out-laps and slow laps (> 7 % over the car's median) as gaps. */
-function cleanLapTimes(car: CarLaps): Series['points'] {
-  const ok = (i: number) => {
-    const l = car.laps[i]
-    return l.time > 0 && !l.pitted && !(i > 0 && car.laps[i - 1].pitted)
-  }
-  const times = car.laps.filter((_, i) => ok(i)).map((l) => l.time).sort((a, b) => a - b)
-  const median = times[Math.floor(times.length / 2)] ?? 0
-  return car.laps.map((l, i) => ({ x: l.lap, y: ok(i) && l.time < median * 1.07 ? l.time : null }))
-}
-
-/** Battle graph: gap between two cars per lap, with a trend over the last 10 clean laps. */
-function Battle({ history, running, label }: { history: { cars: CarLaps[] }; running: string[]; label: (id: string) => string }) {
+/** Battle graph: gap between two cars per lap, with a trend over the last 10 laps since either car's latest stop. */
+function Battle({ history, running, label }: { history: LapHistory; running: string[]; label: (id: string) => string }) {
   const [a, setA] = useState(running[0] ?? '')
   const [b, setB] = useState(running[1] ?? '')
-  const ca = history.cars.find((c) => c.id === a)
-  const cb = history.cars.find((c) => c.id === b)
-  const options = running.map((id) => <option key={id} value={id}>{label(id)}</option>)
-
-  let body = <div className="chart-empty">Pick two cars.</div>
-  if (ca && cb && a !== b) {
-    const aLaps = new Map(ca.laps.map((l) => [l.lap, l]))
-    // Positive = b behind a. Only laps where both are on the lead lap; pit laps for either car are marked.
-    const points = cb.laps.flatMap((l) => {
-      const o = aLaps.get(l.lap)
-      if (!o || o.gapLaps !== 0 || l.gapLaps !== 0) return []
-      return [{ x: l.lap, y: l.gap - o.gap, marked: l.pitted || o.pitted }]
-    })
-    // Trend: only laps since the latest pit stop by either car, skipping that out-lap. Across a pit cycle the gap
-    // jumps by a minute or more, which made a nonsense trend (e.g. "gaining 6.3 s a lap").
-    const lastPit = Math.max(0, ...points.filter((p) => p.marked).map((p) => p.x))
-    const clean = points.filter((p) => !p.marked && p.x > lastPit + 1).slice(-10)
-    const fit = clean.length >= 4 ? linearFit(clean) : null
-    const series: Series[] = [{ id: 'gap', label: `${label(b)} to ${label(a)}`, color: SLOTS[0], points }]
-    if (fit) {
-      series.push({ id: 'trend', label: 'Trend', color: '#8a96a3', dashed: true, decoration: true,
-        points: [clean[0].x, clean[clean.length - 1].x].map((x) => ({ x, y: fit.intercept + fit.slope * x })) })
-    }
-    const last = points[points.length - 1]
-    const who = last && last.y >= 0 ? { ahead: label(a), behind: label(b), sign: 1 } : { ahead: label(b), behind: label(a), sign: -1 }
-    const rate = fit ? fit.slope * who.sign : 0
-    body = (
-      <>
-        {last && !fit && (
-          <p className="battle-summary">
-            {label(b)} is <strong>{Math.abs(last.y).toFixed(1)}s</strong> {last.y >= 0 ? 'behind' : 'ahead of'} {label(a)}.
-            {' '}Not enough laps since the last pit stop for a trend yet.
-          </p>
-        )}
-        {last && fit && (
-          <p className="battle-summary">
-            {label(b)} is <strong>{Math.abs(last.y).toFixed(1)}s</strong> {last.y >= 0 ? 'behind' : 'ahead of'} {label(a)}.{' '}
-            {Math.abs(rate) < 0.05
-              ? 'The gap is steady.'
-              : rate < 0
-                ? <>{who.behind} is gaining <strong>{Math.abs(rate).toFixed(2)}s a lap</strong> (last {clean.length} laps).</>
-                : <>{who.ahead} is pulling away by <strong>{rate.toFixed(2)}s a lap</strong> (last {clean.length} laps).</>}
-          </p>
-        )}
-        <LineChart series={series} robustY yFormat={(v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}s`} ariaLabel={`Gap between ${label(b)} and ${label(a)} per lap`} />
-        <p className="chart-note">Gap at the line each lap; above 0 means {label(b)} is behind. Dashed: trend over the last {clean.length} laps since either car's latest pit stop. Hollow markers: pit laps. Pit-cycle jumps run off the chart.</p>
-      </>
-    )
-  }
   return (
     <div className="battle">
       <div className="battle-pick">
-        <select value={a} onChange={(e) => setA(e.target.value)} aria-label="First car">{options}</select>
+        <select value={a} onChange={(e) => setA(e.target.value)} aria-label="First car">{running.map((id) => <option key={id} value={id}>{label(id)}</option>)}</select>
         <span>vs</span>
-        <select value={b} onChange={(e) => setB(e.target.value)} aria-label="Second car">{options}</select>
+        <select value={b} onChange={(e) => setB(e.target.value)} aria-label="Second car">{running.map((id) => <option key={id} value={id}>{label(id)}</option>)}</select>
       </div>
-      {body}
+      <BattleChart history={history} a={a} b={b} label={label} />
     </div>
   )
 }
 
-/** Least-squares line through the points. */
-function linearFit(points: { x: number; y: number }[]) {
-  const n = points.length
-  const mx = points.reduce((s, p) => s + p.x, 0) / n
-  const my = points.reduce((s, p) => s + p.y, 0) / n
-  const sxx = points.reduce((s, p) => s + (p.x - mx) ** 2, 0)
-  const slope = sxx === 0 ? 0 : points.reduce((s, p) => s + (p.x - mx) * (p.y - my), 0) / sxx
-  return { slope, intercept: my - slope * mx }
+/** The battle summary, chart and note for cars a and b (shared with the large view). */
+export function BattleChart({ history, a, b, label, big }: {
+  history: LapHistory; a: string; b: string; label: (id: string) => string
+  /** Large-view props passed through to the chart (size, zoom, axes). */
+  big?: Partial<Parameters<typeof LineChart>[0]>
+}) {
+  const ca = history.cars.find((c) => c.id === a)
+  const cb = history.cars.find((c) => c.id === b)
+  if (!ca || !cb || a === b) return <div className="chart-empty">Pick two cars.</div>
+  const points = battlePoints(ca, cb)
+  const clean = trendLaps(points)
+  const fit = clean.length >= 4 ? linearFit(clean) : null
+  const series: Series[] = [{ id: 'gap', label: `${label(b)} to ${label(a)}`, color: SLOTS[0], points }]
+  if (fit) {
+    series.push({ id: 'trend', label: 'Trend', color: '#8a96a3', dashed: true, decoration: true,
+      points: [clean[0].x, clean[clean.length - 1].x].map((x) => ({ x, y: fit.intercept + fit.slope * x })) })
+  }
+  const last = points[points.length - 1]
+  const who = last && last.y >= 0 ? { ahead: label(a), behind: label(b), sign: 1 } : { ahead: label(b), behind: label(a), sign: -1 }
+  const rate = fit ? fit.slope * who.sign : 0
+  return (
+    <>
+      {last && (
+        <p className="battle-summary">
+          {label(b)} is <strong>{Math.abs(last.y).toFixed(1)}s</strong> {last.y >= 0 ? 'behind' : 'ahead of'} {label(a)}.{' '}
+          {!fit
+            ? 'Not enough laps since the last pit stop for a trend yet.'
+            : Math.abs(rate) < 0.05
+              ? 'The gap is steady.'
+              : rate < 0
+                ? <>{who.behind} is gaining <strong>{Math.abs(rate).toFixed(2)}s a lap</strong> (last {clean.length} laps).</>
+                : <>{who.ahead} is pulling away by <strong>{rate.toFixed(2)}s a lap</strong> (last {clean.length} laps).</>}
+        </p>
+      )}
+      <LineChart series={series} robustY={!big?.yDomain} yFormat={(v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)}s`}
+        ariaLabel={`Gap between ${label(b)} and ${label(a)} per lap`} {...big} />
+      <p className="chart-note">Gap at the line each lap; above 0 means {label(b)} is behind. Dashed: trend over the last {clean.length} laps since either car's latest pit stop. Hollow markers: pit laps. Pit-cycle jumps run off the chart.</p>
+    </>
+  )
 }

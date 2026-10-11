@@ -198,7 +198,11 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   to 5 chosen cars (chips; colour follows the car, slots in `SLOTS` validated with the dataviz palette script
   against #12161b), and a battle graph for two cars with a trend over the last ≤10 laps since either car's latest
   pit stop (a pit cycle makes nonsense trends otherwise). Data: GET /api/laps (`useLapHistory`, every 10 s), not
-  the snapshot. Lap times leave out pit laps, out-laps and laps > 7% off the car's median.
+  the snapshot. Lap times leave out pit laps, out-laps and laps > 7% off the car's median. Series data lives in
+  `chartData.ts` (shared). "⤢ Expand" opens `ChartLab.tsx`: a dialog portalled to <body> over the blurred app,
+  gaps / lap times / position / battle, up to 8 cars (all 8 palette slots validated), points on every lap when ≤ 60
+  laps are in view, wheel zoom (Shift = y), drag pan, double-click reset, typed axis ranges (one end can stay auto =
+  NaN). Escape/focus are set up once (the parent re-renders with every update).
 - Pit badge (`PitTimer`): counts smoothly from the server's pit-in time on the session clock while in the pit lane
   ("PIT 23.4s"), then shows the final pit-lane time from the timing (Natsoft PT) in green for 8 s after the exit.
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel`, under the tower in the live view (bottom of the
