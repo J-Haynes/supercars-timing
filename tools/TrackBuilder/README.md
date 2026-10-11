@@ -81,3 +81,40 @@ Track geometry © OpenStreetMap contributors, available under the ODbL.
 |---|---|---|
 | `MOUN` | Mount Panorama, Bathurst | 6942508 |
 | `SURF` | Surfers Paradise (Gold Coast 500). Provisional; control line estimated mid Gold Coast Highway | 9325885 |
+
+## Gold Coast weekend checklist (23-25 Oct 2026)
+
+The Gold Coast track file (`SURF`) is provisional: no recording at Surfers Paradise exists yet, so the web map places
+the timing points itself from live pace a lap or two into the first session (`map/calibrate.ts`).
+
+**How good is that?** Checked at Bathurst on 11 Oct 2026: a provisional Mount Panorama built the same way (no
+recording, `--lap-time 128`), calibrated from the race's live pace, put every timing point within 4 m of the
+recording-based positions (0.1% of a lap). Both use the same lap simulation, so this shows live calibration matches
+what a recording would give, not that the simulation is perfect.
+
+**Risks at the Gold Coast:**
+- Natsoft's track code is a guess (`SURF`). If the feed's `<T C="...">` differs, the map still matches on the track
+  name (`SURFERS`), but rename the file and `--code` to the real code when rebuilding.
+- The control line is estimated (middle of the Gold Coast Highway section, `controlLineEstimated`). If cars visibly
+  cross the line in the wrong place, find the Finish Line node in OSM and pass `--control-node`.
+- OSM has no pit lane for the circuit and doesn't map the temporary chicanes, so pit cars sit beside the track and the
+  speed profile is rougher.
+
+**After Practice 1 (Friday):**
+
+```bash
+# 1. Find the recording and the real track code
+ls -t data/recordings | head -3
+grep -o 'T C=\\u0022[A-Z]*' data/recordings/<P1 file>.jsonl | head -1   # recordings store quotes as \u0022
+
+# 2. Rebuild from the recording (replace SURF with the real code if it differs)
+dotnet run --project tools/TrackBuilder -- \
+  --code SURF --relation 9325885 --name "Surfers Paradise" --match SURFERS \
+  --control-way "Gold Coast Highway" --recording data/recordings/<P1 file>.jsonl
+
+# 3. Build the site (the server serves it; no restart needed) and check the map during the next session
+cd src/web && npm run build
+```
+
+Sanity-check the console output (lap time, where each timing point lands) and watch the map in the next session:
+cars should cross timing points as the tower updates, and not bunch up or wait at points.

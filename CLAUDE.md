@@ -262,7 +262,8 @@ pit lane for the 5 s. So `penalties.ts` follows the sporting rule:
 
 ## Roadmap / next steps
 
-1. Track map polish: more circuits (Albert Park, Surfers Paradise, Sandown, Adelaide...), car trails, selecting
+1. Track map polish: Gold Coast: rebuild `SURF` from the Practice 1 recording (checklist in tools/TrackBuilder/README.md);
+   then Sandown, Adelaide, Albert Park... car trails, selecting
    a car to follow, gaps shown on the map, better pit lane handling. (Bathurst map done.)
 2. Race-specific handling once a full Supercars race is captured: check `<E L>` and the flag values in a real
    Supercars race (Bathurst 1000 recording, 11 Oct 2026), laps-down gaps.
