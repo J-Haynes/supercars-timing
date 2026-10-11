@@ -12,6 +12,7 @@ import { ResultsView } from './components/ResultsView'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
 import { PitLog } from './components/PitLog'
+import { RaceControl } from './components/RaceControl'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useTrack } from './tracks'
 import { isRace, isShootout, isSupercarsSession } from './session'
@@ -108,6 +109,7 @@ export default function App() {
                         No map for {timing.session.track || 'this track'} yet. Build one with <code>tools/TrackBuilder</code>.
                       </div>
                     )}
+                    {(timing.raceControl?.length || timing.session.lapRecord) ? <RaceControl timing={timing} /> : null}
                     {isRace(timing.session.type) && <PitLog timing={timing} />}
                   </aside>
                 </div>

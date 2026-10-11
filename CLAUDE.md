@@ -121,7 +121,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   Natsoft driver `1` is the primary (full-time) driver in every entry. As on the broadcast, the tower marks who's in
   the car, left of the name: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
 - Race order: Natsoft only re-orders `Position` at the control line, so the race tower uses `roadOrder()`
-  (`liveGaps.ts`): laps, then furthest timing point, then who reached it first (exact times at the line and I1/I2).
+  (`liveGaps.ts`). It uses Natsoft's own road position (`CarRow.RoadPosition`, `<P LP>`) when every car has a unique
+  one; otherwise it works it out: laps, then furthest timing point, then who reached it first (exact times at the
+  line and I1/I2).
   Pit stops: a car that crossed the line in the pit lane is "parked" there (`parkedAtLine`) until its next timing
   point, so it drops as each car passes (Natsoft holds it until they complete another lap, ~2 min later). At the line
   it agrees with Natsoft except next to a pit stop (444/468, all 24 misses pit-related). Pos and +/− show road rank.
@@ -152,6 +154,10 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   `UnattributedLaps` = laps before we connected that no one has claimed yet. Stint column = laps since the pit exit.
 - Pit stop log (`PitLog.tsx`, under the map in races): from `CarRow.PitLog` (`PI` in, `PT` = pit-lane seconds out,
   driver swap attached to the stop if it arrives up to 120 s after the exit).
+- Race control (`RaceControl.tsx`, under the map): `TimingSnapshot.RaceControl` from `<G R>` (newest first, last 50),
+  with the lap record (`SessionInfo.LapRecord`, from `<E RI RC RV>`) on top, purple if beaten. Penalties are parsed
+  from the text (`TimingSnapshot.Penalty()`, best effort) into `CarRow.Penalties` and badged in the tower ("+5s").
+  Race time in the header = now − `SessionInfo.GreenAt` (first green flag).
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel` at the bottom of the page; closing is remembered.
 - Shootout: the map shows cars on out-lap, flying lap and in-lap, and hides them once they're in the pits. Natsoft
   doesn't flag that pit entry: an in-lap car past the last timing point and overdue at the line is treated as in

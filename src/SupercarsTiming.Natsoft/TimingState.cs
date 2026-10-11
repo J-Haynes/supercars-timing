@@ -15,6 +15,12 @@ public sealed class TimingState
     public string SessionCode { get; private set; } = "";
     public string SessionName { get; private set; } = "";
     public string SessionType { get; private set; } = "";
+    /// <summary>Race control messages (<c>&lt;G R&gt;</c>), oldest first: incidents, investigations, penalties.</summary>
+    public List<RaceControlMessage> RaceControl { get; } = [];
+    /// <summary>Natsoft time of the first green flag (<c>&lt;S S="Green" I&gt;</c>): the race start. 0 = not seen.</summary>
+    public double GreenAt { get; private set; }
+    /// <summary>Lap record for this session type at this track (<c>&lt;E RI RC RV&gt;</c>); null when not sent.</summary>
+    public LapRecord? Record { get; private set; }
     /// <summary>Scheduled race distance in laps (<c>&lt;E L&gt;</c>); 0 when Natsoft doesn't send one (timed races).</summary>
     public int ScheduledLaps { get; private set; }
     public string TrackCode { get; private set; } = "";
@@ -76,8 +82,16 @@ public sealed class TimingState
                 try { foreach (var child in root.Elements()) ApplyChild(child); }
                 finally { _inSnapshot = false; }
                 if (previous.SessionCode == SessionCode && previous.SessionName == SessionName && SessionName != "")
+                {
                     foreach (var c in Cars.Values)
                         if (previous.Cars.TryGetValue(c.Id, out var old)) c.CarryHistoryFrom(old, Now);
+                }
+                else
+                {
+                    // A new session: race control and the start time belonged to the last one.
+                    RaceControl.Clear();
+                    GreenAt = 0;
+                }
                 break;
             default:
                 ApplyChild(root);
@@ -106,6 +120,8 @@ public sealed class TimingState
                 SessionName = Str(e, "D") ?? SessionName;
                 SessionType = Str(e, "Y") ?? SessionType;
                 ScheduledLaps = Int(e, "L") ?? ScheduledLaps;
+                if (Dbl(e, "RI") is double record && record > 0)
+                    Record = new LapRecord(record, (Str(e, "RC") ?? "").Replace('_', ' '), Str(e, "RV") ?? "");
                 break;
             case "RL":
                 foreach (var r in e.Elements("R"))
@@ -117,6 +133,8 @@ public sealed class TimingState
                 break;
             case "S":
                 Flag = Str(e, "S") ?? Flag;
+                // I = when the flag changed. The first green is the race start (later greens follow safety cars).
+                if (Flag == "Green" && GreenAt == 0 && Dbl(e, "I") is double greenAt && greenAt > 0) GreenAt = greenAt;
                 break;
             case "C":
                 ClockRemaining = Int(e, "C");
@@ -132,7 +150,12 @@ public sealed class TimingState
             case "L":
                 foreach (var p in e.Elements("P")) ApplyCar(p);
                 break;
-            // H = heartbeat, F = flag/finish echo, G = unknown, OL = other categories: ignored for now.
+            case "G":
+                // Race control: free text, e.g. "Stewards: Penalty Car 19 - 5 seconds - driving infringement".
+                // Natsoft also sends empty ones, which carry nothing.
+                if (Str(e, "R") is { Length: > 0 } text && !_inSnapshot) RaceControl.Add(new RaceControlMessage(Now, text));
+                break;
+            // H = heartbeat, F = flag/finish echo, OL = other categories: ignored for now.
         }
     }
 
@@ -143,6 +166,8 @@ public sealed class TimingState
         if (!Cars.TryGetValue(id, out var c)) Cars[id] = c = new CarState { Id = id };
 
         c.Position = Int(p, "L") ?? c.Position;
+        // LP on <P> (not <D>, where LP is the timing point): position on the road at the last timing point.
+        c.RoadPosition = Int(p, "LP") ?? c.RoadPosition;
         if (Str(p, "D") is { } driver && driver != c.DriverIndex)
         {
             // A change after the first value we see is a driver swap (co-driver events, practice changeovers).
@@ -322,6 +347,11 @@ public sealed class CarState
 {
     public string Id { get; init; } = "";
     public int Position { get; set; }
+    /// <summary>
+    /// Position on the road at the last timing point (<c>&lt;P LP&gt;</c>). <see cref="Position"/> only changes at the
+    /// control line; this changes at every timing point, so mid-lap passes and pitting cars show straight away.
+    /// </summary>
+    public int RoadPosition { get; set; }
     /// <summary>Key into <see cref="Entry.Drivers"/> for the driver currently in the car.</summary>
     public string DriverIndex { get; set; } = "1";
     internal bool DriverSeen { get; set; }
@@ -423,6 +453,10 @@ public sealed class CarState
         BestLapSplits = new(old.BestLapSplits);
     }
 }
+
+public sealed record RaceControlMessage(double Time, string Text);
+
+public sealed record LapRecord(double Seconds, string Driver, string Vehicle);
 
 public sealed class PitStop
 {

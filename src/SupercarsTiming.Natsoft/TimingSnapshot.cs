@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace SupercarsTiming.Natsoft;
 
 /// <summary>
@@ -12,16 +14,22 @@ public sealed record TimingSnapshot(
     IReadOnlyList<double> SegmentReference,
     /// <summary>Fastest time anyone has done through each stretch this session (mini-sector purple). 0 = none yet.</summary>
     IReadOnlyList<double> SegmentBest,
+    /// <summary>Latest race control messages, newest first (at most <see cref="RaceControlLimit"/>).</summary>
+    IReadOnlyList<RaceControlMessage> RaceControl,
     double Now,
     long MessageCount)
 {
     public static TimingSnapshot Empty { get; } =
-        new(new SessionInfo("", "", "", "", "", "", null, null, 0), [], new BestTimes(null, null, null, null, null), [], [], [], 0, 0);
+        new(new SessionInfo("", "", "", "", "", "", null, null, 0, 0, null), [], new BestTimes(null, null, null, null, null), [], [], [], [], 0, 0);
+
+    public const int RaceControlLimit = 50;
 
     public static TimingSnapshot From(TimingState s)
     {
         var order = s.PointOrder.ToList();
         var reference = FieldSegmentTimes(s, order);
+        var penalties = s.RaceControl.Select(m => Penalty(m.Text)).OfType<(string Car, string What)>()
+            .ToLookup(p => p.Car, p => p.What);
 
         var cars = s.Cars.Values
             .OrderBy(c => c.Position == 0 ? int.MaxValue : c.Position)
@@ -48,7 +56,9 @@ public sealed record TimingSnapshot(
                     driverKeys.Select(k => c.LapsByDriver.GetValueOrDefault(k)).ToArray(),
                     Math.Max(0, c.Laps - c.LapsByDriver.Values.Sum()),
                     c.Laps - c.StintStartLap,
-                    c.PitLog.Select(p => new PitStopRow(p.Lap, p.InAt, p.OutAt, Math.Round(p.Seconds, 1), Name(p.DriverIn), Name(p.DriverOut))).ToArray());
+                    c.PitLog.Select(p => new PitStopRow(p.Lap, p.InAt, p.OutAt, Math.Round(p.Seconds, 1), Name(p.DriverIn), Name(p.DriverOut))).ToArray(),
+                    c.RoadPosition,
+                    penalties[e?.CarNumber ?? c.Id].ToArray());
             })
             .ToList();
 
@@ -68,8 +78,10 @@ public sealed record TimingSnapshot(
             topSpeed > 0 ? topSpeed : null);
 
         return new TimingSnapshot(
-            new SessionInfo(s.Meeting, s.SessionName, s.SessionType, s.TrackName, s.TrackCode, s.Flag, s.ClockRemaining, s.ClockElapsed, s.ScheduledLaps),
-            s.TimingPoints.ToList(), best, cars, reference, SessionBestSegments(s, order), s.Now, s.MessageCount);
+            new SessionInfo(s.Meeting, s.SessionName, s.SessionType, s.TrackName, s.TrackCode, s.Flag, s.ClockRemaining, s.ClockElapsed,
+                s.ScheduledLaps, s.GreenAt, s.Record),
+            s.TimingPoints.ToList(), best, cars, reference, SessionBestSegments(s, order),
+            s.RaceControl.AsEnumerable().Reverse().Take(RaceControlLimit).ToList(), s.Now, s.MessageCount);
     }
 
     /// <summary>
@@ -125,6 +137,16 @@ public sealed record TimingSnapshot(
         return splits;
     }
 
+    /// <summary>
+    /// Car number and penalty from a race control message, e.g. "Stewards: Penalty Car 19 - 5 seconds - driving
+    /// infringement" gives ("19", "5 seconds"). Null for anything else. The wording is free text, so this is best effort.
+    /// </summary>
+    public static (string Car, string What)? Penalty(string text)
+    {
+        var m = Regex.Match(text, @"\bPenalty\s+Car\s+(\d+)\s*-\s*([^-]+)", RegexOptions.IgnoreCase);
+        return m.Success ? (m.Groups[1].Value, m.Groups[2].Value.Trim()) : null;
+    }
+
     static string Manufacturer(string? vehicle) => vehicle switch
     {
         null or "" => "",
@@ -139,7 +161,11 @@ public sealed record SessionInfo(
     string Meeting, string Name, string Type, string Track, string TrackCode, string Flag,
     int? ClockRemaining, int? ClockElapsed,
     /// <summary>Scheduled race laps from Natsoft; 0 = not sent (the UI falls back to known race distances).</summary>
-    int ScheduledLaps);
+    int ScheduledLaps,
+    /// <summary>Natsoft time of the first green flag (race start); 0 = not seen.</summary>
+    double GreenAt,
+    /// <summary>Lap record for this session type at this track, if Natsoft sends one.</summary>
+    LapRecord? LapRecord);
 
 public sealed record BestTimes(double? Lap, double? S1, double? S2, double? S3, int? Speed);
 
@@ -168,7 +194,11 @@ public sealed record CarRow(
     /// <summary>Laps completed since the last pit exit (or the start).</summary>
     int StintLaps,
     /// <summary>Pit stops seen live, oldest first.</summary>
-    IReadOnlyList<PitStopRow> PitLog);
+    IReadOnlyList<PitStopRow> PitLog,
+    /// <summary>Natsoft's position on the road at the last timing point; 0 = not sent.</summary>
+    int RoadPosition,
+    /// <summary>Penalties from race control messages, e.g. "5 seconds".</summary>
+    IReadOnlyList<string> Penalties);
 
 /// <summary>A pit stop. Seconds = time in pit lane, 0 while the car is still in. Driver names differ on a swap.</summary>
 public sealed record PitStopRow(int Lap, double InAt, double OutAt, double Seconds, string DriverIn, string DriverOut);

@@ -59,6 +59,10 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
   const flag = session?.flag ?? ''
   const status = statusText(connection, feed)
   const laps = hideSession ? null : lapCount(update)
+  // Time since the green flag (race start), while the race is on.
+  const greenAt = session?.greenAt ?? 0
+  const finished = ['checkered', 'ended'].includes(flag.toLowerCase())
+  const raceTime = laps && greenAt > 0 && !finished && update ? clock(Math.max(0, Math.floor(update.timing.now - greenAt))) : null
 
   return (
     <header className="session">
@@ -77,6 +81,7 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
           <div className="laps-to-go" title="Race distance, from the leader's laps">
             <span className="lap-of">{laps.lap}</span>
             <span className="to-go">{laps.toGo}</span>
+            {raceTime && <span className="to-go" title="Time since the green flag">Race time {raceTime}</span>}
           </div>
         )}
       </div>

@@ -22,6 +22,22 @@ export interface SessionInfo {
   clockElapsed: number | null
   /** Scheduled race laps from Natsoft; 0 = not sent (see raceLaps() in session.ts). */
   scheduledLaps: number
+  /** Natsoft time of the first green flag (race start); 0 = not seen. Optional: older servers don't send it. */
+  greenAt?: number
+  /** Lap record for this session type at this track, if Natsoft sends one. */
+  lapRecord?: LapRecord | null
+}
+
+export interface LapRecord {
+  seconds: number
+  driver: string
+  vehicle: string
+}
+
+/** A race control message (incidents, investigations, penalties). `time` is Natsoft time. */
+export interface RaceControlMessage {
+  time: number
+  text: string
 }
 
 export interface TimingPoint {
@@ -97,6 +113,10 @@ export interface CarRow {
   stintLaps: number
   /** Pit stops seen live, oldest first. */
   pitLog: PitStopRow[]
+  /** Natsoft's position on the road at the last timing point; 0 / missing = not sent. */
+  roadPosition?: number
+  /** Penalties from race control, e.g. "5 seconds". */
+  penalties?: string[]
 }
 
 export interface PitStopRow {
@@ -120,6 +140,8 @@ export interface TimingSnapshot {
   segmentReference: number[]
   /** Fastest time anyone has done through each stretch this session (purple mini-sector). */
   segmentBest: number[]
+  /** Latest race control messages, newest first. */
+  raceControl?: RaceControlMessage[]
   now: number
   messageCount: number
 }

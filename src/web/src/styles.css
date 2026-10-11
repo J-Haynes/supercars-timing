@@ -388,3 +388,21 @@ main { flex: 1; padding: 0 16px 24px; }
   0%, 45% { background-color: rgba(255, 77, 79, .30); }
   25% { background-color: rgba(255, 77, 79, .12); }
 }
+
+/* Penalty badge next to the driver (from race control messages). */
+.penalty-badge { margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--red); color: #fff; }
+
+/* Race control panel under the map. */
+.race-control { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 8px 10px; }
+.race-control h2 { margin: 0 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.race-control ul { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.race-control li { display: flex; gap: 10px; padding: 5px 2px; border-bottom: 1px solid var(--line); }
+.race-control li:last-child { border-bottom: 0; }
+.race-control li.penalty { background: rgba(255, 77, 79, .10); }
+.race-control li.penalty .rc-text { color: var(--text); font-weight: 600; }
+.rc-time { color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.rc-text { color: var(--text); }
+.race-control-empty { color: var(--muted); font-size: 13px; padding: 4px 0; }
+.lap-record { font-size: 12px; color: var(--muted); padding: 2px 2px 8px; }
+.lap-record strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.lap-record.beaten, .lap-record.beaten strong { color: var(--purple); }

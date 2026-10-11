@@ -85,6 +85,9 @@ const COLUMNS: Record<string, Column> = {
           {car.driver}
           {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
           {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
+          {(car.penalties ?? []).map((p, i) => (
+            <span key={i} className="penalty-badge" title={`Penalty: ${p}`}>{penaltyBadge(p)}</span>
+          ))}
           {car.inPit && <span className="pit-badge">PIT</span>}
         </>
       )
@@ -162,6 +165,15 @@ function DriverMarker({ car }: { car: CarRow }) {
       aria-label={primary ? 'Primary driver' : 'Co-driver'}
     />
   )
+}
+
+/** "5 seconds" -> "+5s", "Drive Through" -> "DT"; anything else -> "PEN". */
+function penaltyBadge(penalty: string): string {
+  const seconds = penalty.match(/(\d+)\s*sec/i)
+  if (seconds) return `+${seconds[1]}s`
+  if (/drive\s*through/i.test(penalty)) return 'DT'
+  if (/stop\s*(and|&)\s*go/i.test(penalty)) return 'S&G'
+  return 'PEN'
 }
 
 const abbreviation = (name: string) => surname(name).replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()

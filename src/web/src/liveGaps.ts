@@ -56,7 +56,7 @@ function latestCrossing(car: CarRow, order: string[]): number {
 }
 
 /**
- * The race order on the road. Natsoft only re-orders positions at the control line, so a pass at Hell Corner
+ * The race order on the road. Natsoft only re-orders official positions at the control line, so a pass at Hell Corner
  * doesn't show until the cars complete the lap (Bathurst 2026: Lowndes was ahead of Best at every timing point for
  * a whole lap while Natsoft still had Best ahead). This orders by laps completed, then the furthest timing point
  * reached, then who reached it first. At the line it agrees with Natsoft (351 of 353 crossings).
@@ -66,6 +66,12 @@ function latestCrossing(car: CarRow, order: string[]): number {
  * within 19 s of crossing the line in the pit lane), see parkedAtLine().
  */
 export function roadOrder(cars: CarRow[], order: string[]): CarRow[] {
+  // Natsoft sends its own road position at every timing point (<P LP>), which also handles pit stops. Use it when
+  // every car has one and they're all different; otherwise work it out (older servers, gaps in the data).
+  const natsoft = cars.map((c) => c.roadPosition ?? 0)
+  if (natsoft.every((p) => p > 0) && new Set(natsoft).size === natsoft.length) {
+    return [...cars].sort((a, b) => (a.roadPosition ?? 0) - (b.roadPosition ?? 0))
+  }
   return [...cars].sort((a, b) =>
     b.laps - a.laps
     || order.indexOf(b.lastPoint) - order.indexOf(a.lastPoint)
