@@ -94,6 +94,7 @@ export default function App() {
                     columnPrefs={settings.columns}
                     hoverId={hoverId}
                     highlightIds={highlightIds}
+                    clockRate={rate}
                     pinned={settings.pinned}
                     onHover={setHoverId}
                     onTogglePin={togglePinned}

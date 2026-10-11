@@ -481,3 +481,7 @@ main { flex: 1; padding: 0 16px 24px; }
 /* Tips under the tower (live view) line up with the column instead of the page margins. */
 .tower-column .tips { margin: 0; }
 .tower-column .page-footer { margin: 0; padding: 0 2px; }
+
+/* Pit badge: tabular digits so the running timer doesn't jiggle; green with the final time just after leaving. */
+.pit-badge { font-variant-numeric: tabular-nums; }
+.pit-badge.done { background: var(--green); color: #04210f; }

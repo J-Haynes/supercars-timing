@@ -8,6 +8,7 @@ import { startPosition } from '../startingGrid'
 import { carPenalties } from '../penalties'
 import { liveGap, parkedAtLine, roadOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
+import { useSessionClock } from '../map/useSessionClock'
 
 interface Ctx {
   car: CarRow
@@ -26,6 +27,8 @@ interface Ctx {
   points: TimingSnapshot['timingPoints']
   session: TimingSnapshot['session']
   timing: TimingSnapshot
+  /** Session seconds per real second (1 live, replay speed, 0 when stopped), for the smooth pit timer. */
+  clockRate: number
   /** Minimum laps per driver (0 = no rule) and laps left in the race (0 = unknown). */
   minLaps: number
   lapsLeft: number
@@ -86,7 +89,7 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple, race, best, timing }) => {
+    cell: ({ car, now, simple, race, best, timing, clockRate }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
@@ -104,7 +107,7 @@ const COLUMNS: Record<string, Column> = {
           {carPenalties(car, timing).filter((p) => !p.servedAt).map((p, i) => (
             <span key={i} className="penalty-badge" title={`Penalty: ${p.what} (not served yet)`}>{penaltyBadge(p.what)}</span>
           ))}
-          {car.inPit && <span className="pit-badge" title="In the pit lane">PIT{pitSeconds(car, now)}</span>}
+          <PitTimer car={car} serverNow={now} rate={clockRate} />
         </>
       )
     },
@@ -183,10 +186,32 @@ function DriverMarker({ car }: { car: CarRow }) {
   )
 }
 
-/** " 23.4s": time in the pit lane so far, from the open pit stop's pit-in time; "" if we don't know it. */
-function pitSeconds(car: CarRow, now: number): string {
-  const stop = [...(car.pitLog ?? [])].reverse().find((s) => s.outAt === 0)
-  return stop && stop.inAt > 0 && now >= stop.inAt ? ` ${(now - stop.inAt).toFixed(1)}s` : ''
+/** How long the final pit-lane time stays on the badge after the car leaves. */
+const PIT_RESULT_SECONDS = 8
+
+/**
+ * Pit badge with a smooth timer. While the car is in the pit lane it counts up from the server's pit-in time,
+ * driven by the session clock every frame (the server only updates a few times a second). When the car leaves it
+ * shows the stop's final pit-lane time from the server (Natsoft's PT) for a few seconds.
+ */
+function PitTimer({ car, serverNow, rate }: { car: CarRow; serverNow: number; rate: number }) {
+  const log = car.pitLog ?? []
+  const open = car.inPit ? [...log].reverse().find((s) => s.outAt === 0) : undefined
+  const last = log[log.length - 1]
+  const justOut = !car.inPit && last && last.outAt > 0 && last.seconds > 0 && serverNow - last.outAt < PIT_RESULT_SECONDS
+  if (car.inPit) {
+    return open && open.inAt > 0
+      ? <PitCounter since={open.inAt} serverNow={serverNow} rate={rate} />
+      : <span className="pit-badge" title="In the pit lane">PIT</span>
+  }
+  if (justOut) return <span className="pit-badge done" title="Time in the pit lane (from the timing)">PIT {last.seconds.toFixed(1)}s</span>
+  return null
+}
+
+/** Separate component so only cars in the pit lane re-render every frame. */
+function PitCounter({ since, serverNow, rate }: { since: number; serverNow: number; rate: number }) {
+  const now = useSessionClock(serverNow, rate)
+  return <span className="pit-badge" title="In the pit lane">PIT {Math.max(0, now - since).toFixed(1)}s</span>
 }
 
 /** Small stopwatch for the fastest lap badge; uses the text colour so it suits the badge. */
@@ -237,7 +262,7 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], pinned, onHover, onTogglePin }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin }: {
   timing: TimingSnapshot
   simple: boolean
   /** The viewer's detailed-mode layout per session kind (settings panel). */
@@ -245,6 +270,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   hoverId: string | null
   /** Cars named by the insight under the mouse. */
   highlightIds?: string[]
+  /** Session clock rate (see FeedStatus.clockRate). */
+  clockRate?: number
   pinned: string[]
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
@@ -278,7 +305,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race ? i + 1 : car.position, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, minLaps, lapsLeft }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race ? i + 1 : car.position, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr

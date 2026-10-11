@@ -177,7 +177,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   (by car number, full-time drivers only) + points for each car's projected finish (road order, time penalties
   added to the gap). Top 10 (`finalsCut`) in a gold border: they go to the Finals. Data is entered by hand with its
   sources in the comment; update it each round. Enduro scale only lists 25 places (26th = 0), no Enduro Cup bonus.
-- Pit badge counts time in the pit lane ("PIT 23.4s") from the open pit stop's pit-in time.
+- Pit badge (`PitTimer`): counts smoothly from the server's pit-in time on the session clock while in the pit lane
+  ("PIT 23.4s"), then shows the final pit-lane time from the timing (Natsoft PT) in green for 8 s after the exit.
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel`, under the tower in the live view (bottom of the
   page elsewhere); closing is remembered.
 - Wide-screen layout: the left column (insights, tower, tips) scrolls with the page until its bottom reaches the bottom
