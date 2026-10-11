@@ -11,6 +11,11 @@ const FLAG_CLASS: Record<string, string> = {
   ended: 'flag-ended',
 }
 
+/** Readable names for Natsoft flags that aren't plain colours. */
+const FLAG_LABEL: Record<string, string> = {
+  waitstart: 'Waiting to start',
+}
+
 /** One short, human status instead of "mode · state". */
 function statusText(connection: ConnectionState, feed: FeedStatus | undefined) {
   if (connection === 'connecting') return { text: 'Connecting…', dot: 'starting' }
@@ -64,8 +69,9 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
         <div className="track">{session?.track}</div>
       </div>
       <div className="session-status">
-        {flag && <span className={`flag ${FLAG_CLASS[flag.toLowerCase()] ?? ''}`}>{flag}</span>}
-        {session && <div className="clock" title="Time remaining">{clock(session.clockRemaining ?? null)}</div>}
+        {flag && <span className={`flag ${FLAG_CLASS[flag.toLowerCase()] ?? ''}`}>{FLAG_LABEL[flag.toLowerCase()] ?? flag}</span>}
+        {/* Lap races: Natsoft's clock counts laps (<C Y="L" C="161">), not seconds, so the lap counter replaces it. */}
+        {session && !laps && <div className="clock" title="Time remaining">{clock(session.clockRemaining ?? null)}</div>}
         <div className="feed"><span className={`dot dot-${status.dot}`} />{status.text}</div>
         {laps && (
           <div className="laps-to-go" title="Race distance, from the leader's laps">

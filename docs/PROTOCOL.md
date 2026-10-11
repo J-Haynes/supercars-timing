@@ -66,7 +66,7 @@ Counts are from Practice 5 (63 minutes, 8,844 messages).
 | Root | Count | Meaning |
 |---|---|---|
 | `L` | 5,287 | Leaderboard. `Y="f"` full, `Y="p"` partial. A `<P>` per car, each with an optional `<D>` of changed fields |
-| `C` | 3,488 | Session clock, about once a second. `C` = seconds remaining, `E` = elapsed, `Y="T"` = timed session |
+| `C` | 3,488 | Session clock, about once a second. `C` = seconds remaining, `E` = elapsed, `Y="T"` = timed session. `Y="L"` = lap race: `C` = **laps** remaining, `E` = laps done (Bathurst 1000: `C="161" E="0"` before the start) |
 | `A` | 52 | Session best: `I` lap, `C` car, `I1`/`I2` intermediates, `S1`–`S3` sectors |
 | `H` | 10 | Heartbeat |
 | `S` | 3 | Session status: `S` = flag, `E` = session code, `I` = time of change |
