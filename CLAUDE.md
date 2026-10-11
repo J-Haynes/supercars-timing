@@ -1,294 +1,237 @@
 # CLAUDE.md
 
-Guidance for Claude Code working in this repo.
+Guidance for Claude Code (and other agents) working in this repo.
+
+> **Keep this file current.** It's the first thing the next agent reads, often in a fresh session with none of the
+> history. When you add a feature, learn something about the feed, change a workflow or make a decision with the
+> owner, update the relevant section here in the same commit, and delete anything that's no longer true. Protocol
+> findings go in `docs/PROTOCOL.md`; longer-term plans and research in `docs/PLANNING.md`.
 
 ## Project
 
-Unofficial live timing dashboard for the Repco Supercars Championship (F1-dashboard style). Data
-comes from Natsoft's public live timing WebSocket, the same feed behind supercars.com's free
-"classic" live timing. Goals in order: timing tower → interpolated track map → charts and analysis
-(lap times, gaps, stints, battles) → broadcast-delay sync and session replay.
+Unofficial live timing dashboard for the Repco Supercars Championship (F1-dashboard style), for personal use.
+Data comes from Natsoft's public live timing WebSocket, the same feed behind supercars.com's free "classic" live
+timing. The owner runs it as a systemd service on their laptop and views it on their tailnet (see `deploy/`).
 
-Owner is a junior developer working in React, .NET/C# and SQL. Prefer clear, idiomatic code over
-clever code, and explain non-obvious decisions in comments or the PR description.
+Owner: a junior developer working in React, .NET/C# and SQL. Prefer clear, idiomatic code over clever code, and
+explain non-obvious decisions in comments and commit messages.
+
+**Status (11 Oct 2026):** the Bathurst 1000 (Race 30) was followed live end to end and is fully recorded,
+including a safety car and two penalties. Next round: Boost Mobile Gold Coast 500, 23-25 Oct (Finals round 1):
+see "Next round" below.
+
+## How we work
+
+- **Branches:** work on a feature/fix branch, never straight on `main`. One commit per feature or fix, with a message
+  that says what changed, why, and how it was checked. Merge to `main` (fast-forward) and push only when the owner says.
+- **Commit trailer** (from the session's attribution settings): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- **Frontend-only changes don't need a server restart:** `cd src/web && npm run build` writes into the server's
+  `wwwroot`, which the running service serves; viewers refresh. **Server (C#) changes need a restart**: ask the owner
+  first, especially during a session. A restart takes ~5 s and loses nothing (warm start, below).
+- **Measure before fixing.** Many fixes this season started with a wrong guess. Reproduce with real data first
+  (recordings, the live API, or the app's own code run in a script), then fix, then measure again.
+- **Look at the page** for UI changes (headless browser, see "Verifying changes"), and check phone width (390 px).
+- **Never fabricate facts about the sport:** standings, points scales, rules and schedules come from sources (cite
+  them in code comments). If a source can't be found, say so and leave it configurable.
 
 ## Layout
 
-- `src/SupercarsTiming.Natsoft`: no ASP.NET dependency. Protocol and domain logic lives here.
-  - `NatsoftDecoder`: XOR-chain frame decoding
-  - `NatsoftClient`: WebSocket client with reconnect / NotFound / Redirect handling
-  - `Recording` (`RecordingWriter`, `RecordingReader`): JSON Lines recordings, including timed replay
-  - `SessionIndex`: finds sessions in recordings (split at `<New>`/`<NotFound>`, merged across restarts), computes
-    results, and `IsSupercarsChampionship()` (support categories share the feed; the app only shows Supercars)
-  - `TimingState`: applies XML messages to an in-memory model (`Entries`, `Cars`, flag, clock). A `<New>` snapshot of
-    the *same* session (reconnect, restart) keeps each car's history (`CarState.CarryHistoryFrom`): laps per driver,
-    pit log, mini-sector bests. Live snapshots don't list the cars (they follow in an `<L Y="f">`), so each car's old
-    state waits in `_carryFrom` until the car reappears. A different session starts from scratch.
-  - `TimingSnapshot`: flat, serialisable view of `TimingState` sent to the UI
-- `src/SupercarsTiming.Server`: ASP.NET Core minimal API + SignalR.
-  - `Feed/TimingFeedService`: background service, live or replay → `TimingStore`. Live mode records to
-    `Feed:RecordDirectory` (`data/recordings` by default) and, on start-up, replays a session recorded in the last
-    15 minutes first (`WarmStart`), so restarting mid-race keeps driver laps and the pit log.
-  - `Feed/TimingStore`: lock-protected `TimingState`, rebuilds snapshots only when dirty
-  - `Feed/SnapshotBroadcaster`: pushes `TimingUpdate` to `/hubs/timing` at most every `BroadcastIntervalMs`
-  - Endpoints: `GET /api/health`, `GET /api/snapshot`, `GET /api/sessions`, hub `/hubs/timing` (method `snapshot`)
-  - `Sessions/SessionCatalog`: recorded sessions in data/recordings (via `SessionIndex` in the Natsoft library) and
-    their results (final `TimingSnapshot`, cached). `GET /api/sessions` lists Supercars Championship sessions only
-    (`?all=true` for support categories too); `GET /api/sessions/{id}/results` returns the classification.
-- `src/web`: React 19 + Vite + TypeScript. `src/types.ts` mirrors the C# DTOs and must be kept in sync
-  by hand. `useTiming.ts` handles the SignalR connection.
-  - `src/tracks/<CODE>.json`: generated track files (don't hand-edit; rerun TrackBuilder). `tracks/index.ts` lazy-loads them
-    by Natsoft track code, falling back to name fragments in `tracks/manifest.json` (also written by TrackBuilder).
-    Provisional tracks (no recording yet, e.g. `SURF` for the Gold Coast) are calibrated in the browser from live pace
-    (`map/calibrate.ts`). Track codes other than `MOUN` are guesses until we see them in the feed.
-  - `src/map/`: `trackModel.ts` (geometry, sim-time ↔ distance), `carPosition.ts` (where a car is between timing points),
-    `useSessionClock.ts` (smooth session time between server updates).
-  - `src/components/TrackMap.tsx`: the SVG map. Wrapped in an `ErrorBoundary` so a map bug can't take down the tower.
-- `deploy/`: systemd user service for the live server and its README (install, logs, Tailscale).
-- `tools/NatsoftRecorder`: console recorder and inspector. References the Natsoft library.
-- `tools/TrackBuilder`: builds track files from an OSM circuit relation + a recording (see its README).
-- `tests/SupercarsTiming.Natsoft.Tests`: xUnit.
-- `docs/PROTOCOL.md`: the protocol reference. **Update it whenever you learn something new about a field.**
-- `data/recordings/*.jsonl`: real captures, git-ignored. Use them for development and debugging.
+- `src/SupercarsTiming.Natsoft` (no ASP.NET dependency; protocol and domain logic):
+  - `NatsoftDecoder`: XOR-chain frame decoding. `NatsoftClient`: the WebSocket client (reconnects: 30 s while not
+    live, 10 s after errors, immediately on `<Redirect/>`).
+  - `Recording` (`RecordingWriter`, `RecordingReader`): JSON Lines recordings.
+  - `SessionIndex`: finds sessions in recordings (split at `<New>`/`<NotFound>`, merged across restarts), `Replay()`
+    (final `TimingState`), `Results()`, `IsSupercarsChampionship()`.
+  - `SessionReplay`: plays a recorded session to any time t (forward incrementally, backward by rebuilding).
+  - `TimingState`: applies XML messages to the model (`Entries`, `Cars`, flag, clock, race control, flag history,
+    lap record). A `<New>` of the *same* session (reconnect, restart) keeps each car's history
+    (`CarState.CarryHistoryFrom`); live snapshots don't list the cars (they follow in `<L Y="f">`), so old states wait
+    in `_carryFrom` until each car reappears. A different session starts from scratch.
+  - `TimingSnapshot`: the serialisable view sent to the UI (`CarRow`, `SessionInfo`, race control, flag history).
+    `LapHistory` (per-car `LapEntry` list) is separate because it's large.
+- `src/SupercarsTiming.Server` (ASP.NET Core minimal API + SignalR):
+  - `Feed/TimingFeedService`: live (records to `Feed:RecordDirectory` = `data/recordings`) or replay mode. On start-up
+    in live mode it first replays a session recorded in the last 15 min (`WarmStart`), so a restart mid-race keeps
+    driver laps, the pit log, race control and history.
+  - `Feed/TimingStore`: lock-protected `TimingState`; snapshots rebuilt only when dirty. `Feed/SnapshotBroadcaster`
+    pushes to `/hubs/timing` at most every 250 ms.
+  - `Sessions/SessionCatalog`: recorded sessions and their results + lap history (one cached replay per session).
+    `Sessions/ReplayService`: one `SessionReplay` cursor per viewer and session (idle 10 min, max 16).
+- `src/web` (React 19 + Vite + TypeScript, strict). `src/types.ts` mirrors the C# DTOs **by hand**: update it when
+  `CarRow`/`TimingSnapshot`/`SessionInfo` change. Key modules:
+  - Data/logic: `useTiming.ts` (SignalR), `useDelayedUpdate.ts` (broadcast delay), `liveGaps.ts` (live gaps, road
+    order, `raceOrder`), `insights.ts`, `penalties.ts`, `championship.ts` + `finals.ts` (points data, cited),
+    `startingGrid.ts`, `raceSummary.ts`, `chartData.ts`, `session.ts` (`isRace`, `flagKind`, `raceLaps`,
+    `minDriverLaps`, `cautionPeriods`), `calendar.ts` (upcoming events and session times), `towerLayout.ts`.
+  - Map: `map/trackModel.ts`, `map/carPosition.ts` (placement, out-lap and caution pacing), `map/smoothing.ts`,
+    `map/sessionClock.ts` + `useSessionClock.ts`, `map/calibrate.ts`, `map/usePositionSync.ts`.
+  - Track files `src/tracks/<CODE>.json` are generated by TrackBuilder (never hand-edit); `tracks/index.ts` loads by
+    Natsoft track code with name fallback (`tracks/manifest.json`). `MOUN` is real; `SURF` (Gold Coast) is provisional.
+- `deploy/`: the systemd user service and its README (install, logs, Tailscale serve).
+- `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
+  README has the Gold Coast checklist).
+- `tests/SupercarsTiming.Natsoft.Tests`: xUnit, including `RecordingRegressionTests` on real recordings.
+- `docs/PROTOCOL.md` (the feed, field by field: **update it whenever you learn something**), `docs/PLANNING.md`
+  (data-use considerations, deployment, ideas).
+- `data/recordings/*.jsonl`: real captures, git-ignored, **only on this machine (no backup yet)**. Bathurst weekend:
+  Practice 5, Practice 6 (red flag), Top Ten Shootout, Warm Up (last minutes only), Race 30 (complete), plus support races.
+
+## Endpoints
+
+`GET /api/health` · `GET /api/snapshot` (`TimingUpdate`) · `GET /api/laps` (live lap history) · hub `/hubs/timing`
+(method `snapshot`) · `GET /api/sessions` (Supercars only; `?all=true` for support categories) ·
+`GET /api/sessions/{id}/results` · `GET /api/sessions/{id}/laps` · `GET /api/sessions/{id}/replay/info` ·
+`GET /api/sessions/{id}/replay?t=<natsoft time>&viewer=<id>`.
 
 ## Commands
 
 ```bash
-dotnet build                      # whole solution (SupercarsTiming.slnx)
-dotnet test
-dotnet run --project src/SupercarsTiming.Server -- --Feed:Mode=Replay --Feed:ReplaySpeed=10
-dotnet run --project src/SupercarsTiming.Server                          # live (stop the service first)
-systemctl --user restart supercars-timing                                 # the live service (see deploy/README.md)
-dotnet run --project tools/NatsoftRecorder                               # record
-dotnet run --project tools/NatsoftRecorder -- replay data/recordings/<file>.jsonl
+dotnet build && dotnet test                               # solution: SupercarsTiming.slnx
+systemctl --user status|restart supercars-timing          # the live service (Release build, :5080); logs: journalctl --user -u supercars-timing -f
+dotnet build src/SupercarsTiming.Server -c Release        # pre-build before a restart, so it's quick
+cd src/web && npm run build                               # typecheck + build into wwwroot (live site updates, no restart)
+cd src/web && npm run dev                                 # :5173, proxies /api and /hubs to :5080 (TIMING_SERVER overrides)
+# A test server that never contacts Natsoft (replay mode; also serves results/replay from data/recordings):
+dotnet run --project src/SupercarsTiming.Server --no-launch-profile -- --urls http://localhost:5081 \
+  --Feed:Mode=Replay --Feed:ReplaySpeed=10 --Feed:RecordDirectory= --Feed:ReplayFile=<recording.jsonl>
+TIMING_SERVER=http://localhost:5081 npx vite --port 5174   # preview the frontend against it
 dotnet run --project tools/TrackBuilder -- --code MOUN --relation 6942508 --name "Mount Panorama" --recording data/recordings/<file>.jsonl
-cd src/web && npm run dev         # http://localhost:5173, proxies /api and /hubs to :5080
-cd src/web && npm run build       # typecheck + build into the server's wwwroot
 ```
+
+Only one process may hold port 5080 and only one connection to Natsoft may exist: stop the service before running
+the server in live mode by hand.
 
 ## Verifying changes
 
-- Protocol or state changes: add or extend a test in `TimingStateTests` using trimmed real frames,
-  then run `NatsoftRecorder replay` on a real recording and check the sheet looks sane.
-- `RecordingRegressionTests` replay real sessions from `data/recordings` (Bathurst 1000 race, Practice 6) and check
-  pit counts, restart carry-over, penalties, road positions, flags and mini-sectors. They skip themselves when the
-  recordings aren't there (`[RecordingFact]`). Add one whenever a live bug is fixed.
-- UI changes: run the server in replay mode plus `npm run dev`, and look at the page.
-- `npm run build` must pass (TypeScript strict, no unused locals).
+- **Protocol/state:** unit test in `tests/` with trimmed real frames. When a live bug is fixed, add a
+  `RecordingRegressionTests` case (they replay the real Bathurst race/Practice 6 and skip when recordings are absent).
+  Check a test bites by temporarily undoing the fix.
+- **UI:** run the test server (above) or point Vite at the live server, and look. Headless checks used this season:
+  Firefox + `geckodriver` (both installed) driven over WebDriver HTTP from a small Python script: load the page,
+  run JS to read the DOM, take screenshots, crop with PIL. Useful for timing-sensitive behaviour (sample positions
+  every 50 ms) and phone width (`--width=390 --height=844`).
+- **Map/clock behaviour:** import the app's own TS modules (`carPosition`, `smoothing`, `sessionClock`) into a script
+  with `npx tsx` and run them on polled live snapshots or captured snapshot files. That's how stops/teleports and
+  safety car pacing were measured and tuned.
+- `npm run build` must pass (strict TS, no unused locals). `dotnet test` must pass.
 
-## Protocol essentials
+## Protocol essentials (details in docs/PROTOCOL.md)
 
-Read `docs/PROTOCOL.md` before touching parsing. The traps:
+- `<P C>` is Natsoft's **internal car ID** (`R ID`), not the car number. Driver `ID="1"` is the primary (full-time)
+  driver, `2` the co-driver.
+- Partial `L` updates carry only changed fields. Never reset a field because it's missing. 0 = "no time yet".
+- `T` timestamps are track-local wall-clock time encoded as Unix seconds (format as UTC to show track time).
+- Each session starts with its own `<New>`, which resets state. Support categories share the `V8SUPER` feed.
+- Positions: `<P L>` (official) only changes at the control line; `<P LP>` is Natsoft's road position at every timing
+  point. `<D LP>` is the last timing point passed. `LGI`/`LGNI` follow `LP`, not `L`.
+- `LCD` = laps by the current driver, cumulative per driver (in snapshots too). `PI`/`PT`/`PF` = pit in/time/flag.
+- `<E L>` = scheduled laps (161 at Bathurst; 0 for timed races). In a lap race `<C Y="L" C E>` counts **laps**, not seconds.
+- `<G R>` = race control text (incidents, penalties); free text in **varying formats** ("Penalty Car 19 - 5 seconds -
+  …" and "Penalty Car 19  plp  pit stop infringement"). Nothing is sent when a penalty is served.
+- Flags (`<S S>`): WaitStart, Green, **Yellow (= safety car / FCY, confirmed at the Bathurst 1000)**, Red, Checkered,
+  Ended. `<S I>` is the change time for the first green only: after a safety car the green repeats the *first*
+  green's I, so flag-change times use I only within 10 s of the message.
+- After the chequered flag: lap counts stop at the distance, timing points keep coming from the cool-down lap, road
+  positions of stopped cars stop updating, and cars entering the pit lane are not pit stops.
+- The per-car `SC` attribute is not the safety car. `SP` (speed trap) is sent as 0, then the value.
 
-- `<P C="...">` is Natsoft's **internal car ID** (`R ID` in the entry list), not the car number.
-- Partial `L` updates only carry changed fields. Never reset a field because it's missing.
-- `T` timestamps are track-local wall-clock time encoded as Unix seconds (AEDT = Unix + 39600).
-- Each session starts with its own `<New>` snapshot, which must reset state. Support categories share the `V8SUPER` feed.
-- `SP` (speed trap) is sent as `0` and then the real value. Ignore the zero.
-- Gaps: practice/qualifying show `GI`/`GNI` (gap to the fastest lap). `GI` only changes at the control line, so in
-  races the frontend works out live gaps at every timing point (`liveGaps.ts`): each car's crossing time is
-  `lapStartAt` + its split (this lap or last lap), compared with the leader's / car ahead's crossing of the same
-  point on the same lap. Matches `GI` exactly at the line. On out-laps (no `lapStartAt` yet) the car's own crossing is
-  its message time; `GI` would still be the gap from the pit lane, before the stop. The gap column shows PIT / OUT
-  (`parkedAtLine`) until the next timing point; fallback is `LGI`/`LGNI` (they follow the road order), not `GI`.
-  `LGI`/`LGNI` also update per timing point but are often out of order with the positions (2.2 vs 0.2 inversions per
-  check, Bathurst 1000 2026), so they're kept in the model but not shown.
-- Sector fields reset to 0 at the start of a lap. 0 means "no time yet" everywhere.
+## Live page essentials
 
-## Track map essentials
+- **Race order:** use `raceOrder(timing)` everywhere: road order while racing (Natsoft `LP` if unique, else our own:
+  laps, furthest point, who got there first; pitting cars "park" at the line until their next point), Natsoft's
+  official classification once the flag is chequered. **Gaps** in races are worked out per timing point
+  (`liveGaps.ts`; matches `GI` exactly at the line; PIT/OUT while in/just out of the pits); practice/qualifying and
+  finished races use Natsoft's official gaps.
+- **Tower** columns: cells in `TimingTower.tsx` (`COLUMNS`), layouts in `towerLayout.ts`; detailed mode is
+  configurable in ⚙ Settings (`SettingsPanel.tsx`, `settings.columns`). Rows slide and pulse on position changes
+  (`useRowMoves.ts`, FLIP; tint on the row with a cleanup timer). Driver markers (hollow white = primary, green =
+  co-driver), SWAP badge, PIT timer (smooth count from pit-in, then Natsoft's PT for 8 s), penalty badges (+5s, PLP;
+  served ones leave the tower), fastest-lap stopwatch badge, positions gained (`startingGrid.ts`: hand-entered grid,
+  stopgap until the server sends grid positions), driver laps vs the minimum (60 at the Bathurst 1000, 2026; from
+  `LCD`), stint laps, mini-sectors.
+- **Mini-sectors:** stretch times quicker than 0.8× the median of `RawSegmentSeconds` are rejected (pit-lane lines).
+  Never base that median on accepted times (a slow out-lap once locked out every real time); out-laps don't count as
+  pace; stretches starting at a snapshot `LP` or a pit crossing aren't timed.
+- **Flags:** always via `flagKind()`. Caution/red: screen border, `SafetyCarBanner`, ticker items, "SC" tags on stops.
+- **Penalties:** see "Decision" below. Race control panel shows "Penalty served" lines we work out ourselves.
+- **Insights ticker** (`insights.ts` + `InsightsTicker.tsx`): battles, closing trends, pit-adjusted movers, minimum-lap
+  risk, running long, fastest lap, lead changes, race control, caution events. News-ticker scrolling (items leave
+  only when fully off screen, offset reduced in the same frame): never a CSS animation sized to the text (it jumped).
+- **Championship ladder** (`Ladder.tsx`, data in `championship.ts`: standings after Round 10 + Enduro scale, cited)
+  with the top 10 Finals cut in gold. **Finals ladder** (`FinalsLadder.tsx`, rules in `finals.ts`) for the Gold
+  Coast: 3000 + 150/120/96/78 bonus, +25 cup winners, top 7 advance, bottom 3 eliminated.
+- **Charts** (`RaceCharts.tsx`, `LineChart.tsx`, `ChartLab.tsx` large view; colours validated with the dataviz palette
+  script against #12161b): gap, lap times, position, battle (trend only over laps since either car's last stop).
+  Lap axis runs to the race distance.
+- **Laps to go / race time** in the header (`raceLaps()`: `<E L>`, else `KNOWN_RACE_LAPS`: Bathurst 161, Gold Coast 85).
+- **Layout:** wide screens: the left column (insights, tower, tips) sticks at the bottom of the screen while the
+  right column scrolls (`useStickToBottom.ts`; don't make the right column sticky). Phones (< 760 px): `MobileTabs`
+  (Leaderboard | Map | Race | Charts), sticky driver column, trimmed header.
+- **Map:** cars are placed by fraction of the *simulated* stretch time vs expected real time (`carPosition.ts`). Visual
+  only (never changes timing data): 4% slack on expected times, the step at each crossing fades out (0.3 s green,
+  0.8 s caution, `smoothing.ts`), the clock blends server corrections over 0.5 s. Out-laps use the car's previous
+  stretch pace. Under a caution, `cautionPace()` uses what cars took through the same stretch under this caution,
+  scaled per car, only for stretches started after the caution (settings in `CAUTION_TUNING`, tuned on the replayed
+  safety car). "Syncing car positions" greys the map after a page load. Outside races pace is capped at ~1.12×.
+- Live view hides support categories (`isSupercarsSession()`); they're still recorded.
 
-- Natsoft only gives the **last timing point** each car passed (`LP`) and when. Everything between points is estimated.
-- `TimingState` records each car's latest time per segment (`CarState.SegmentSeconds`), skipping pit-lane and
-  non-consecutive crossings, out-laps, and stretches that start at a snapshot `LP` (`CarState.SegmentStartAt` = 0).
-  `TimingSnapshot` sends a per-car expected time per segment (own pace if it's within 0.8–1.6× the field median,
-  otherwise the field median) plus `SegmentReference`.
-- The frontend moves a car the same fraction through the *simulated* segment time as it is through the expected
-  real time, which makes cars slow for corners. Cars that are late hold at 99% of the segment, and dim once
-  they're 2.5× overdue. For drawing only, the expected time gets 4% slack (`VISUAL_SLACK`) and the step at each
-  new crossing fades out over 0.3 s (`map/smoothing.ts`); the session clock blends server corrections in over
-  0.5 s (`map/sessionClock.ts`). Measured live: stops at points 137 → 6, single-frame teleports 264 → 1 per 3 min.
-  `overdue`/`stale` don't use the slack.
-- Under a safety car / FCY (Natsoft sends `Yellow`; confirmed at the Bathurst 1000) cars take ~1.7-2.9x normal per
-  stretch, varying by stretch. `cautionPace()` (map/carPosition.ts) gives per-stretch times cars took under this
-  caution (75th percentile, recent stretches, no out-laps); each car's expected time is that, scaled by how it
-  compared with the field last stretch (cars still closing up are much quicker), and only for stretches started
-  after the caution came out. With no caution data for a stretch, the car's own latest pace. Late cars ease in
-  from 85% instead of freezing at 99%, and the crossing glide is 0.8 s (`TAU_CAUTION`). Tuned offline on the
-  replayed first safety car: waiting at points 1,239 s -> 11 s; typical catch-up at a crossing 13 m -> 54 m (glided).
-  Settings in `CAUTION_TUNING`. On out-laps the expected time is the track's typical time × the car's pace through its
-  previous stretch (1.3× before it has one), so cars in the pit-exit queue keep moving.
-- Timing point positions per track are estimates from TrackBuilder's lap simulation. If they look wrong on a
-  track, fix the inputs (OSM relation, control-line node, recording) and rebuild rather than hand-editing the JSON.
-- `FeedStatus.ClockRate` (replay speed) drives the client-side clock, so replays at 10× animate correctly.
-- After a page load the map shows "Syncing car positions · n/N cars" (`usePositionSync`) until 90% of on-track cars have
-  passed a timing point since (max 45 s), only while the flag is green or yellow. The map is greyed out meanwhile.
+## Results, replay and event pages
 
-## UI essentials
+- **Results** (`ResultsView.tsx`, from the menu): Classification (positions gained, laps down, badges, driver laps),
+  Summary (`raceSummary.ts`: winner and race time, laps led, lead changes, safety cars, movers, fastest stop,
+  penalties, cars well down), Charts, Pit stops, Race control, Championship. Data: `/api/sessions/{id}/results` + `/laps`.
+- **Replay** (`ReplayView.tsx`, "▶ Replay" on a results page): tower + map + banner + race control at any time, play/
+  pause, 1-60×, scrubber with lap ticks and safety car bands; starts 20 s before the first green. The page moves the
+  time and polls `/replay?t=` every 250 ms; the server keeps a cursor per viewer.
+- **Upcoming events** (`EventPreview.tsx`, from the menu): session timetable from `calendar.ts` (local track time,
+  provisional, source linked) and the track map with a work-in-progress note for provisional tracks.
 
-- Tower column cells are defined once in `TimingTower.tsx` (`COLUMNS`). Which show and in what order lives in
-  `towerLayout.ts`: `DEFAULT_LAYOUTS` per session kind and mode (practice/qualifying lead with Best then Gap; races
-  with Gap then Int; `isRace()` decides), `COLUMN_LABELS` (add new columns here too). Detailed mode is configurable
-  in the Settings drawer (`SettingsPanel.tsx`, ⚙ in the controls bar): order and hidden columns per session kind,
-  saved in `settings.columns`. `columnPrefs()` merges saved prefs with columns added later. Simple mode is fixed.
-- Viewer preferences (`settings.ts`: simple mode, broadcast delay, highlighted car numbers, tip dismissed) live in
-  localStorage, wrapped in try/catch so the app still works where storage is blocked.
-- Broadcast delay (`useDelayedUpdate.ts`) buffers updates client-side and shows the one from N seconds ago.
-  The whole UI reads the delayed update; only the connection/feed indicator uses the live one.
-- Highlights are keyed by car number (stable across sessions), hover by Natsoft car ID.
-- Co-driver events: `CarRow.Drivers` lists every driver; `Driver`/`DriverIndex` is who's in the car (Natsoft `<P D>`).
-  `DriverChangedAt` marks a swap; the tower shows the other driver(s) in detailed mode and a SWAP badge for 3 minutes.
-  Natsoft driver `1` is the primary (full-time) driver in every entry. As on the broadcast, the tower marks who's in
-  the car, left of the name: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
-- After the chequered flag `raceOrder()` returns Natsoft's official classification and the tower shows official gaps:
-  Natsoft stops counting laps but keeps sending cool-down-lap timing points, and stops updating stopped cars' road
-  positions, so the road order scrambled the result. Use `raceOrder(timing)` (not `roadOrder`) anywhere a race order is needed.
-- Race order: Natsoft only re-orders `Position` at the control line, so the race tower uses `roadOrder()`
-  (`liveGaps.ts`). It uses Natsoft's own road position (`CarRow.RoadPosition`, `<P LP>`) when every car has a unique
-  one; otherwise it works it out: laps, then furthest timing point, then who reached it first (exact times at the
-  line and I1/I2).
-  Pit stops: a car that crossed the line in the pit lane is "parked" there (`parkedAtLine`) until its next timing
-  point, so it drops as each car passes (Natsoft holds it until they complete another lap, ~2 min later). At the line
-  it agrees with Natsoft except next to a pit stop (444/468, all 24 misses pit-related). Pos and +/− show road rank.
-- Position changes animate (`useRowMoves.ts`, FLIP): the whole row slides to its new place and pulses green (gained)
-  or red (lost). Reduced-motion users get the pulse only. The tint is on the row (not its cells) and a timer clears
-  the class and inline styles afterwards; otherwise rows could stay tinted until hovered (stale repaint).
-- Positions gained/lost (`posChange`, races): from `startingGrid.ts`, a hand-made grid per session taken from our
-  recording (Natsoft's order before the green). Stopgap: the server should send each car's grid position instead.
-- Manufacturer colours (CSS vars): Ford blue, Chevrolet orange, Toyota red; `ManufacturerKey` in the controls bar.
-- Menu (`Menu.tsx`, ☰ in the header): live, results of previous Supercars sessions (`ResultsView.tsx`), upcoming
-  events from `calendar.ts` with countdowns and map status from `tracks/manifest.json`. Clicking an upcoming event opens
-  `EventPreview.tsx`: the Supercars session timetable (`UpcomingEvent.sessions`, local track time, provisional, with
-  its source) and the track map (provisional maps show a work-in-progress note via `TrackMap`'s `note`). Update `calendar.ts` when
-  Supercars publishes changes. There's no replay: previous sessions show results only (owner's call).
-- Live view hides support-category sessions (`isSupercarsSession()` in `session.ts`): the header shows "Waiting for
-  the next Supercars session". They're still recorded.
-- Mini-sectors (`MiniSectors.tsx`, the tower's last column): one block per stretch between timing points, from
-  `CarRow.CurrentSegments`/`LastLapSegments`/`BestSegments` and `TimingSnapshot.SegmentBest`. Purple = session
-  best, green = personal best, yellow = slower; faded = previous lap; outlined = stretch the car is in. Stretch
-  times quicker than 0.8× the field median are rejected (`IsPlausibleSegment`): pit-lane timing lines produce them.
-  The median comes from `RawSegmentSeconds` (timed laps, before the check). Never base it on accepted times: the
-  slow first out-lap at Bathurst once pushed it so high that every real time was rejected and blocks stayed empty.
-- Flags: always go through `flagKind()` (`session.ts`): "Yellow" and likely alternatives ("SC", "FCY", "Safety Car")
-  are caution, since Natsoft's value for a Supercars safety car isn't confirmed yet. Caution/red frame the screen
-  (`.flag-frame`), show `SafetyCarBanner` above the race tower (time out, laps under it if seen starting, caution
-  count, who pitted under it), add ticker items, and tag pit stops "SC". The session flag is the only safety-car
-  signal; the per-car `SC` attribute is something else (see PROTOCOL.md).
-- Laps to go (header, next to the live indicator): `raceLaps()` in `session.ts` uses Natsoft's `<E L>` when it's set,
-  else `KNOWN_RACE_LAPS` (Bathurst 1000 = 161). Hidden when unknown (timed races).
-- Endurance races: Driver laps column (`DriverLaps` in `TimingTower.tsx`) from `CarRow.DriverLaps`, which comes from
-  Natsoft's `LCD` (current driver's laps, cumulative per driver) with our own count as the fallback.
-  `minDriverLaps()` = 60 at the Bathurst 1000 (2026) (check the regulations each year); red when a driver can't reach it.
-  `UnattributedLaps` = laps before we connected that no one has claimed yet. Stint column = laps since the pit exit.
-- Pit stop log (`PitLog.tsx`, under the map in races): from `CarRow.PitLog` (`PI` in, `PT` = pit-lane seconds out,
-  driver swap attached to the stop if it arrives up to 120 s after the exit).
-- Race control (`RaceControl.tsx`, under the map): `TimingSnapshot.RaceControl` from `<G R>` (newest first, last 50),
-  with today's fastest lap on top and, under it, the stored race lap record (`SessionInfo.LapRecord`, `<E RI RC RV>`;
-  not today's lap, so it's labelled "Race lap record"), purple if beaten. Races also get a purple stopwatch badge on
-  the fastest-lap car in the tower. Penalties are parsed
-  from the text (`TimingSnapshot.Penalty()`, best effort) into `CarRow.Penalties` and badged in the tower ("+5s").
-  Served or not (`penalties.ts`): Natsoft never says, and pit-lane time doesn't show it (Payne's serving stop was a
-  normal 66 s), so it follows the rule instead. Served penalties leave the tower and appear in race control as
-  "Penalty served" (`servedMessages`). See "Decision: when a penalty counts as served" below.
-  Race time in the header = now − `SessionInfo.GreenAt` (first green flag).
-- Insights ticker (`InsightsTicker.tsx`, races, above the tower; logic in `insights.ts`): recent events (new fastest
-  lap, lead change, race control penalties/incidents), battles (< 1 s on the road, trains of 3+), closing trends (gap
-  at the line shrinking 3 laps running), minimum-lap risk, big movers and cars running long. Movers are pit-adjusted:
-  each stop a car still owes vs the most-stopped car adds the typical loss (median pit-lane time − 10 s), so not having
-  stopped yet isn't "moving up". Hovering an item highlights its cars (`highlightIds` in App → tower rows and map).
-  The ticker works like a news ticker (items enter right, leave left once fully out of view, with the offset reduced
-  by the item's width in the same frame): never drive it with a CSS animation sized to the text, which jumped.
-- Championship ladder (`Ladder.tsx`, map column, races with data in `championship.ts`): standings before the race
-  (by car number, full-time drivers only) + points for each car's projected finish (road order, time penalties
-  added to the gap). Top 10 (`finalsCut`) in a gold border: they go to the Finals. Data is entered by hand with its
-  sources in the comment; update it each round. Enduro scale only lists 25 places (26th = 0), no Enduro Cup bonus.
-- Finals ladder (`FinalsLadder.tsx`, rules and sources in `finals.ts`): at a Finals round (Gold Coast configured) the
-  top 10 after Bathurst start on 3000 + 150/120/96/78 by position, +25 for the Sprint/Enduro Cup winners; live total
-  adds this round's completed races (from recorded results) and the projected race. Top 7 in gold, bottom 3 below a
-  red elimination line, the rest on ordinary points. Bathurst order comes from our recording via /api/sessions (no
-  post-race penalties). After the Bathurst 1000: set `cupWinners.enduro` and check the result against the official
-  one. Add Sandown (reset 4000, 7 finalists) and Adelaide (5000, 4) entries before those rounds.
-- Race charts (`RaceCharts.tsx`, map column; generic `LineChart.tsx`): gap to the leader and lap times per lap for up
-  to 5 chosen cars (chips; colour follows the car, slots in `SLOTS` validated with the dataviz palette script
-  against #12161b), and a battle graph for two cars with a trend over the last ≤10 laps since either car's latest
-  pit stop (a pit cycle makes nonsense trends otherwise). Data: GET /api/laps (`useLapHistory`, every 10 s), not
-  the snapshot. Lap times leave out pit laps, out-laps and laps > 7% off the car's median. Series data lives in
-  `chartData.ts` (shared). "⤢ Expand" opens `ChartLab.tsx`: a dialog portalled to <body> over the blurred app,
-  gaps / lap times / position / battle, up to 8 cars (all 8 palette slots validated), points on every lap when ≤ 60
-  laps are in view, wheel zoom (Shift = y), drag pan, double-click reset, typed axis ranges (one end can stay auto =
-  NaN). Escape/focus are set up once (the parent re-renders with every update).
-- Pit badge (`PitTimer`): counts smoothly from the server's pit-in time on the session clock while in the pit lane
-  ("PIT 23.4s"), then shows the final pit-lane time from the timing (Natsoft PT) in green for 8 s after the exit.
-- Tips live in `tips.ts` (one string each) and render in `TipsPanel`, under the tower in the live view (bottom of the
-  page elsewhere); closing is remembered.
-- Phone layout (< 760 px): `MobileTabs` (Tower | Map | Race | Charts, remembered) shows one section; the map column
-  is split into `.panel-map`, `.panel-race`, `.panel-charts` (`display: contents` on desktop, so nothing changes
-  there). Everything stays mounted. The tower's driver column is sticky when scrolling sideways; the header, the
-  delay slider, the on-track select and the manufacturer key are trimmed.
-- Wide-screen layout: the left column (insights, tower, tips) scrolls with the page until its bottom reaches the bottom
-  of the screen, then stays while the taller right column keeps scrolling: CSS sticky with a negative `top` from
-  `--stick-height` (`useStickToBottom.ts`). Don't make the right column sticky; it's taller than the screen.
-- Shootout: the map shows cars on out-lap, flying lap and in-lap, and hides them once they're in the pits. Natsoft
-  doesn't flag that pit entry: an in-lap car past the last timing point and overdue at the line is treated as in
-  the pit lane. The card's mini-sector bars are purple (fastest of anyone through that stretch), green (faster
-  than the named reference driver) or yellow (slower).
-- On-track (Shootout) card (`ShootoutCard.tsx`): shown automatically when the session name/type matches
-  `isShootout()` in `session.ts` (/shoot-out|top 10|top ten/), or forced On/Off from the controls bar. It focuses
-  the car on its flying lap (`lapsSincePit === 1`), else the most recently active car on track, and compares its
-  splits with provisional pole's best-lap splits at each timing point.
-- Lap splits (`CarState.CurrentLapSplits/LastLapSplits/BestLapSplits`): seconds from the line at each timing point,
-  "M" = lap time. Exact I1/I2 at the track's intermediate points (`<T PI1 PI2>`), Natsoft's lap time at the line,
-  message time elsewhere. Snapshots send them as arrays `[TP1..TPn, lap]`; best splits fall back to F1/F2/FI.
-  `LapsSincePit`: 0 out-lap, 1 first flying lap, resets on pit entry.
-- Map view (`TrackMap.tsx`): everything is drawn in rotated screen coordinates (`makeView`) so text stays upright.
-  Rotation is saved per track in settings; zoom/pan (wheel, pinch, drag, buttons) is per page view.
-- Outside races, map pace is capped at ~1.12× the track file's typical segment time, so flying laps after slow
-  out-laps animate smoothly.
+## Next round: Gold Coast 500 (23-25 Oct 2026)
+
+- Sessions and sources are in `calendar.ts` (Supercars schedule "correct as of 16 Sep"). Races 31 and 32, 85 laps.
+- **Before the weekend:** set `FINALS_ROUNDS[0].cupWinners.enduro` in `finals.ts` (Enduro Cup winner, +25) and check the
+  Bathurst result our Finals seeding uses against the official one (post-race penalties aren't in the feed). Add a
+  `startingGrid.ts` entry for each race once the grid is known (or send grid positions from the server).
+- **After Practice 1:** rebuild the `SURF` map from the recording (checklist in `tools/TrackBuilder/README.md`;
+  Natsoft's track code there is still a guess). Check that the Gold Coast feed behaves like Bathurst (flags, `<E L>`).
+- `championship.ts` only knows the Bathurst 1000; the Finals ladder takes over at Finals rounds.
 
 ## Decision: when a penalty counts as served
 
-Decided with the owner during the Bathurst 1000 (11 Oct 2026). Natsoft only sends the penalty itself (a `<G>` race
-control message, e.g. "Stewards: Penalty Car 19 - 5 seconds - driving infringement"), never that it was served, and
-the pit-lane time can't show it: Payne's serving stop took a normal 66.1 s, yet the broadcast shows him held in the
-pit lane for the 5 s. So `penalties.ts` follows the sporting rule:
+Decided with the owner during the Bathurst 1000. Natsoft only sends the penalty (`<G>`), never that it was served,
+and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet the broadcast showed him held). So
+`penalties.ts` follows the sporting rule:
 
-- **Rule:** Supercars Operations Manual **B7.7.1.7**, as amended for Bathurst 2024 and quoted by Supercars:
-  "Unless otherwise directed by the Stewards, a Time Penalty imposed during a Race must be served at the Car's next
-  Pit Stop." It "may not be served while the SC, FCY boards or Red Flag are displayed or while the Race is
-  suspended" and "must be served after the completion of all work being performed on the Car during the Pit Stop."
-  Source: https://www.supercars.com/news/bathurst-supercars-penalty-loophole-closed-with-regulations-tweak
-  (3 Oct 2024; prompted by Brad Jones Racing serving a penalty under the Safety Car at Sandown). Speedcafe:
-  https://speedcafe.com/supercars-news-penalty-rule-loophole-bathurst-1000/ ; older coverage
-  (https://speedcafe.com/new-penalty-for-supercars-false-starts/) says an unserved time penalty carries over or is
-  added to the race time.
-- **What the code does:** a penalty is served at the car's first completed pit stop that started after race control
-  issued it, skipping stops with a non-green flag at any point (Natsoft's `Yellow` assumed to mean SC/FCY; not yet
-  confirmed in a Supercars race). With no such stop it stays unserved, and the ladder adds a time penalty to the gap.
-- **Pit lane penalties (PLP):** race control also words them differently ("Penalty Car 19  plp  pit stop
-  infringement": double spaces, no dashes), so `parsePenalty` splits on " - " or 2+ spaces. A PLP is a drive-through,
-  served by the next trip through the pit lane (Payne's took 32.6 s vs ~66 s for a stop). Unserved, the ladder counts
-  it as 25 s, the "pit lane drive-through equivalent" stewards used converting one to a post-race penalty in 2018
-  (https://www.supercars.com/news/championship/van-gisbergen-loses-win-with-pitstop-penalty/). Applying the no-SC rule
-  to drive-throughs is an assumption: the current rule text wasn't found.
-- **Known limits:** a stewards' direction to serve it differently can't be seen in the data. The 2024 wording may
-  have changed in the 2026 manual (not found online). Re-check the rule each season.
+- **Rule:** Supercars Operations Manual **B7.7.1.7** (Bathurst 2024 wording): "Unless otherwise directed by the
+  Stewards, a Time Penalty imposed during a Race must be served at the Car's next Pit Stop." It "may not be served
+  while the SC, FCY boards or Red Flag are displayed or while the Race is suspended" and "must be served after the
+  completion of all work". Sources: https://www.supercars.com/news/bathurst-supercars-penalty-loophole-closed-with-regulations-tweak ,
+  https://speedcafe.com/supercars-news-penalty-rule-loophole-bathurst-1000/ ,
+  https://speedcafe.com/new-penalty-for-supercars-false-starts/ (unserved: carried over or added to race time).
+- **Code:** served at the first completed pit stop that started after the penalty, skipping stops with a caution/red
+  flag at any point (from `TimingSnapshot.FlagHistory`). Unserved time penalties are added to the ladder's projection.
+- **PLP** (pit lane penalty = drive-through): served by the next trip through the pit lane (Payne's: 32.6 s);
+  unserved counts as 25 s, the stewards' 2018 "drive-through equivalent"
+  (https://www.supercars.com/news/championship/van-gisbergen-loses-win-with-pitstop-penalty/). Applying the no-SC
+  rule to drive-throughs is an assumption.
+- **Limits:** stewards' directions can't be seen in the data; the 2026 wording wasn't found. Re-check each season.
 
 ## Rules
 
-- **One connection to Natsoft.** Never add polling, parallel connections or tighter retry loops.
-  Keep the 30 s retry while a meeting isn't live.
-- **Never commit recordings or `.har` files.** They're git-ignored. Recordings are Natsoft's data, and
-  HAR captures contain supercars.com login tokens.
-- Keep the Natsoft library free of ASP.NET dependencies so tools and tests can use it.
-- When you add a field to `CarRow` / `TimingSnapshot`, update `src/web/src/types.ts` too.
-- Don't build features on the paid MySupercars+ (Firebase) data without discussing it first. It's behind a login and its terms are different.
+- **One connection to Natsoft.** Never add polling, parallel connections or tighter retry loops; keep the 30 s
+  retry while a meeting isn't live. Our server fans out to our own browsers. See `docs/PLANNING.md` on data use.
+- **Never commit recordings or `.har` files** (git-ignored; recordings are Natsoft's data, HAR files contain login tokens).
+- **Personal use only:** don't make the app public (no Tailscale Funnel, no public deploy) without the owner deciding,
+  and permission for the data. The tailnet is fine.
+- Keep the Natsoft library free of ASP.NET dependencies.
+- When you add a field to `CarRow` / `TimingSnapshot` / `SessionInfo`, update `src/web/src/types.ts` too.
+- Don't build on the paid MySupercars+ (Firebase) data without discussing it first.
 
-## Roadmap / next steps
+## Roadmap
 
-1. Track map polish: Gold Coast: rebuild `SURF` from the Practice 1 recording (checklist in tools/TrackBuilder/README.md);
-   then Sandown, Adelaide, Albert Park... car trails, selecting
-   a car to follow, gaps shown on the map, better pit lane handling. (Bathurst map done.)
-2. Race-specific handling once a full Supercars race is captured: check `<E L>` and the flag values in a real
-   Supercars race (Bathurst 1000 recording, 11 Oct 2026), laps-down gaps.
-3. ~~Lap time and gap charts~~ (done: `RaceCharts`). Next: position charts, stint pace comparisons.
-4. Broadcast-delay slider and scrubbable replay.
-5. Persist sessions (SQL) instead of only JSONL.
+1. Gold Coast weekend (above), then Sandown and Adelaide entries in `finals.ts`, track maps for them.
+2. Back up `data/recordings` (off the laptop; TrueNAS on the tailnet when it's online, or an external drive).
+3. Grid positions from the server (replacing hand-entered `startingGrid.ts`); championship standings after each round.
+4. Ideas not built yet: pit windows / stops remaining, follow-a-driver card with notifications, co-driver planner,
+   pit stop leaderboard, calendar-aware Natsoft connection (`docs/PLANNING.md`).
+5. Persist sessions (SQL or static per-session archives) only if cross-season queries or deployment need it.
