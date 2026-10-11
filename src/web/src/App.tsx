@@ -10,6 +10,7 @@ import { TipsPanel } from './components/TipsPanel'
 import { Menu } from './components/Menu'
 import { ResultsView } from './components/ResultsView'
 import { EventPreview } from './components/EventPreview'
+import { ReplayView } from './components/ReplayView'
 import type { UpcomingEvent } from './calendar'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
@@ -44,6 +45,8 @@ export default function App() {
   const [results, setResults] = useState<RecordedSession | null>(null)
   // An upcoming event's page (timetable and map), opened from the menu.
   const [preview, setPreview] = useState<UpcomingEvent | null>(null)
+  // Replaying the results session (from its results page).
+  const [replaying, setReplaying] = useState(false)
 
   const timing = update?.timing
   // Support categories share the feed: only show Supercars Championship sessions.
@@ -65,14 +68,16 @@ export default function App() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         resultsId={results?.id ?? null}
-        onWatchLive={() => { setResults(null); setPreview(null) }}
-        onResults={(s) => { setResults(s); setPreview(null) }}
+        onWatchLive={() => { setResults(null); setPreview(null); setReplaying(false) }}
+        onResults={(s) => { setResults(s); setPreview(null); setReplaying(false) }}
         onPreview={(e) => { setPreview(e); setResults(null) }}
       />
       {preview ? (
         <main><EventPreview event={preview} onLive={() => setPreview(null)} /></main>
+      ) : results && replaying ? (
+        <main><ReplayView session={results} onBack={() => setReplaying(false)} /></main>
       ) : results ? (
-        <main><ResultsView session={results} onLive={() => setResults(null)} /></main>
+        <main><ResultsView session={results} onLive={() => setResults(null)} onReplay={() => setReplaying(true)} /></main>
       ) : (
         <>
           <Controls
