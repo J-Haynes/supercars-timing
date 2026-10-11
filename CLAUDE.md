@@ -183,6 +183,11 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   (by car number, full-time drivers only) + points for each car's projected finish (road order, time penalties
   added to the gap). Top 10 (`finalsCut`) in a gold border: they go to the Finals. Data is entered by hand with its
   sources in the comment; update it each round. Enduro scale only lists 25 places (26th = 0), no Enduro Cup bonus.
+- Race charts (`RaceCharts.tsx`, map column; generic `LineChart.tsx`): gap to the leader and lap times per lap for up
+  to 5 chosen cars (chips; colour follows the car, slots in `SLOTS` validated with the dataviz palette script
+  against #12161b), and a battle graph for two cars with a trend over the last ≤10 laps since either car's latest
+  pit stop (a pit cycle makes nonsense trends otherwise). Data: GET /api/laps (`useLapHistory`, every 10 s), not
+  the snapshot. Lap times leave out pit laps, out-laps and laps > 7% off the car's median.
 - Pit badge (`PitTimer`): counts smoothly from the server's pit-in time on the session clock while in the pit lane
   ("PIT 23.4s"), then shows the final pit-lane time from the timing (Natsoft PT) in green for 8 s after the exit.
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel`, under the tower in the live view (bottom of the
@@ -251,6 +256,6 @@ pit lane for the 5 s. So `penalties.ts` follows the sporting rule:
    a car to follow, gaps shown on the map, better pit lane handling. (Bathurst map done.)
 2. Race-specific handling once a full Supercars race is captured: check `<E L>` and the flag values in a real
    Supercars race (Bathurst 1000 recording, 11 Oct 2026), laps-down gaps.
-3. Lap time, position and gap charts from recorded history (needs per-lap history in `TimingState`).
+3. ~~Lap time and gap charts~~ (done: `RaceCharts`). Next: position charts, stint pace comparisons.
 4. Broadcast-delay slider and scrubbable replay.
 5. Persist sessions (SQL) instead of only JSONL.

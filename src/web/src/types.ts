@@ -166,3 +166,28 @@ export interface RecordedSession {
   durationSeconds: number
   messages: number
 }
+
+/** One completed lap (GET /api/laps). `gap`/`gapLaps` are the gap to the leader at the line; `at` is Natsoft time. */
+export interface LapEntry {
+  lap: number
+  time: number
+  position: number
+  gap: number
+  gapLaps: number
+  driver: string
+  pitted: boolean
+  at: number
+}
+
+export interface CarLaps {
+  id: string
+  carNumber: string
+  driver: string
+  drivers: string[]
+  laps: LapEntry[]
+}
+
+export interface LapHistory {
+  session: string
+  cars: CarLaps[]
+}

@@ -15,6 +15,7 @@ import { PitLog } from './components/PitLog'
 import { RaceControl } from './components/RaceControl'
 import { InsightsTicker } from './components/InsightsTicker'
 import { Ladder } from './components/Ladder'
+import { RaceCharts } from './components/RaceCharts'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useTrack } from './tracks'
 import { useStickToBottom } from './useStickToBottom'
@@ -129,6 +130,7 @@ export default function App() {
                       </div>
                     )}
                     <Ladder timing={timing} onHighlight={setHighlightIds} />
+                    {isRace(timing.session.type) && <RaceCharts timing={timing} />}
                     {(timing.raceControl?.length || timing.session.lapRecord) ? <RaceControl timing={timing} /> : null}
                     {isRace(timing.session.type) && <PitLog timing={timing} />}
                   </aside>
