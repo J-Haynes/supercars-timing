@@ -23,7 +23,17 @@ interface RaceChampionship {
   finalsCut: number
 }
 
-const ENDURO_POINTS = [300, 276, 258, 240, 222, 204, 192, 180, 168, 156, 144, 138, 132, 126, 120, 114, 108, 102, 96, 90, 84, 78, 72, 66, 60]
+export const ENDURO_POINTS = [300, 276, 258, 240, 222, 204, 192, 180, 168, 156, 144, 138, 132, 126, 120, 114, 108, 102, 96, 90, 84, 78, 72, 66, 60]
+
+/** Drivers' standings after Round 10 (car number -> [driver, points]); see the sources in the comment above. */
+export const STANDINGS_AFTER_R10: Record<string, [string, number]> = {
+  '19': ['Matt Payne', 2275], '88': ['Broc Feeney', 2155], '26': ['Kai Allen', 2069], '17': ['Brodie Kostecki', 1971],
+  '6': ['Cam Waters', 1962], '18': ['Anton De Pasquale', 1879], '888': ['Will Brown', 1870], '1': ['Chaz Mostert', 1713],
+  '2': ['Ryan Wood', 1594], '4': ['Jack Le Brocq', 1313], '8': ['André Heimgartner', 1251], '55': ['Thomas Randle', 1250],
+  '31': ['Jayden Ojeda', 1243], '7': ['James Golding', 1226], '48': ['David Reynolds', 1035], '14': ['Cameron Hill', 944],
+  '38': ['Rylan Gray', 916], '10': ['Zach Bates', 815], '99': ['Cooper Murray', 774], '3': ['Aaron Cameron', 763],
+  '777': ['Declan Fraser', 715], '96': ['Macauley Jones', 710], '11': ['Jackson Walls', 663], '9': ['Jobe Stewart', 639],
+}
 
 const RACES: RaceChampionship[] = [
   {
@@ -31,14 +41,7 @@ const RACES: RaceChampionship[] = [
     session: /supercars championship - race 30$/i,
     points: ENDURO_POINTS,
     finalsCut: 10,
-    standings: {
-      '19': ['Matt Payne', 2275], '88': ['Broc Feeney', 2155], '26': ['Kai Allen', 2069], '17': ['Brodie Kostecki', 1971],
-      '6': ['Cam Waters', 1962], '18': ['Anton De Pasquale', 1879], '888': ['Will Brown', 1870], '1': ['Chaz Mostert', 1713],
-      '2': ['Ryan Wood', 1594], '4': ['Jack Le Brocq', 1313], '8': ['André Heimgartner', 1251], '55': ['Thomas Randle', 1250],
-      '31': ['Jayden Ojeda', 1243], '7': ['James Golding', 1226], '48': ['David Reynolds', 1035], '14': ['Cameron Hill', 944],
-      '38': ['Rylan Gray', 916], '10': ['Zach Bates', 815], '99': ['Cooper Murray', 774], '3': ['Aaron Cameron', 763],
-      '777': ['Declan Fraser', 715], '96': ['Macauley Jones', 710], '11': ['Jackson Walls', 663], '9': ['Jobe Stewart', 639],
-    },
+    standings: STANDINGS_AFTER_R10,
   },
 ]
 

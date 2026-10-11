@@ -183,6 +183,12 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   (by car number, full-time drivers only) + points for each car's projected finish (road order, time penalties
   added to the gap). Top 10 (`finalsCut`) in a gold border: they go to the Finals. Data is entered by hand with its
   sources in the comment; update it each round. Enduro scale only lists 25 places (26th = 0), no Enduro Cup bonus.
+- Finals ladder (`FinalsLadder.tsx`, rules and sources in `finals.ts`): at a Finals round (Gold Coast configured) the
+  top 10 after Bathurst start on 3000 + 150/120/96/78 by position, +25 for the Sprint/Enduro Cup winners; live total
+  adds this round's completed races (from recorded results) and the projected race. Top 7 in gold, bottom 3 below a
+  red elimination line, the rest on ordinary points. Bathurst order comes from our recording via /api/sessions (no
+  post-race penalties). After the Bathurst 1000: set `cupWinners.enduro` and check the result against the official
+  one. Add Sandown (reset 4000, 7 finalists) and Adelaide (5000, 4) entries before those rounds.
 - Race charts (`RaceCharts.tsx`, map column; generic `LineChart.tsx`): gap to the leader and lap times per lap for up
   to 5 chosen cars (chips; colour follows the car, slots in `SLOTS` validated with the dataviz palette script
   against #12161b), and a battle graph for two cars with a trend over the last ≤10 laps since either car's latest

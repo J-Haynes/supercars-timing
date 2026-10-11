@@ -520,3 +520,10 @@ main { flex: 1; padding: 0 16px 24px; }
 .battle-pick { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; font-size: 12px; color: var(--muted); }
 .battle-pick select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; font: inherit; }
 .battle-summary { font-size: 13px; margin: 2px 2px 6px; line-height: 1.4; }
+
+/* Finals ladder: the bottom three below a red elimination line. */
+.ladder-seed { color: var(--muted); }
+.ladder-elimination { --elim: var(--red); border: 2px dashed var(--elim); border-radius: 8px; padding: 2px 0 4px; margin: 0 0 8px; background: rgba(255, 77, 79, .06); }
+.ladder-elimination-label { color: var(--elim); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px 2px; }
+.finals-row.out .ladder-pos { color: var(--red); }
+.ladder-others summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 4px 8px; }
