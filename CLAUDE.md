@@ -170,6 +170,10 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   at the line shrinking 3 laps running), minimum-lap risk, big movers and cars running long. Movers are pit-adjusted:
   each stop a car still owes vs the most-stopped car adds the typical loss (median pit-lane time − 10 s), so not having
   stopped yet isn't "moving up". Hovering an item highlights its cars (`highlightIds` in App → tower rows and map).
+- Championship ladder (`Ladder.tsx`, map column, races with data in `championship.ts`): standings before the race
+  (by car number, full-time drivers only) + points for each car's projected finish (road order, time penalties
+  added to the gap). Top 10 (`finalsCut`) in a gold border: they go to the Finals. Data is entered by hand with its
+  sources in the comment; update it each round. Enduro scale only lists 25 places (26th = 0), no Enduro Cup bonus.
 - Pit badge counts time in the pit lane ("PIT 23s") from the open pit stop's pit-in time.
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel` at the bottom of the page; closing is remembered.
 - Shootout: the map shows cars on out-lap, flying lap and in-lap, and hides them once they're in the pits. Natsoft

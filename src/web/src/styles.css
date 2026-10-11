@@ -451,3 +451,25 @@ main { flex: 1; padding: 0 16px 24px; }
 .insight.tone-red { border-color: rgba(255, 77, 79, .5); }
 .insight.tone-yellow { border-color: rgba(255, 210, 63, .45); }
 .insight.tone-blue { border-color: rgba(47, 111, 223, .55); }
+
+/* Championship ladder (map column). The top 10 go to the Finals: gold border around them. */
+.ladder { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 8px 10px; font-size: 13px; }
+.ladder h2 { margin: 0 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.ladder-live { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
+.ladder-head, .ladder-row { display: grid; grid-template-columns: 26px 34px 1fr 48px 52px; align-items: center; gap: 6px; padding: 4px 8px; }
+.ladder-head { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.ladder-head span:nth-child(n + 4), .ladder-today, .ladder-total { text-align: right; font-variant-numeric: tabular-nums; }
+.ladder-row { position: relative; border-radius: 4px; }
+.ladder-row:hover { background: #1f2a36; }
+.ladder-pos { font-weight: 700; text-align: right; }
+.ladder-move { font-size: 11px; font-weight: 700; color: var(--muted); }
+.ladder-move.up { color: var(--green); }
+.ladder-move.down { color: var(--red); }
+.ladder-car { color: var(--muted); font-size: 11px; }
+.ladder-today { color: var(--green); }
+.ladder-total { font-weight: 700; }
+.ladder-short { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ladder-finals { --gold: #e6b422; border: 2px solid var(--gold); border-radius: 8px; padding: 2px 0 4px; margin: 4px 0 8px; background: rgba(230, 180, 34, .06); box-shadow: 0 0 12px rgba(230, 180, 34, .18); }
+.ladder-finals-label { color: var(--gold); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px 2px; }
+.ladder-finals .ladder-pos { color: var(--gold); }
+.ladder-note { color: var(--muted); font-size: 11px; margin: 8px 2px 0; line-height: 1.4; }
