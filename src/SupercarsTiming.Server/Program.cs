@@ -3,6 +3,7 @@ using SupercarsTiming.Server.Feed;
 using SupercarsTiming.Server.Hubs;
 using SupercarsTiming.Natsoft;
 using SupercarsTiming.Server.Sessions;
+using SupercarsTiming.Server.F1;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,10 @@ builder.Services.AddHostedService<TimingFeedService>();
 builder.Services.AddHostedService<SnapshotBroadcaster>();
 builder.Services.AddSingleton<SessionCatalog>();
 builder.Services.AddSingleton<ReplayService>();
+// F1: a second, separate feed (F1's live timing hub) with its own store, hub and endpoints under /api/f1.
+builder.Services.Configure<F1Options>(builder.Configuration.GetSection(F1Options.Section));
+builder.Services.AddSingleton<F1Store>();
+builder.Services.AddHostedService<F1FeedService>();
 
 builder.Services.AddSignalR()
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -44,6 +49,11 @@ app.MapGet("/api/sessions/{id}/replay", (ReplayService replays, string id, doubl
 app.MapGet("/api/sessions/{id}/laps", (SessionCatalog catalog, string id) =>
     catalog.Laps(id) is { } laps ? Results.Ok(laps) : Results.NotFound());
 app.MapHub<TimingHub>(TimingHub.Path);
+
+app.MapGet("/api/f1/health", (F1Store store) => Results.Ok(store.Status));
+app.MapGet("/api/f1/snapshot", (F1Store store) => Results.Ok(new TimingUpdate(store.Status, store.Snapshot())));
+app.MapGet("/api/f1/laps", (F1Store store) => Results.Ok(store.Laps()));
+app.MapHub<F1Hub>(F1Hub.Path);
 
 // Production: serve the built React app from wwwroot (npm run build in src/web writes there).
 // In development, run the Vite dev server instead (npm run dev in src/web -> http://localhost:5173).

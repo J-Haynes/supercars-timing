@@ -1,3 +1,4 @@
+import { teamStyle } from '../series'
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { CarRow, TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
@@ -104,7 +105,9 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
   const smoothing = useRef(new Map<string, Smoothed>())
   // Just after the page loads, positions come from crossings made before it; say so until most cars have updated.
   const flagNow = flagKind(timing.session.flag)
-  const sync = usePositionSync(timing.cars, `${timing.session.meeting}|${timing.session.name}`, flagNow === 'green' || flagNow === 'caution')
+  // Retired cars (F1 sends Retired) leave the map; they'd otherwise sit where they stopped and hold up the sync.
+  const mapCars = timing.cars.filter((c) => !c.retired)
+  const sync = usePositionSync(mapCars, `${timing.session.meeting}|${timing.session.name}`, flagNow === 'green' || flagNow === 'caution')
 
   const geometry = useMemo(() => new TrackModel(track), [track])          // outline only: stable for the view
   const model = useMemo(() => new TrackModel(effective), [effective])     // with timing points: car positions
@@ -125,7 +128,7 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
 
   // Draw order: later = on top. Leader above the field, then pinned, focused, and the hovered car on top.
   const layer = (c: CarRow) => (c.id === hoverId || highlightIds.includes(c.id) ? 3 : c.id === focusId ? 2 : pinned.includes(c.carNumber) ? 1 : 0)
-  const cars = [...timing.cars].sort((a, b) => layer(a) - layer(b) || (b.position || 99) - (a.position || 99))
+  const cars = [...mapCars].sort((a, b) => layer(a) - layer(b) || (b.position || 99) - (a.position || 99))
   let pitIndex = 0
   // In the Shootout, show cars on their out-lap, flying lap and in-lap, and hide them once they're back in the
   // pits. Natsoft doesn't flag the pit entry after the in-lap; the car just stops crossing timing points. So an
@@ -329,7 +332,7 @@ function CarDot({ car, p, dim, scale, hovered, focused, pinned, onHover, onToggl
     >
       <title>{`P${car.position} #${car.carNumber} ${car.driver}${car.inPit ? ' (pit)' : ''}`}</title>
       {(pinned || focused) && <circle r={CAR_RADIUS * 1.7} className={focused ? 'focus-ring' : 'pin-ring'} />}
-      <circle r={big ? CAR_RADIUS * 1.3 : CAR_RADIUS} />
+      <circle r={big ? CAR_RADIUS * 1.3 : CAR_RADIUS} style={teamStyle(car, 'fill')} />
       <text dy="0.36em">{car.carNumber}</text>
     </g>
   )

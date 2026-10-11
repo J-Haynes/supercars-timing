@@ -13,5 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/SupercarsTiming.Natsoft/SupercarsTiming.Natsoft.csproj" />
+    <!-- F1 state lives in the server project (src/SupercarsTiming.Server/F1). -->
+    <ProjectReference Include="../../src/SupercarsTiming.Server/SupercarsTiming.Server.csproj" />
   </ItemGroup>
 </Project>

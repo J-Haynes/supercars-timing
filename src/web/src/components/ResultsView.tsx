@@ -1,3 +1,4 @@
+import { teamStyle } from '../series'
 import { useEffect, useState } from 'react'
 import type { CarRow, LapHistory, RecordedSession, TimingSnapshot } from '../types'
 import { gapText, lapTime, clock } from '../format'
@@ -108,13 +109,13 @@ function Classification({ results, race }: { results: TimingSnapshot; race: bool
             const others = (c.drivers ?? []).filter((d) => d && d !== c.driver)
             const isFastest = !!fastest && Math.abs(c.bestLap - fastest) < 0.0005
             const best = <td className={`num ${isFastest ? 'session-best' : ''}${race ? '' : ' primary'}`}>{lapTime(c.bestLap) || '–'}</td>
-            const start = race ? startPosition(results.session, c.carNumber) : undefined
+            const start = race ? startPosition(results.session, c) : undefined
             const change = start && c.position ? start - c.position : 0
             return (
               <tr key={c.id}>
                 <td className="num pos">{c.position || '–'}</td>
                 {race && <td className="num">{start ? <span className={change > 0 ? 'pos-up' : change < 0 ? 'pos-down' : 'pos-same'} title={`Started P${start}`}>{change > 0 ? `▲${change}` : change < 0 ? `▼${-change}` : '–'}</span> : ''}</td>}
-                <td><span className={`car mfr-${c.manufacturer.toLowerCase()}`} title={c.vehicle}>{c.carNumber}</span></td>
+                <td><span className={`car mfr-${c.manufacturer.toLowerCase()}`} style={teamStyle(c)} title={c.vehicle}>{c.carNumber}</span></td>
                 <td className="driver">
                   {c.driver}{others.length > 0 && <span className="co-driver"> / {others.join(', ')}</span>}
                   {race && isFastest && <span className="fastest-badge" title={`Fastest lap: ${lapTime(c.bestLap)}`}>⏱</span>}

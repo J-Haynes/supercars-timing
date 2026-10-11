@@ -204,7 +204,15 @@ public sealed record CarRow(
     /// <summary>Natsoft's position on the road at the last timing point; 0 = not sent.</summary>
     int RoadPosition,
     /// <summary>Penalties from race control messages, e.g. "5 seconds".</summary>
-    IReadOnlyList<string> Penalties);
+    IReadOnlyList<string> Penalties,
+    // F1 only (Natsoft doesn't send these; the defaults keep the Supercars snapshot unchanged):
+    /// <summary>Current tyre compound ("SOFT", "INTERMEDIATE", ...) and laps on that set.</summary>
+    string Tyre = "", int TyreLaps = 0,
+    /// <summary>Team colour as hex without '#', e.g. "F47600".</summary>
+    string TeamColour = "",
+    /// <summary>Starting grid position; 0 = unknown.</summary>
+    int GridPosition = 0,
+    bool Retired = false);
 
 /// <summary>A pit stop. Seconds = time in pit lane, 0 while the car is still in. Driver names differ on a swap.</summary>
 public sealed record PitStopRow(int Lap, double InAt, double OutAt, double Seconds, string DriverIn, string DriverOut);

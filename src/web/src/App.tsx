@@ -27,6 +27,7 @@ import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './comp
 import { flagKind, isRace, isShootout, isSupercarsSession } from './session'
 import { SafetyCarBanner } from './components/SafetyCarBanner'
 import type { RecordedSession } from './types'
+import { isF1 } from './series'
 
 export default function App() {
   const { update: latest, connection } = useTiming()
@@ -50,7 +51,7 @@ export default function App() {
 
   const timing = update?.timing
   // Support categories share the feed: only show Supercars Championship sessions.
-  const supportSession = !!timing?.session.name && !isSupercarsSession(timing.session.name)
+  const supportSession = !isF1 && !!timing?.session.name && !isSupercarsSession(timing.session.name)
   const track = useTrack(timing?.session.trackCode || undefined, timing?.session.track)
   const hasCars = !!timing && timing.cars.length > 0 && !supportSession
   const rate = latest && (latest.feed.state === 'live' || latest.feed.state === 'replaying') ? latest.feed.clockRate ?? 1 : 0
@@ -63,7 +64,7 @@ export default function App() {
 
   return (
     <div className={`app${frame}`}>
-      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} hideSession={supportSession} />
+      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={isF1 ? undefined : () => setMenuOpen(true)} hideSession={supportSession} />
       <Menu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -144,13 +145,14 @@ export default function App() {
                       </ErrorBoundary>
                     ) : (
                       <div className="map-missing">
-                        No map for {timing.session.track || 'this track'} yet. Build one with <code>tools/TrackBuilder</code>.
+                        No map for {timing.session.track || 'this track'} yet. Build one with <code>{isF1 ? 'tools/F1TrackBuilder' : 'tools/TrackBuilder'}</code>.
                       </div>
                     )}
                     </div>
                     <div className="panel-race">
-                      <Ladder timing={timing} onHighlight={setHighlightIds} />
-                      {isRace(timing.session.type) && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
+                      {/* Supercars championship and Finals ladders: no F1 standings yet. */}
+                      {!isF1 && <Ladder timing={timing} onHighlight={setHighlightIds} />}
+                      {!isF1 && isRace(timing.session.type) && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
                     </div>
                     <div className="panel-charts">
                       {isRace(timing.session.type) && <RaceCharts timing={timing} />}
@@ -184,6 +186,7 @@ function EmptyState({ state, detail, connection, support }: { state?: string; de
   let message = 'Waiting for timing data…'
   if (connection !== 'connected') message = 'Connecting to the timing server…'
   else if (support) message = `A support category is on track (${support.replace(/^\d{4}\s+/, '').split(' - ')[0]}). Timing will appear here when the next Supercars session starts.`
+  else if (isF1 && state === 'live') message = 'Connected to F1 live timing. Waiting for the session data…'
   else if (state === 'waiting') message = 'No session on track right now. Timing appears automatically when one starts.'
   else if (state === 'error') message = detail ?? 'The feed reported an error.'
   return <div className="empty">{message}</div>

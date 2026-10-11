@@ -1,3 +1,4 @@
+import { isF1 } from './series'
 import { useCallback, useEffect, useState } from 'react'
 import type { ColumnPrefs, SessionKind } from './towerLayout'
 
@@ -18,7 +19,8 @@ export interface Settings {
   columns: Partial<Record<SessionKind, ColumnPrefs>>
 }
 
-const KEY = 'supercars-timing:settings'
+// Each series keeps its own settings (column layouts differ).
+const KEY = isF1 ? 'supercars-timing:f1-settings' : 'supercars-timing:settings'
 const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, focusCard: 'auto', columns: {} }
 
 function load(): Settings {

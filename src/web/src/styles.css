@@ -657,3 +657,18 @@ button.upcoming:hover { border-color: var(--muted); }
 .replay-band { position: absolute; bottom: 4px; height: 10px; background: rgba(255, 210, 63, .35); border-radius: 2px; pointer-events: none; }
 .replay-tick { position: absolute; top: 0; bottom: 14px; width: 1px; background: var(--line); pointer-events: none; }
 .replay-tick span { position: absolute; top: 0; left: 3px; font-size: 9px; color: var(--muted); }
+
+/* F1 tyres (TimingTower "tyre" column): compound initial in Pirelli's colours, laps on the set. */
+.tyre { display: inline-flex; align-items: baseline; gap: 3px; font-weight: 700; font-family: ui-monospace, monospace; }
+.tyre::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--muted); align-self: center; }
+.tyre small { color: var(--muted); font-weight: 400; }
+.tyre-soft::before { border-color: #e8002d; }
+.tyre-medium::before { border-color: #ffd12e; }
+.tyre-hard::before { border-color: #f0f0ec; }
+.tyre-intermediate::before { border-color: #43b02a; }
+.tyre-wet::before { border-color: #0072c6; }
+
+/* Supercars | F1 switch in the header: each is its own app (a full page load). */
+.series-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font-size: 12px; font-weight: 700; }
+.series-switch a { padding: 4px 10px; color: var(--muted); text-decoration: none; }
+.series-switch a.active { background: var(--line); color: var(--text, #fff); }

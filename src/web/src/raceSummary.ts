@@ -56,7 +56,7 @@ export function raceSummary(results: TimingSnapshot, history: LapHistory | null)
 
   const classified = [...results.cars].filter((c) => c.position > 0).sort((a, b) => a.position - b.position)
   const movers = classified
-    .map((c) => ({ c, start: startPosition(results.session, c.carNumber) ?? 0 }))
+    .map((c) => ({ c, start: startPosition(results.session, c) ?? 0 }))
     .filter((x) => x.start > 0)
     .map(({ c, start }) => ({ carNumber: c.carNumber, driver: c.driver, start, finish: c.position, change: start - c.position }))
     .sort((a, b) => b.change - a.change)

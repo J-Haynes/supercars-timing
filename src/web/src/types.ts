@@ -117,6 +117,15 @@ export interface CarRow {
   roadPosition?: number
   /** Penalties from race control, e.g. "5 seconds". */
   penalties?: string[]
+  // F1 only (see series.ts):
+  /** Current tyre compound ("SOFT", "INTERMEDIATE", ...) and laps on that set. */
+  tyre?: string
+  tyreLaps?: number
+  /** Team colour, hex without '#'. */
+  teamColour?: string
+  /** Starting grid position; 0 = unknown. */
+  gridPosition?: number
+  retired?: boolean
 }
 
 export interface PitStopRow {

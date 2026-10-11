@@ -1,3 +1,4 @@
+import { isF1, SERIES, SERIES_HOME, SERIES_LABEL, type Series } from '../series'
 import type { FeedStatus, TimingUpdate } from '../types'
 import type { ConnectionState } from '../useTiming'
 import { clock } from '../format'
@@ -52,7 +53,8 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
   update: TimingUpdate | null
   feed: FeedStatus | undefined
   connection: ConnectionState
-  onMenu: () => void
+  /** Missing in the F1 app (the menu's results and events are Supercars only for now). */
+  onMenu?: () => void
   hideSession?: boolean
 }) {
   const session = hideSession ? undefined : update?.timing.session
@@ -66,9 +68,10 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
 
   return (
     <header className="session">
-      <button type="button" className="menu-button" onClick={onMenu} aria-label="Open menu">☰</button>
+      {onMenu && <button type="button" className="menu-button" onClick={onMenu} aria-label="Open menu">☰</button>}
+      <SeriesSwitch />
       <div className="session-title">
-        <div className="meeting">{session?.meeting || update?.timing.session.meeting || 'Supercars Timing'}</div>
+        <div className="meeting">{session?.meeting || update?.timing.session.meeting || (isF1 ? 'F1 Timing' : 'Supercars Timing')}</div>
         <h1>{session?.name || (hideSession ? 'Waiting for the next Supercars session' : '—')}</h1>
         <div className="track">{session?.track}</div>
       </div>
@@ -86,5 +89,19 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
         )}
       </div>
     </header>
+  )
+}
+
+/** Master switch between the Supercars app (/) and the F1 app (/f1). Remembered for the next visit to /. */
+function SeriesSwitch() {
+  const choose = (s: Series) => {
+    try { localStorage.setItem('supercars-timing:series', s) } catch { /* private mode: not remembered */ }
+  }
+  return (
+    <nav className="series-switch" aria-label="Series">
+      {(['v8', 'f1'] as const).map((s) => (
+        <a key={s} href={SERIES_HOME[s]} className={s === SERIES ? 'active' : ''} onClick={() => choose(s)}>{SERIES_LABEL[s]}</a>
+      ))}
+    </nav>
   )
 }

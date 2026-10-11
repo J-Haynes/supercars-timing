@@ -1,3 +1,4 @@
+import { isF1, teamStyle } from '../series'
 import type { ReactNode } from 'react'
 import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
@@ -57,6 +58,8 @@ const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
 // tell (e.g. just out of the pits). Practice/qualifying: GI is the gap to the fastest lap, so it stays as is.
 const gapOf = (c: Ctx) => {
   const { car } = c
+  // F1's gaps and intervals are already live (updated through the lap), so use them as they are.
+  if (isF1) return { gap: car.gap, laps: car.gapLaps, int: car.interval, intLaps: car.intervalLaps, status: car.inPit ? 'PIT' : '' }
   // Practice/qualifying, and races once finished: Natsoft's official gaps (live ones would follow the cool-down lap).
   if (!c.race || c.finished) return { gap: car.gap, laps: car.gapLaps, int: car.interval, intLaps: car.intervalLaps, status: '' }
   // In the pit lane, or out of it but not yet at a timing point: no meaningful gap until the next point.
@@ -77,7 +80,7 @@ const COLUMNS: Record<string, Column> = {
   posChange: {
     key: 'posChange', header: '+/−', numeric: true,
     cell: ({ car, session, rank }) => {
-      const start = startPosition(session, car.carNumber)
+      const start = startPosition(session, car)
       if (!start || !rank) return ''
       const change = start - rank
       const title = `Started P${start}`
@@ -88,7 +91,12 @@ const COLUMNS: Record<string, Column> = {
   },
   car: {
     key: 'car', header: 'Car',
-    cell: ({ car }) => <span className={`car mfr-${car.manufacturer.toLowerCase()}`} title={car.vehicle}>{car.carNumber}</span>,
+    cell: ({ car }) => <span className={`car mfr-${car.manufacturer.toLowerCase()}`} style={teamStyle(car)} title={car.vehicle}>{car.carNumber}</span>,
+  },
+  tyre: {
+    key: 'tyre', header: 'Tyre',
+    // F1 only: compound initial and laps on the set (TimingAppData stints).
+    cell: ({ car }) => car.tyre ? <span className={`tyre tyre-${car.tyre.toLowerCase()}`} title={`${car.tyre} · ${car.tyreLaps ?? 0} laps`}>{car.tyre[0]}<small>{car.tyreLaps ?? ''}</small></span> : null,
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',

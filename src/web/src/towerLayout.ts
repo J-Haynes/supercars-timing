@@ -1,3 +1,4 @@
+import { isF1 } from './series'
 /**
  * Which tower columns show, and in what order. The cells themselves are defined in TimingTower.tsx (COLUMNS);
  * this module only knows the keys, so the settings panel can use it without importing the tower.
@@ -24,13 +25,14 @@ export const COLUMN_LABELS: Record<string, string> = {
   stint: 'Stint (laps since pit)',
   laps: 'Laps',
   minis: 'Mini-sectors',
+  tyre: 'Tyre (F1)',
 }
 
 /** Columns that can be moved but not hidden. */
 export const LOCKED_COLUMNS = ['driver']
 
 /** Practice/qualifying ("timed") lead with Best then Gap; races lead with Gap then Int. */
-export const DEFAULT_LAYOUTS: Record<SessionKind, { detailed: string[]; simple: string[] }> = {
+const SUPERCARS_LAYOUTS: Record<SessionKind, { detailed: string[]; simple: string[] }> = {
   timed: {
     detailed: ['pos', 'car', 'driver', 'best', 'gap', 'int', 'last', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'minis'],
     simple: ['pos', 'car', 'driver', 'best', 'gap', 'last', 'pits', 'laps'],
@@ -41,6 +43,20 @@ export const DEFAULT_LAYOUTS: Record<SessionKind, { detailed: string[]; simple: 
     simple: ['pos', 'posChange', 'car', 'driver', 'driverLaps', 'gap', 'int', 'last', 'pits', 'stint', 'laps'],
   },
 }
+
+/** F1: tyres instead of driver laps (one driver per car). */
+const F1_LAYOUTS: Record<SessionKind, { detailed: string[]; simple: string[] }> = {
+  timed: {
+    detailed: ['pos', 'car', 'driver', 'best', 'gap', 'int', 'last', 's1', 's2', 's3', 'tyre', 'speed', 'pits', 'laps', 'minis'],
+    simple: ['pos', 'car', 'driver', 'best', 'gap', 'last', 'tyre', 'laps'],
+  },
+  race: {
+    detailed: ['pos', 'posChange', 'car', 'driver', 'gap', 'int', 'tyre', 'last', 'best', 's1', 's2', 's3', 'speed', 'pits', 'laps', 'minis'],
+    simple: ['pos', 'posChange', 'car', 'driver', 'gap', 'int', 'tyre', 'last', 'pits', 'laps'],
+  },
+}
+
+export const DEFAULT_LAYOUTS = isF1 ? F1_LAYOUTS : SUPERCARS_LAYOUTS
 
 /** A viewer's detailed-mode layout for one session kind: every column in order, and the hidden ones. */
 export interface ColumnPrefs {

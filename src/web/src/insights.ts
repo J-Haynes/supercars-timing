@@ -151,11 +151,11 @@ export function buildInsights(timing: TimingSnapshot, memory: InsightMemory): In
     const maxStops = Math.max(...cars.map((c) => c.pitStops))
     const typicalLap = median(cars.map((c) => c.lastLap).filter((t) => t > 0)) ?? 130
     const adjusted = cars
-      .filter((c) => startPosition(timing.session, c.carNumber))
+      .filter((c) => startPosition(timing.session, c))
       .map((c) => ({ c, t: gapToLeader(c) + c.gapLaps * typicalLap + (maxStops - c.pitStops) * pitLoss }))
       .sort((a, b) => a.t - b.t)
     adjusted.forEach(({ c }, i) => {
-      const start = startPosition(timing.session, c.carNumber) ?? 0
+      const start = startPosition(timing.session, c) ?? 0
       const change = start - (i + 1)
       if (Math.abs(change) < MOVER_PLACES || !onTrack(c)) return
       out.push(change > 0

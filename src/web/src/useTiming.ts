@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr'
 import type { TimingUpdate } from './types'
+import { API_BASE, HUB_PATH } from './series'
 
 export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
 
@@ -11,7 +12,7 @@ export function useTiming() {
 
   useEffect(() => {
     const hub = new HubConnectionBuilder()
-      .withUrl('/hubs/timing')
+      .withUrl(HUB_PATH)
       .withAutomaticReconnect({ nextRetryDelayInMilliseconds: () => 3000 })
       .configureLogging(LogLevel.Warning)
       .build()
@@ -19,7 +20,7 @@ export function useTiming() {
     hub.on('snapshot', (u: TimingUpdate) => setUpdate(u))
 
     // Paint immediately from the REST snapshot while the hub connects.
-    fetch('/api/snapshot')
+    fetch(`${API_BASE}/snapshot`)
       .then((r) => (r.ok ? (r.json() as Promise<TimingUpdate>) : null))
       .then((u) => u && setUpdate((prev) => prev ?? u))
       .catch(() => {})

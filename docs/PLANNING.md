@@ -50,6 +50,22 @@ We haven't found published terms for the feed. If Natsoft or Supercars ask us to
 - **Prerequisites:** permission for the data (above), and authentication if anything is ever public.
 - Doing this would also solve the recordings backup gap.
 
+## F1 (added 11 Oct 2026, Singapore GP)
+
+The app has a second, separate F1 app at `/f1` on F1's public live timing (`docs/PROTOCOL-F1.md`). Notes:
+
+- **Car positions need F1 TV.** Anonymous connections get all the timing topics but not `Position.z` (real x/y,
+  ~4 Hz) or `CarData.z` (telemetry). With an F1 TV subscription token they'd be available and the map could show true
+  positions instead of placing cars between mini-sectors. Guides say the cheaper **F1 TV Access** tier includes live
+  timing (Pro adds video; F1 TV Pro is US$10.99/month in the US). We couldn't confirm the Australian price or
+  whether Access is sold here (Kayo/Foxtel hold the TV rights): check https://f1tv.formula1.com before deciding.
+  It's a paid service, so discuss before building on it (same rule as MySupercars+). Implementation would mean
+  storing the token on the server and sending it with the negotiate/WebSocket (FastF1 does this).
+- **Same data-use rules as Natsoft:** one connection, slow reconnects, personal use, our server fans out.
+- **Not built yet for F1:** results/replay pages (the menu is Supercars only), championship standings, track maps
+  for other circuits (run `tools/F1TrackBuilder` on a practice or qualifying archive at each new circuit), pit-lane
+  path on the map, team radio, weather.
+
 ## Ideas not built yet
 
 From the Bathurst brainstorm (built: safety car mode, charts, battle graph, finals ladder, phone layout, regression
