@@ -233,5 +233,7 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
 2. Back up `data/recordings` (off the laptop; TrueNAS on the tailnet when it's online, or an external drive).
 3. Grid positions from the server (replacing hand-entered `startingGrid.ts`); championship standings after each round.
 4. Ideas not built yet: pit windows / stops remaining, follow-a-driver card with notifications, co-driver planner,
-   pit stop leaderboard, calendar-aware Natsoft connection (`docs/PLANNING.md`).
-5. Persist sessions (SQL or static per-session archives) only if cross-season queries or deployment need it.
+   pit stop leaderboard.
+5. **Decided, next to plan:** connect to Natsoft only around scheduled sessions, with session times fetched
+   automatically from the series' websites (`docs/PLANNING.md`, "Using Natsoft's data responsibly").
+6. Persist sessions (SQL or static per-session archives) only if cross-season queries or deployment need it.

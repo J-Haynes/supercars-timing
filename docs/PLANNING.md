@@ -18,7 +18,11 @@ because our server fans out to them. That part is the polite design.
 is cheap, but a browser tab doesn't sit doing that for weeks, so it's the most visible and least necessary part of
 our traffic. The .NET `ClientWebSocket` also doesn't identify the app.
 
-**Options (not implemented; owner to decide):**
+**Decision (11 Oct 2026):** the owner chose option 1, extended: plan the connection schedule ahead and automate it
+from session times fetched from the racing series' websites (not only the hand-kept `calendar.ts`). Not built yet;
+to be planned in its own session.
+
+**Options considered:**
 1. **Calendar-aware connection:** connect normally from ~1 hour before the first session of an event day
    (`calendar.ts` has the times) to the end of the day; otherwise check rarely (every 15-30 min) or not at all.
    That removes almost all of the off-weekend handshakes. Risk: an unlisted or rescheduled session is missed, so
