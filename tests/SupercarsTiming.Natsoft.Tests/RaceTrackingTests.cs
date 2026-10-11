@@ -167,4 +167,13 @@ public class RaceTrackingTests
         Assert.True(laps[1].Pitted || s.Cars["22"].PitLog[0].Lap == 11);   // the stop was logged against lap 11
         Assert.Equal(12, LapHistory.From(s).Cars.Single().Laps[^1].Lap);
     }
+
+    [Fact]
+    public void Pit_entry_after_the_chequered_flag_is_not_a_stop()
+    {
+        var s = Fresh();
+        s.Apply("""<S T="1100.0000" S="Checkered" I="1100.0000" />""");
+        Car(s, 1150, """P="Y" LLP="161" PS="2" PI="1150.0000" """);   // cool-down lap into the pit lane
+        Assert.Empty(s.Cars["22"].PitLog);
+    }
 }

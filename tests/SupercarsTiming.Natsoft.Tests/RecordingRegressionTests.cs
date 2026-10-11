@@ -82,9 +82,18 @@ public class RecordingRegressionTests
     [RecordingFact(Race)]
     public void Race_road_positions_flags_start_and_record()
     {
+        // Road positions are unique while racing. After the finish Natsoft stops updating those of stopped and
+        // retired cars, so they can repeat (the frontend falls back to its own road order then): check mid-race.
+        var mid = new TimingState();
+        foreach (var m in SessionIndex.Read(Recordings.Session(Race)!))
+        {
+            if (m.Xml is null) continue;
+            mid.Apply(m.Xml);
+            if (mid.Cars.Count > 0 && mid.Cars.Values.Max(c => c.Laps) >= 80) break;
+        }
+        Assert.Equal(mid.Cars.Count, mid.Cars.Values.Select(c => c.RoadPosition).Where(p => p > 0).Distinct().Count());
+
         var s = Recordings.Replay(Race);
-        var snap = TimingSnapshot.From(s);
-        Assert.Equal(snap.Cars.Count, snap.Cars.Select(c => c.RoadPosition).Where(p => p > 0).Distinct().Count());
         Assert.Contains(s.FlagHistory, f => f.Flag == "Green");
         Assert.True(s.GreenAt > 0);
         Assert.Equal(161, s.ScheduledLaps);

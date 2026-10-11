@@ -213,7 +213,10 @@ public sealed class TimingState
             leaving = inPit == "N" && c.InPit;
             // Pit stop log. Entering: PI = pit-in time, LLP = lap. Leaving: PT = seconds in pit lane.
             // A snapshot only says the car is in the pits, not since when, so it doesn't start a log entry.
-            if (entering && !_inSnapshot)
+            // After the chequered flag cars drive into the pit lane on their cool-down lap; that isn't a pit stop
+            // (Natsoft's PS doesn't count it either: Bathurst 1000, three cars logged a "stop" on lap 161).
+            var raceOver = Flag is "Checkered" or "Ended";
+            if (entering && !_inSnapshot && !raceOver)
                 c.PitLog.Add(new PitStop
                 {
                     Lap = Int(d, "LLP") ?? c.Laps,
