@@ -258,7 +258,9 @@ def main():
         'source': {'attribution': 'Positions from F1 live timing (livetiming.formula1.com)', 'osmRelation': 0,
                    'recording': info.get('Path', ''), 'built': datetime.now().strftime('%Y-%m-%d')},
         'length': round(length, 1), 'step': STEP, 'path': path, 'simTime': sim,
-        'timingPoints': points, 'segmentSeconds': segment_seconds, 'labels': [], 'pitLane': pit_lane,
+        # The control line must be a timing point too: the map looks up where 'M' is to place a car on the last
+        # stretch of the lap (without it, that stretch was taken as a whole lap and cars zipped round at the line).
+        'timingPoints': [{'id': 'M', 'name': 'Control line', 'distance': 0}] + points, 'segmentSeconds': segment_seconds, 'labels': [], 'pitLane': pit_lane,
     }
     out = os.path.join(args.out, f'{code}.json')
     with open(out, 'w') as f:

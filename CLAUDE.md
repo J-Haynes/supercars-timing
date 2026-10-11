@@ -220,7 +220,7 @@ the server in live mode by hand.
   Flags: TrackStatus 4 = "Safety Car", 6/7 = "VSC" (both cautions in `flagKind`), 2 is a local yellow (green).
 - **Maps:** `F1-<circuit key>.json`, built by `build_track.py` from archived qualifying positions: Marina Bay (61)
   from 2026; Austin (9), Mexico City (65), Interlagos (14), Las Vegas (152), Lusail (150), Yas Marina (70) from 2025.
-  Mini-sectors per sector differ by circuit (read from the data). The pit lane is traced from cars' positions while
+  Mini-sectors per sector differ by circuit (read from the data). Like every track file, they need the control line as timing point `M` at distance 0 (without it cars zipped a whole lap at the line). The pit lane is traced from cars' positions while
   `InPit` (Interlagos has a stray branch into the infield). Cars in the pits are drawn along it. Rebuild a circuit
   from its Practice 1 archive if the 2026 mini-sectors differ from 2025's (tower ids won't match the map's).
 - **Car positions (Position.z) need an F1 TV login:** not used; see `docs/PLANNING.md` before building on it.
