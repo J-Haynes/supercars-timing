@@ -120,6 +120,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   `DriverChangedAt` marks a swap; the tower shows the other driver(s) in detailed mode and a SWAP badge for 3 minutes.
   Natsoft driver `1` is the primary (full-time) driver in every entry. As on the broadcast, the tower marks who's in
   the car, left of the name: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
+- Race order: Natsoft only re-orders `Position` at the control line, so the race tower uses `roadOrder()`
+  (`liveGaps.ts`): laps, then furthest timing point, then who reached it first (exact times at the line and I1/I2).
+  Agrees with Natsoft at the line (351/353); pit-lane cars keep Natsoft's slot. Pos and +/− show the road rank.
 - Position changes animate (`useRowMoves.ts`, FLIP): the whole row slides to its new place and pulses green (gained)
   or red (lost). Reduced-motion users get the pulse only.
 - Positions gained/lost (`posChange`, races): from `startingGrid.ts`, a hand-made grid per session taken from our

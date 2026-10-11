@@ -5,7 +5,7 @@ import { MiniSectors } from './MiniSectors'
 import { isRace, minDriverLaps, raceLaps } from '../session'
 import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
 import { startPosition } from '../startingGrid'
-import { liveGap } from '../liveGaps'
+import { liveGap, roadOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
 
 interface Ctx {
@@ -15,6 +15,8 @@ interface Ctx {
   now: number
   simple: boolean
   isFirst: boolean
+  /** Position shown: road order in races (see roadOrder), Natsoft's otherwise. */
+  rank: number
   /** Race leader and the car ahead, for live gaps. */
   leader?: CarRow
   ahead?: CarRow
@@ -54,13 +56,13 @@ const gapOf = (c: Ctx) => {
 }
 
 const COLUMNS: Record<string, Column> = {
-  pos: { key: 'pos', header: 'Pos', numeric: true, cell: ({ car }) => car.position || '', cellClass: () => 'pos' },
+  pos: { key: 'pos', header: 'Pos', numeric: true, cell: ({ rank }) => rank || '', cellClass: () => 'pos' },
   posChange: {
     key: 'posChange', header: '+/−', numeric: true,
-    cell: ({ car, session }) => {
+    cell: ({ car, session, rank }) => {
       const start = startPosition(session, car.carNumber)
-      if (!start || !car.position) return ''
-      const change = start - car.position
+      if (!start || !rank) return ''
+      const change = start - rank
       const title = `Started P${start}`
       if (change > 0) return <span className="pos-up" title={title}>▲{change}</span>
       if (change < 0) return <span className="pos-down" title={title}>▼{-change}</span>
@@ -199,10 +201,12 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHo
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
 }) {
-  const { cars, best, timingPoints } = timing
-  const rowRef = useRowMoves(cars.map((c) => c.id))
+  const { best, timingPoints } = timing
   const race = isRace(timing.session.type)
   const order = ['M', ...timingPoints.map((p) => p.id)]
+  // Races: order by progress on the road, which updates at every timing point (Natsoft re-orders at the line).
+  const cars = race ? roadOrder(timing.cars, order) : timing.cars
+  const rowRef = useRowMoves(cars.map((c) => c.id))
   // Driver laps only matter when cars are shared (co-driver events).
   const shared = cars.some((c) => (c.drivers?.length ?? 0) > 1)
   const kind: SessionKind = race ? 'race' : 'timed'
@@ -210,7 +214,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHo
     .filter((k) => k !== 'driverLaps' || shared)
     .map((k) => COLUMNS[k])
   const totalLaps = raceLaps(timing.session)
-  const leaderLaps = cars.find((c) => c.position === 1)?.laps ?? 0
+  const leaderLaps = cars[0]?.laps ?? 0
   const lapsLeft = totalLaps > 0 ? Math.max(0, totalLaps - leaderLaps) : 0
   const minLaps = minDriverLaps(timing.session)
 
@@ -226,7 +230,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHo
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, minLaps, lapsLeft }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race ? i + 1 : car.position, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, minLaps, lapsLeft }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr
