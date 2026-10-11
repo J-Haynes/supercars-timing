@@ -220,6 +220,12 @@ pit lane for the 5 s. So `penalties.ts` follows the sporting rule:
 - **What the code does:** a penalty is served at the car's first completed pit stop that started after race control
   issued it, skipping stops with a non-green flag at any point (Natsoft's `Yellow` assumed to mean SC/FCY; not yet
   confirmed in a Supercars race). With no such stop it stays unserved, and the ladder adds a time penalty to the gap.
+- **Pit lane penalties (PLP):** race control also words them differently ("Penalty Car 19  plp  pit stop
+  infringement": double spaces, no dashes), so `parsePenalty` splits on " - " or 2+ spaces. A PLP is a drive-through,
+  served by the next trip through the pit lane (Payne's took 32.6 s vs ~66 s for a stop). Unserved, the ladder counts
+  it as 25 s, the "pit lane drive-through equivalent" stewards used converting one to a post-race penalty in 2018
+  (https://www.supercars.com/news/championship/van-gisbergen-loses-win-with-pitstop-penalty/). Applying the no-SC rule
+  to drive-throughs is an assumption: the current rule text wasn't found.
 - **Known limits:** a stewards' direction to serve it differently can't be seen in the data. The 2024 wording may
   have changed in the 2026 manual (not found online). Re-check the rule each season.
 

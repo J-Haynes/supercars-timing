@@ -105,7 +105,10 @@ const COLUMNS: Record<string, Column> = {
           )}
           {/* Served penalties leave the tower; race control logs them as served. */}
           {carPenalties(car, timing).filter((p) => !p.servedAt).map((p, i) => (
-            <span key={i} className="penalty-badge" title={`Penalty: ${p.what} (not served yet)`}>{penaltyBadge(p.what)}</span>
+            <span key={i} className="penalty-badge"
+              title={`${p.kind === 'plp' ? 'Pit lane penalty (drive-through)' : `Penalty: ${p.what}`}${p.reason ? `: ${p.reason}` : ''} (not served yet)`}>
+              {penaltyBadge(p.what)}
+            </span>
           ))}
           <PitTimer car={car} serverNow={now} rate={clockRate} />
         </>
@@ -226,10 +229,11 @@ function StopwatchIcon() {
   )
 }
 
-/** "5 seconds" -> "+5s", "Drive Through" -> "DT"; anything else -> "PEN". */
+/** "5 seconds" -> "+5s", "plp" (pit lane penalty) -> "PLP", "Drive Through" -> "DT"; anything else -> "PEN". */
 function penaltyBadge(penalty: string): string {
   const seconds = penalty.match(/(\d+)\s*sec/i)
   if (seconds) return `+${seconds[1]}s`
+  if (/\bplp\b|pit\s*lane/i.test(penalty)) return 'PLP'
   if (/drive\s*through/i.test(penalty)) return 'DT'
   if (/stop\s*(and|&)\s*go/i.test(penalty)) return 'S&G'
   return 'PEN'
