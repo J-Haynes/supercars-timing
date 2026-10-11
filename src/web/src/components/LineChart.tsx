@@ -27,7 +27,7 @@ const PAD_BASE = { left: 50, right: 80, top: 12, bottom: 26 }
  */
 export function LineChart({
   series, yFormat, axisFormat = yFormat, invertY = false, robustY = false, ariaLabel,
-  width = 560, height = 240, xDomain, yDomain, onXDomain, onYDomain, showPoints = false, integerY = false,
+  width = 560, height = 240, xDomain, yDomain, onXDomain, onYDomain, showPoints = false, integerY = false, xMax,
 }: {
   series: Series[]
   /** Values in the tooltip. */
@@ -50,6 +50,8 @@ export function LineChart({
   showPoints?: boolean
   /** Whole-number y ticks only (positions). */
   integerY?: boolean
+  /** Extend the lap axis to this (the race distance, e.g. 161), so the chart shows how much race is left. */
+  xMax?: number
 }) {
   const W = width, H = height
   // Room on the right for end-of-line labels (shown for 2-4 series), sized to the longest one.
@@ -63,7 +65,7 @@ export function LineChart({
 
   const all = series.flatMap((s) => s.points.filter((p) => p.y !== null)) as { x: number; y: number }[]
   const xsAll = all.map((p) => p.x)
-  const dataX: Domain = [Math.min(...xsAll), Math.max(...xsAll, Math.min(...xsAll) + 1)]
+  const dataX: Domain = [Math.min(...xsAll), Math.max(...xsAll, Math.min(...xsAll) + 1, xMax ?? 0)]
   // A fixed domain can leave one end automatic (NaN), e.g. only "from" typed in the large view.
   const x0 = xDomain && Number.isFinite(xDomain[0]) ? xDomain[0] : dataX[0]
   const x1 = xDomain && Number.isFinite(xDomain[1]) ? xDomain[1] : dataX[1]

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { LapHistory, TimingSnapshot } from '../types'
 import { roadOrder } from '../liveGaps'
+import { raceLaps } from '../session'
 import { lapTime } from '../format'
 import { SLOTS, gapPoints, lapTimePoints, positionPoints, shortLap, surname } from '../chartData'
 import { LineChart, type Domain, type Series } from './LineChart'
@@ -96,9 +97,11 @@ export function ChartLab({ timing, history, initialCars, initialKind, onClose }:
     cars.map((id) => lapsOf(id)).filter((c): c is NonNullable<typeof c> => !!c)
       .map((c) => ({ id: c.id, label: label(c.id), color: colorOf(c.id), points: points(c) }))
 
-  const big = { width: 1100, height: 480, xDomain, yDomain, onXDomain: setXDomain, onYDomain: setYDomain, showPoints: true }
+  // Lap axis to the race distance (161 at Bathurst) when known; zooming and panning stay within it.
+  const xMax = raceLaps(timing.session) || undefined
+  const big = { width: 1100, height: 480, xDomain, yDomain, onXDomain: setXDomain, onYDomain: setYDomain, showPoints: true, xMax }
   const yFmt = kind === 'laps' ? lapTime : kind === 'position' ? (v: number) => `P${Math.round(v)}` : (v: number) => `+${v.toFixed(1)}s`
-  const lastLap = Math.max(0, ...history.cars.flatMap((c) => c.laps.map((l) => l.lap)))
+  const lastLap = xMax ?? Math.max(0, ...history.cars.flatMap((c) => c.laps.map((l) => l.lap)))
   const [xs, ys] = [xDomain ?? null, yDomain ?? null]
 
   // Rendered at the end of <body>, so nothing in the map column can affect its fixed positioning.

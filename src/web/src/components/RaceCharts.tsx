@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import type { CarLaps, LapHistory, TimingSnapshot } from '../types'
 import { useLapHistory } from '../useLapHistory'
 import { roadOrder } from '../liveGaps'
+import { raceLaps } from '../session'
 import { lapTime } from '../format'
 import { SLOTS, battlePoints, gapPoints, lapTimePoints, linearFit, shortLap, surname, trendLaps } from '../chartData'
 import { LineChart, type Series } from './LineChart'
@@ -23,6 +24,8 @@ export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
   const [expanded, setExpanded] = useState(false)
   const order = ['M', ...timing.timingPoints.map((p) => p.id)]
   const running = roadOrder(timing.cars, order)
+  // Lap axis runs to the race distance (161 at Bathurst) when it's known, so the charts show how much race is left.
+  const xMax = raceLaps(timing.session) || undefined
 
   // Selected cars and their colour slots. Starts with the top four on the road; colour follows the car, not its rank.
   const slots = useRef(new Map<string, number>())
@@ -82,8 +85,8 @@ export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
             })}
           </div>
           {tab === 'gaps'
-            ? <LineChart series={gapSeries} invertY yFormat={(v) => `+${v.toFixed(0)}s`} ariaLabel="Gap to the leader at the end of each lap" />
-            : <LineChart series={lapSeries} yFormat={(v) => lapTime(v)} axisFormat={shortLap} ariaLabel="Lap times (pit, out and slow laps left out)" />}
+            ? <LineChart series={gapSeries} invertY xMax={xMax} yFormat={(v) => `+${v.toFixed(0)}s`} ariaLabel="Gap to the leader at the end of each lap" />
+            : <LineChart series={lapSeries} xMax={xMax} yFormat={(v) => lapTime(v)} axisFormat={shortLap} ariaLabel="Lap times (pit, out and slow laps left out)" />}
           <p className="chart-note">
             {tab === 'gaps'
               ? 'Gap to the leader at the line each lap. Hollow markers: pit stop laps. Lapped laps are left out.'
@@ -91,7 +94,7 @@ export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
           </p>
         </>
       )}
-      {tab === 'battle' && <Battle history={history} running={running.map((c) => c.id)} label={label} />}
+      {tab === 'battle' && <Battle history={history} running={running.map((c) => c.id)} label={label} xMax={xMax} />}
       {expanded && (
         <ChartLab timing={timing} history={history} initialCars={selected} initialKind={tab === 'laps' ? 'laps' : tab}
           onClose={() => setExpanded(false)} />
@@ -101,7 +104,7 @@ export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
 }
 
 /** Battle graph: gap between two cars per lap, with a trend over the last 10 laps since either car's latest stop. */
-function Battle({ history, running, label }: { history: LapHistory; running: string[]; label: (id: string) => string }) {
+function Battle({ history, running, label, xMax }: { history: LapHistory; running: string[]; label: (id: string) => string; xMax?: number }) {
   const [a, setA] = useState(running[0] ?? '')
   const [b, setB] = useState(running[1] ?? '')
   return (
@@ -111,7 +114,7 @@ function Battle({ history, running, label }: { history: LapHistory; running: str
         <span>vs</span>
         <select value={b} onChange={(e) => setB(e.target.value)} aria-label="Second car">{running.map((id) => <option key={id} value={id}>{label(id)}</option>)}</select>
       </div>
-      <BattleChart history={history} a={a} b={b} label={label} />
+      <BattleChart history={history} a={a} b={b} label={label} big={{ xMax }} />
     </div>
   )
 }
