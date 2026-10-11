@@ -179,6 +179,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   at the line shrinking 3 laps running), minimum-lap risk, big movers and cars running long. Movers are pit-adjusted:
   each stop a car still owes vs the most-stopped car adds the typical loss (median pit-lane time − 10 s), so not having
   stopped yet isn't "moving up". Hovering an item highlights its cars (`highlightIds` in App → tower rows and map).
+  The ticker works like a news ticker (items enter right, leave left once fully out of view, with the offset reduced
+  by the item's width in the same frame): never drive it with a CSS animation sized to the text, which jumped.
 - Championship ladder (`Ladder.tsx`, map column, races with data in `championship.ts`): standings before the race
   (by car number, full-time drivers only) + points for each car's projected finish (road order, time penalties
   added to the gap). Top 10 (`finalsCut`) in a gold border: they go to the Finals. Data is entered by hand with its
