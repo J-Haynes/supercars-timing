@@ -600,3 +600,7 @@ main { flex: 1; padding: 0 16px 24px; }
   .chart-lab-head { flex-wrap: wrap; }
   .chart-lab-hint { display: none; }
 }
+/* No text selection in the chart view (dragging to pan or scrolling shouldn't highlight labels); inputs still edit. */
+.chart-lab { user-select: none; -webkit-user-select: none; }
+.chart-lab input, .chart-lab select { user-select: text; -webkit-user-select: text; }
+.chart-lab-backdrop { overscroll-behavior: contain; }

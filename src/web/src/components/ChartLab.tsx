@@ -73,7 +73,19 @@ export function ChartLab({ timing, history, initialCars, initialKind, onClose }:
     close.current?.focus()
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCloseRef.current() }
     window.addEventListener('keydown', onKey)
-    return () => { window.removeEventListener('keydown', onKey); before?.focus?.() }
+    // Lock the page behind the dialog so scrolling (or wheel-zooming the chart) doesn't move it. Pad by the
+    // scrollbar's width so the page doesn't shift sideways when the scrollbar disappears.
+    const body = document.body
+    const saved = { overflow: body.style.overflow, paddingRight: body.style.paddingRight }
+    const scrollbar = window.innerWidth - document.documentElement.clientWidth
+    body.style.overflow = 'hidden'
+    if (scrollbar > 0) body.style.paddingRight = `${scrollbar}px`
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      body.style.overflow = saved.overflow
+      body.style.paddingRight = saved.paddingRight
+      before?.focus?.()
+    }
   }, [])
 
   // Switching chart type starts with automatic axes.
