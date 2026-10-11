@@ -5,14 +5,21 @@ import { useLayoutEffect, useRef } from 'react'
  * let React put it in its new place, then start it at the old spot and slide it to the new one. A row that gains
  * places pulses green, one that loses places pulses red (CSS: `.moved-up` / `.moved-down`).
  *
+ * Everything is cleaned up when it finishes (class removed, inline styles cleared). Without that, rows could stay
+ * tinted until hovered: browsers don't always repaint a table row when an animation ends while it's sliding.
+ *
  * @param ids car IDs in display order
  * @returns a ref callback for each row: `ref={rowRef(car.id)}`
  */
+/** Keep in step with the row-up / row-down animation length in styles.css. */
+const PULSE_MS = 1800
+
 export function useRowMoves(ids: string[]) {
   const rows = useRef(new Map<string, HTMLTableRowElement>())
   const lastTop = useRef(new Map<string, number>())
   const lastRank = useRef(new Map<string, number>())
   const lastCount = useRef(0)
+  const cleanups = useRef(new Map<string, number>())
 
   // Runs after every render, before the browser paints, so the jump to the new place is never visible.
   useLayoutEffect(() => {
@@ -35,6 +42,15 @@ export function useRowMoves(ids: string[]) {
       row.classList.remove('moved-up', 'moved-down')
       void row.offsetWidth
       row.classList.add(rank < oldRank ? 'moved-up' : 'moved-down')
+      // Clear up after the pulse and slide. A timer rather than animationend, which doesn't always fire
+      // (background tabs, a row re-rendered mid-animation).
+      window.clearTimeout(cleanups.current.get(id))
+      cleanups.current.set(id, window.setTimeout(() => {
+        row.classList.remove('moved-up', 'moved-down')
+        row.style.removeProperty('transition')
+        row.style.removeProperty('transform')
+        cleanups.current.delete(id)
+      }, PULSE_MS + 100))
 
       if (reduceMotion || oldTop === undefined || oldTop === top) return
       row.style.transition = 'none'
@@ -46,6 +62,8 @@ export function useRowMoves(ids: string[]) {
       })
     })
   })
+
+  useLayoutEffect(() => () => cleanups.current.forEach((t) => window.clearTimeout(t)), [])
 
   return (id: string) => (el: HTMLTableRowElement | null) => {
     if (el) rows.current.set(id, el)

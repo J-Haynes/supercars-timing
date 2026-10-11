@@ -126,7 +126,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   point, so it drops as each car passes (Natsoft holds it until they complete another lap, ~2 min later). At the line
   it agrees with Natsoft except next to a pit stop (444/468, all 24 misses pit-related). Pos and +/− show road rank.
 - Position changes animate (`useRowMoves.ts`, FLIP): the whole row slides to its new place and pulses green (gained)
-  or red (lost). Reduced-motion users get the pulse only.
+  or red (lost). Reduced-motion users get the pulse only. The tint is on the row (not its cells) and a timer clears
+  the class and inline styles afterwards; otherwise rows could stay tinted until hovered (stale repaint).
 - Positions gained/lost (`posChange`, races): from `startingGrid.ts`, a hand-made grid per session taken from our
   recording (Natsoft's order before the green). Stopgap: the server should send each car's grid position instead.
 - Manufacturer colours (CSS vars): Ford blue, Chevrolet orange, Toyota red; `ManufacturerKey` in the controls bar.

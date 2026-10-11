@@ -376,15 +376,15 @@ main { flex: 1; padding: 0 16px 24px; }
 
 /* Position changes: the row slides to its new place (useRowMoves) and pulses green (up) or red (down). */
 .tower tbody tr { position: relative; }
-.tower tbody tr.moved-up td { animation: row-up 1.8s ease-out; }
-.tower tbody tr.moved-down td { animation: row-down 1.8s ease-out; }
+/* On the row, not its cells: cells under a sliding row didn't always repaint when the animation ended. */
+.tower tbody tr.moved-up { animation: row-up 1.8s ease-out; }
+.tower tbody tr.moved-down { animation: row-down 1.8s ease-out; }
+/* No 100% keyframe: it fades back to the row's own background (zebra stripe, hover, pin). */
 @keyframes row-up {
   0%, 45% { background-color: rgba(61, 220, 132, .30); }
   25% { background-color: rgba(61, 220, 132, .12); }
-  100% { background-color: transparent; }
 }
 @keyframes row-down {
   0%, 45% { background-color: rgba(255, 77, 79, .30); }
   25% { background-color: rgba(255, 77, 79, .12); }
-  100% { background-color: transparent; }
 }
