@@ -69,7 +69,7 @@ Counts are from Practice 5 (63 minutes, 8,844 messages).
 | `C` | 3,488 | Session clock, about once a second. `C` = seconds remaining, `E` = elapsed, `Y="T"` = timed session. `Y="L"` = lap race: `C` = **laps** remaining, `E` = laps done (Bathurst 1000: `C="161" E="0"` before the start) |
 | `A` | 52 | Session best: `I` lap, `C` car, `I1`/`I2` intermediates, `S1`–`S3` sectors |
 | `H` | 10 | Heartbeat |
-| `S` | 3 | Session status: `S` = flag, `E` = session code, `I` = time of change |
+| `S` | 3 | Session status: `S` = flag, `E` = session code, `I` = time of the change (the green flag time = race start) |
 | `F` | 2 | Flag echo (`S` = Green / Yellow / Checkered / End) |
 | `G` | 3 | **Race control messages.** `R` = the text, `C` = empty so far. Bathurst 1000, 11 Oct 2026: `Race Control: Turn 19.2 Incident Cars 19 & 48 noted`, `Stewards: Turn 19.2 Incident under investigation Cars 19 & 48`, `Stewards: Penalty Car 19 - 5 seconds - driving infringement`. Free text only: no penalty field, and time penalties don't change the car's timing data |
 | `New` | 1 | Full snapshot, sent per session |
@@ -87,7 +87,9 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Red`, `Checkered`, `Ended`. 
   `PI1`/`PI2` = which timing points the exact intermediate times `I1`/`I2` are measured at (Bathurst: 3 and 5). `<TP ID Y>` lists timing points in lap order.
   Bathurst: `1=Pos1, 2=Pos2, 3=Int1, 4=Pos3, 5=Int2, 6=Pos4, 7=Pos5`. The control line is `M`, so a
   lap is M → 1 → … → 7 → M: 8 crossings per lap, 15–25 s apart at Bathurst.
-- `E`: session. `C` = code (e.g. `P12`), `D` = name, `Y` = type (`Practice`, `Race`), `RI`/`RC`/`RV` = record time / driver / car.
+- `E`: session. `C` = code (e.g. `P12`), `D` = name, `Y` = type (`Practice`, `Race`), `RI`/`RC`/`RV`/`RY` = lap record
+  time / driver / car / session type (Bathurst 1000: `126.7265`, William Brown, Chev Camaro ZL1, Race). `RD` looks like a
+  day number (739901 = days since 0001-01-01, i.e. a 2026 date). `<O>` repeats the record for the meeting.
   `L` = scheduled laps: `161` for the Bathurst 1000 (Race 30, 11 Oct 2026), `1` for the Top Ten Shootout, `0` for
   timed races (`<C Y="T">`).
 - `OL`: other categories at the meeting.
@@ -97,6 +99,10 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Red`, `Checkered`, `Ended`. 
 ## Per-car fields (`<L><P><D>`)
 
 `<P>` attributes: `L` = position, `C` = **internal car ID (R ID), not the car number**, `D` = driver index (`1`/`2`).
+`LP` (and `LL`, same value so far) = **road position at the last timing point**. `L` (official) only changes at the
+control line; `LP` changes at every timing point, including passes mid-lap and pitting cars dropping as the field
+passes the pit lane (Bathurst 1000, car 9's stop: `LP` 18 -> 24 within 32 s, `L` stayed 18 for ~130 s). `P` = `L`.
+`LGI`/`LGNI` (per-car `<D>`) are ordered by `LP`, not `L`: 44 inversions in 6,342 pairs sorted by `LP` vs 247 by `L`.
 
 `<D>` attributes. Partials only include fields that changed.
 
@@ -124,7 +130,9 @@ Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Red`, `Checkered`, `Ended`. 
 | `LL` | Last line: `1`, `2` (intermediates), `M` (control line) |
 | `SC` | *Unconfirmed:* `Y`/`N` per car. **Not the safety car:** it's `Y` for one car at a time under green (support races, 10 Oct). Use the session flag for safety car / full-course yellow |
 | `GL`, `GNL` | Can be `?` before a gap in laps is known |
-| `TY`, `TSL`, `PN`, `SN`, `LT`, `FTY` | Not yet identified |
+| `FT` | Time the best lap was set |
+| `PN` | `0` -> `1` once per car at its first line crossing in the race; meaning unclear |
+| `TY`, `TSL`, `SN`, `LT`, `FTY` | Not yet identified (constant in the Bathurst 1000 so far; `FTY="S"` when a best lap is set) |
 
 ## Open questions
 
