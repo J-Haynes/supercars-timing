@@ -20,6 +20,7 @@ import { RaceCharts } from './components/RaceCharts'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useTrack } from './tracks'
 import { useStickToBottom } from './useStickToBottom'
+import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './components/MobileTabs'
 import { flagKind, isRace, isShootout, isSupercarsSession } from './session'
 import { SafetyCarBanner } from './components/SafetyCarBanner'
 import type { RecordedSession } from './types'
@@ -33,6 +34,8 @@ export default function App() {
   // Cars named by the insight under the mouse, highlighted in the tower and on the map.
   const [highlightIds, setHighlightIds] = useState<string[]>([])
   const towerColumn = useStickToBottom<HTMLDivElement>()
+  // Phone layout: which section the tab bar shows (desktop shows everything).
+  const [mobileTab, setMobileTab] = useState<MobileTab>(() => loadMobileTab())
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // null = live timing; otherwise the recorded session whose results are on screen.
@@ -88,7 +91,8 @@ export default function App() {
             {hasCars && update ? (
               <>
                 {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
-                <div className="layout">
+                <MobileTabs tab={mobileTab} race={isRace(timing.session.type)} onTab={(t) => { setMobileTab(t); saveMobileTab(t) }} />
+                <div className="layout" data-tab={mobileTab}>
                   <div className="tower-column" ref={towerColumn}>
                   {isRace(timing.session.type) && <SafetyCarBanner timing={timing} />}
                   {isRace(timing.session.type) && <InsightsTicker timing={timing} onHighlight={setHighlightIds} />}
@@ -110,6 +114,7 @@ export default function App() {
                   />
                   </div>
                   <aside className="map-panel">
+                    <div className="panel-map">
                     {track ? (
                       <ErrorBoundary fallback={<div className="map-missing">The track map hit an error. Check the browser console.</div>}>
                         <TrackMap
@@ -130,11 +135,18 @@ export default function App() {
                         No map for {timing.session.track || 'this track'} yet. Build one with <code>tools/TrackBuilder</code>.
                       </div>
                     )}
-                    <Ladder timing={timing} onHighlight={setHighlightIds} />
-                    {isRace(timing.session.type) && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
-                    {isRace(timing.session.type) && <RaceCharts timing={timing} />}
-                    {(timing.raceControl?.length || timing.session.lapRecord) ? <RaceControl timing={timing} /> : null}
-                    {isRace(timing.session.type) && <PitLog timing={timing} />}
+                    </div>
+                    <div className="panel-race">
+                      <Ladder timing={timing} onHighlight={setHighlightIds} />
+                      {isRace(timing.session.type) && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
+                    </div>
+                    <div className="panel-charts">
+                      {isRace(timing.session.type) && <RaceCharts timing={timing} />}
+                    </div>
+                    <div className="panel-race">
+                      {(timing.raceControl?.length || timing.session.lapRecord) ? <RaceControl timing={timing} /> : null}
+                      {isRace(timing.session.type) && <PitLog timing={timing} />}
+                    </div>
                   </aside>
                 </div>
               </>

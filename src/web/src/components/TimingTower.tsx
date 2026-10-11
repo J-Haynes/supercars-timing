@@ -303,7 +303,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         <thead>
           <tr>
             {columns.map((col) => (
-              <th key={col.key} className={[col.numeric ? 'num' : '', col.className?.(race) ?? ''].join(' ')}>{col.header}</th>
+              <th key={col.key} className={[`col-${col.key}`, col.numeric ? 'num' : '', col.className?.(race) ?? ''].join(' ')}>{col.header}</th>
             ))}
           </tr>
         </thead>
@@ -321,7 +321,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
                 onDoubleClick={() => onTogglePin(car.carNumber)}
               >
                 {columns.map((col) => {
-                  const cls = [col.numeric ? 'num' : '', col.className?.(race) ?? '', col.cellClass?.(ctx) ?? '', col.flashKey ? 'flash' : '']
+                  const cls = [`col-${col.key}`, col.numeric ? 'num' : '', col.className?.(race) ?? '', col.cellClass?.(ctx) ?? '', col.flashKey ? 'flash' : '']
                   // Keying on the value re-mounts the cell when a new time arrives, which replays the flash animation.
                   const key = col.flashKey ? `${col.key}-${col.flashKey(ctx)}` : col.key
                   return <td key={key} className={cls.join(' ')}>{col.cell(ctx)}</td>

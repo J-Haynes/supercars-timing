@@ -47,8 +47,10 @@ export function RaceCharts({ timing }: { timing: TimingSnapshot }) {
     const live = timing.cars.find((c) => c.id === id)
     return live ? `#${live.carNumber} ${surname(live.driver)}` : id
   }
-  if (!history) return null
-  if (history.cars.every((c) => c.laps.length < 2)) return null
+  // Nothing to chart yet (or a server without /api/laps): only the phone layout shows this note, on its Charts tab.
+  if (!history || history.cars.every((c) => c.laps.length < 2)) {
+    return <section className="race-charts empty">Charts appear once a few laps have been recorded.</section>
+  }
 
   const cars = selected.map((id) => byId.get(id)).filter((c): c is CarLaps => !!c)
   const gapSeries: Series[] = cars.map((c) => ({

@@ -198,6 +198,10 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   ("PIT 23.4s"), then shows the final pit-lane time from the timing (Natsoft PT) in green for 8 s after the exit.
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel`, under the tower in the live view (bottom of the
   page elsewhere); closing is remembered.
+- Phone layout (< 760 px): `MobileTabs` (Tower | Map | Race | Charts, remembered) shows one section; the map column
+  is split into `.panel-map`, `.panel-race`, `.panel-charts` (`display: contents` on desktop, so nothing changes
+  there). Everything stays mounted. The tower's driver column is sticky when scrolling sideways; the header, the
+  delay slider, the on-track select and the manufacturer key are trimmed.
 - Wide-screen layout: the left column (insights, tower, tips) scrolls with the page until its bottom reaches the bottom
   of the screen, then stays while the taller right column keeps scrolling: CSS sticky with a negative `top` from
   `--stick-height` (`useStickToBottom.ts`). Don't make the right column sticky; it's taller than the screen.

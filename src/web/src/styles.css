@@ -527,3 +527,43 @@ main { flex: 1; padding: 0 16px 24px; }
 .ladder-elimination-label { color: var(--elim); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px 2px; }
 .finals-row.out .ladder-pos { color: var(--red); }
 .ladder-others summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 4px 8px; }
+
+/* Phone layout (< 760 px): a tab bar picks one section; everything else stays mounted but hidden. */
+.mobile-tabs { display: none; }
+.panel-map, .panel-race, .panel-charts { display: contents; }
+@media (max-width: 760px) {
+  main { padding: 0 8px 16px; }
+  .controls { padding: 0 8px 8px; gap: 8px 16px; }
+  .mobile-tabs {
+    display: flex; position: sticky; top: 0; z-index: 15; gap: 4px; margin: 0 -8px 8px; padding: 6px 8px;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+  }
+  .mobile-tabs button { flex: 1; background: var(--panel); border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 7px 0; font: inherit; font-size: 13px; }
+  .mobile-tabs button.active { color: var(--text); border-color: var(--muted); background: #16202c; }
+  .layout { gap: 8px; }
+  .map-panel { order: 0; }
+  .panel-map, .panel-race, .panel-charts { display: block; }
+  .layout[data-tab="tower"] .map-panel { display: none; }
+  .layout:not([data-tab="tower"]) .tower-column { display: none; }
+  .layout[data-tab="map"] .panel-race, .layout[data-tab="map"] .panel-charts { display: none; }
+  .layout[data-tab="race"] .panel-map, .layout[data-tab="race"] .panel-charts { display: none; }
+  .layout[data-tab="charts"] .panel-map, .layout[data-tab="charts"] .panel-race { display: none; }
+  .panel-race > :first-child, .panel-charts > :first-child { margin-top: 0; }
+  /* Tower: keep the driver's name in view while scrolling sideways. */
+  .tower th.col-driver, .tower td.col-driver { position: sticky; left: 0; z-index: 1; background: var(--panel); box-shadow: 1px 0 0 var(--line); }
+  .tower tbody tr:nth-child(even) td.col-driver { background: var(--row-alt); }
+  .tower .co-driver { display: none; }
+  .insights-label { display: none; }
+  .track-map svg { max-height: 60vh; }
+}
+.race-charts.empty { display: none; color: var(--muted); font-size: 13px; }
+@media (max-width: 760px) {
+  .race-charts.empty { display: block; padding: 16px 12px; }
+  /* Header and controls take less room so the tabs and tower start higher. */
+  .session { padding: 8px 8px 6px; gap: 6px; }
+  .session .meeting, .session .track { display: none; }
+  .session h1 { font-size: 16px; }
+  .clock { font-size: 18px; }
+  .controls .focus-select, .controls .delay input[type="range"], .controls .delay-label { display: none; }
+  .controls .mfr-key { display: none; }
+}
