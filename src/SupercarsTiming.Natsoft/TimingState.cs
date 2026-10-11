@@ -212,7 +212,7 @@ public sealed class TimingState
                     DriverIn = c.DriverIndex,
                     DriverOut = c.DriverIndex,
                 });
-            if (leaving && c.PitLog.LastOrDefault() is { OutAt: 0 } open)
+            if (leaving && c.PitLog.LastOrDefault(s => s.OutAt == 0) is { } open)
             {
                 open.OutAt = Now;
                 open.Seconds = Dbl(d, "PT") is double pt && pt > 0 ? pt : Now - open.InAt;
@@ -458,7 +458,20 @@ public sealed class CarState
             if (!fromNatsoft.Contains(k)) LapsByDriver[k] = v;
         if (!fromNatsoft.Contains(DriverIndex) && old.LapsKnown && Laps > old.Laps && old.DriverIndex == DriverIndex && old.PitStops == PitStops)
             LapsByDriver[DriverIndex] = LapsByDriver.GetValueOrDefault(DriverIndex) + Laps - old.Laps;
+        // Stops logged since the snapshot can repeat a known one: a car still in the pits looks like it's entering
+        // when the first full update after a reconnect says P="Y" (Bathurst 1000: Wood's stop logged twice and the
+        // copy never closed). Merge by pit-in time, keeping whichever has the exit, in time order.
+        var since = PitLog.ToList();
+        PitLog.Clear();
         PitLog.AddRange(old.PitLog);
+        foreach (var stop in since)
+        {
+            var same = PitLog.FirstOrDefault(p => Math.Abs(p.InAt - stop.InAt) < 2)
+                ?? (stop.OutAt == 0 ? PitLog.LastOrDefault(p => p.OutAt == 0) : null);
+            if (same is null) PitLog.Add(stop);
+            else if (same.OutAt == 0 && stop.OutAt > 0) { same.OutAt = stop.OutAt; same.Seconds = stop.Seconds; same.DriverOut = stop.DriverOut; }
+        }
+        PitLog.Sort((a, b) => a.InAt.CompareTo(b.InAt));
         // It was in the pits when we lost the connection and has left since: we missed the exit time.
         if (!InPit && PitLog.LastOrDefault() is { OutAt: 0 } open) open.OutAt = now;
         StintStartLap = old.StintStartLap;

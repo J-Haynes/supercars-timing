@@ -132,4 +132,23 @@ public class RaceTrackingTests
         Assert.Equal(12, car.LapsByDriver["2"]);                    // Natsoft's newer LCD wins over our 10
         Assert.Equal(11, car.StintStartLap);
     }
+
+    [Fact]
+    public void Reconnect_while_a_car_is_in_the_pits_logs_the_stop_once_and_closes_it()
+    {
+        // Bathurst 1000: Wood pitted 26 s before a restart; the stop was logged twice and the copy stayed "in pit".
+        var s = Fresh();
+        Car(s, 1100, """L="11" """);
+        Car(s, 1150, """P="Y" LLP="11" PS="1" PI="1150.0000" """);
+
+        var noCars = Snapshot.Replace("""<L><P L="1" C="22" D="1"><D L="10" P="N" PS="0" /></P></L>""", "").Replace("1000.0000", "1170.0000");
+        s.Apply(noCars);
+        s.Apply("""<L T="1170.5000" Y="f" L="26"><P L="1" LP="1" C="22" D="1"><D L="11" P="Y" PS="1" PI="1150.0000" /></P></L>""");
+        Car(s, 1188, """P="N" PT="38.0000" """, driver: "2");
+
+        var stop = Assert.Single(s.Cars["22"].PitLog);
+        Assert.Equal(1150, stop.InAt, 3);
+        Assert.Equal(38, stop.Seconds, 3);
+        Assert.Equal("2", stop.DriverOut);
+    }
 }

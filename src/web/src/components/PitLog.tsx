@@ -1,6 +1,20 @@
-import type { TimingSnapshot } from '../types'
+import type { PitStopRow, TimingSnapshot } from '../types'
 
 const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
+
+/**
+ * The same stop can be logged twice around a server restart (fixed on the server too): merge entries with the same
+ * pit-in time, keeping the one that has the exit, and put them in time order.
+ */
+function dedupe(log: PitStopRow[]): PitStopRow[] {
+  const byEntry = new Map<number, PitStopRow>()
+  for (const stop of log) {
+    const key = Math.round(stop.inAt)
+    const seen = byEntry.get(key)
+    if (!seen || (seen.outAt === 0 && stop.outAt > 0)) byEntry.set(key, stop)
+  }
+  return [...byEntry.values()].sort((a, b) => a.inAt - b.inAt)
+}
 
 /**
  * Pit stops across the field, most recent first: lap, car, driver swap and time in the pit lane.
@@ -8,7 +22,7 @@ const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
  */
 export function PitLog({ timing, limit = 15 }: { timing: TimingSnapshot; limit?: number }) {
   const stops = timing.cars
-    .flatMap((car) => (car.pitLog ?? []).map((stop, i) => ({ car, stop, number: i + 1 })))
+    .flatMap((car) => dedupe(car.pitLog ?? []).map((stop, i) => ({ car, stop, number: i + 1 })))
     .sort((a, b) => b.stop.inAt - a.stop.inAt)
     .slice(0, limit)
 
@@ -21,7 +35,8 @@ export function PitLog({ timing, limit = 15 }: { timing: TimingSnapshot; limit?:
         <table>
           <tbody>
             {stops.map(({ car, stop, number }) => {
-              const inLane = stop.outAt === 0
+              // An unfinished stop for a car that's back on track means we missed the exit (e.g. a server restart).
+              const inLane = stop.outAt === 0 && car.inPit
               const swap = stop.driverOut && stop.driverOut !== stop.driverIn
               return (
                 <tr key={`${car.id}-${stop.inAt}`} className={inLane ? 'in-lane' : ''}>
