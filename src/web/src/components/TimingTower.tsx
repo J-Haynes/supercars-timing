@@ -5,6 +5,8 @@ import { MiniSectors } from './MiniSectors'
 import { isRace, minDriverLaps, raceLaps } from '../session'
 import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
 import { startPosition } from '../startingGrid'
+import { liveGap } from '../liveGaps'
+import { useRowMoves } from './useRowMoves'
 
 interface Ctx {
   car: CarRow
@@ -13,6 +15,9 @@ interface Ctx {
   now: number
   simple: boolean
   isFirst: boolean
+  /** Race leader and the car ahead, for live gaps. */
+  leader?: CarRow
+  ahead?: CarRow
   race: boolean
   best: TimingSnapshot['best']
   points: TimingSnapshot['timingPoints']
@@ -39,7 +44,14 @@ interface Column {
 // GI is the gap to the fastest lap.
 const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
 
-const gapOf = (c: Ctx) => ({ gap: c.car.gap, laps: c.car.gapLaps, int: c.car.interval, intLaps: c.car.intervalLaps })
+// Races: live gaps at every timing point (liveGaps.ts), falling back to Natsoft's for lapped cars or when we can't
+// tell (e.g. just out of the pits). Practice/qualifying: GI is the gap to the fastest lap, so it stays as is.
+const gapOf = (c: Ctx) => {
+  const { car } = c
+  const gap = c.race && car.gapLaps === 0 && c.leader ? liveGap(car, c.leader, c.order) : null
+  const int = c.race && car.intervalLaps === 0 && c.ahead ? liveGap(car, c.ahead, c.order) : null
+  return { gap: gap ?? car.gap, laps: car.gapLaps, int: int ?? car.interval, intLaps: car.intervalLaps }
+}
 
 const COLUMNS: Record<string, Column> = {
   pos: { key: 'pos', header: 'Pos', numeric: true, cell: ({ car }) => car.position || '', cellClass: () => 'pos' },
@@ -188,6 +200,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHo
   onTogglePin: (carNumber: string) => void
 }) {
   const { cars, best, timingPoints } = timing
+  const rowRef = useRowMoves(cars.map((c) => c.id))
   const race = isRace(timing.session.type)
   const order = ['M', ...timingPoints.map((p) => p.id)]
   // Driver laps only matter when cars are shared (co-driver events).
@@ -213,11 +226,12 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHo
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, race, best, points: timingPoints, session: timing.session, minLaps, lapsLeft }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, minLaps, lapsLeft }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr
                 key={car.id}
+                ref={rowRef(car.id)}
                 className={classes.filter(Boolean).join(' ')}
                 onMouseEnter={() => onHover(car.id)}
                 onMouseLeave={() => onHover(null)}

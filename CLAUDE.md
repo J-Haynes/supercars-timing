@@ -81,8 +81,12 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - `T` timestamps are track-local wall-clock time encoded as Unix seconds (AEDT = Unix + 39600).
 - Each session starts with its own `<New>` snapshot, which must reset state. Support categories share the `V8SUPER` feed.
 - `SP` (speed trap) is sent as `0` and then the real value. Ignore the zero.
-- Use `GI`/`GNI` for gaps in every session type. `LGI`/`LGNI` update more often in races but are frequently out of
-  order with Natsoft's positions (checked against the Bathurst SuperUte race), so they're kept in the model but not shown.
+- Gaps: practice/qualifying show `GI`/`GNI` (gap to the fastest lap). `GI` only changes at the control line, so in
+  races the frontend works out live gaps at every timing point (`liveGaps.ts`): each car's crossing time is
+  `lapStartAt` + its split (this lap or last lap), compared with the leader's / car ahead's crossing of the same
+  point on the same lap. Matches `GI` exactly at the line; falls back to `GI` for lapped cars or after a pit stop.
+  `LGI`/`LGNI` also update per timing point but are often out of order with the positions (2.2 vs 0.2 inversions per
+  check, Bathurst 1000 2026), so they're kept in the model but not shown.
 - Sector fields reset to 0 at the start of a lap. 0 means "no time yet" everywhere.
 
 ## Track map essentials
@@ -116,6 +120,8 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   `DriverChangedAt` marks a swap; the tower shows the other driver(s) in detailed mode and a SWAP badge for 3 minutes.
   Natsoft driver `1` is the primary (full-time) driver in every entry. As on the broadcast, the tower marks who's in
   the car, left of the name: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
+- Position changes animate (`useRowMoves.ts`, FLIP): the whole row slides to its new place and pulses green (gained)
+  or red (lost). Reduced-motion users get the pulse only.
 - Positions gained/lost (`posChange`, races): from `startingGrid.ts`, a hand-made grid per session taken from our
   recording (Natsoft's order before the green). Stopgap: the server should send each car's grid position instead.
 - Manufacturer colours (CSS vars): Ford blue, Chevrolet orange, Toyota red; `ManufacturerKey` in the controls bar.
