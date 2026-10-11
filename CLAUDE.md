@@ -70,6 +70,9 @@ cd src/web && npm run build       # typecheck + build into the server's wwwroot
 
 - Protocol or state changes: add or extend a test in `TimingStateTests` using trimmed real frames,
   then run `NatsoftRecorder replay` on a real recording and check the sheet looks sane.
+- `RecordingRegressionTests` replay real sessions from `data/recordings` (Bathurst 1000 race, Practice 6) and check
+  pit counts, restart carry-over, penalties, road positions, flags and mini-sectors. They skip themselves when the
+  recordings aren't there (`[RecordingFact]`). Add one whenever a live bug is fixed.
 - UI changes: run the server in replay mode plus `npm run dev`, and look at the page.
 - `npm run build` must pass (TypeScript strict, no unused locals).
 
