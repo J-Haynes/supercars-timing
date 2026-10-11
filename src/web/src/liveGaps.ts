@@ -40,8 +40,18 @@ export function liveGap(car: CarRow, ref: CarRow, order: string[]): number | nul
   return mine - theirs
 }
 
+/**
+ * A car that crossed the control line in the pit lane (it's in the pits, or has left but not reached the next timing
+ * point). It's effectively parked at the line, so every car on the same lap that crosses the line afterwards has
+ * passed it. LapsSincePit only counts line crossings out of the pits, so 0 + "M" means the last crossing was in it.
+ */
+function parkedAtLine(car: CarRow): boolean {
+  return car.lastPoint === 'M' && (car.inPit || car.lapsSincePit === 0)
+}
+
 /** When `car` crossed its latest timing point: exact where Natsoft gives it (line, I1/I2), else message time. */
 function latestCrossing(car: CarRow, order: string[]): number {
+  if (parkedAtLine(car)) return Number.MAX_VALUE // behind everyone who has crossed the line on this lap
   return crossingTime(car, order, car.lastPoint, car.laps + 1) ?? (car.lastPointAt || Number.MAX_VALUE)
 }
 
@@ -50,25 +60,15 @@ function latestCrossing(car: CarRow, order: string[]): number {
  * doesn't show until the cars complete the lap (Bathurst 2026: Lowndes was ahead of Best at every timing point for
  * a whole lap while Natsoft still had Best ahead). This orders by laps completed, then the furthest timing point
  * reached, then who reached it first. At the line it agrees with Natsoft (351 of 353 crossings).
- * Cars in the pit lane keep Natsoft's position: their last timing point can be minutes old.
+ *
+ * Pit stops: Natsoft keeps a pitting car ahead of the cars on its lap until they complete another lap (#9 on lap 16
+ * held P18 for ~130 s, then dropped six places at once). Here it drops as each car passes the pit lane (P18 to P24
+ * within 19 s of crossing the line in the pit lane), see parkedAtLine().
  */
 export function roadOrder(cars: CarRow[], order: string[]): CarRow[] {
-  const byNatsoft = [...cars].sort((a, b) => (a.position || 999) - (b.position || 999))
-  const onTrack = byNatsoft
-    .filter((c) => !c.inPit)
-    .sort((a, b) =>
-      b.laps - a.laps
-      || order.indexOf(b.lastPoint) - order.indexOf(a.lastPoint)
-      || latestCrossing(a, order) - latestCrossing(b, order)
-      || (a.position || 999) - (b.position || 999))
-  // Pit-lane cars go back into their Natsoft slots; everyone else fills the gaps in road order.
-  const result: CarRow[] = []
-  let next = 0
-  byNatsoft.forEach((car, slot) => {
-    if (car.inPit) result[slot] = car
-  })
-  for (let slot = 0; slot < byNatsoft.length; slot++) {
-    if (!result[slot]) result[slot] = onTrack[next++]
-  }
-  return result
+  return [...cars].sort((a, b) =>
+    b.laps - a.laps
+    || order.indexOf(b.lastPoint) - order.indexOf(a.lastPoint)
+    || latestCrossing(a, order) - latestCrossing(b, order)
+    || (a.position || 999) - (b.position || 999))
 }

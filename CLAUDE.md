@@ -122,7 +122,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   the car, left of the name: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
 - Race order: Natsoft only re-orders `Position` at the control line, so the race tower uses `roadOrder()`
   (`liveGaps.ts`): laps, then furthest timing point, then who reached it first (exact times at the line and I1/I2).
-  Agrees with Natsoft at the line (351/353); pit-lane cars keep Natsoft's slot. Pos and +/− show the road rank.
+  Pit stops: a car that crossed the line in the pit lane is "parked" there (`parkedAtLine`) until its next timing
+  point, so it drops as each car passes (Natsoft holds it until they complete another lap, ~2 min later). At the line
+  it agrees with Natsoft except next to a pit stop (444/468, all 24 misses pit-related). Pos and +/− show road rank.
 - Position changes animate (`useRowMoves.ts`, FLIP): the whole row slides to its new place and pulses green (gained)
   or red (lost). Reduced-motion users get the pulse only.
 - Positions gained/lost (`posChange`, races): from `startingGrid.ts`, a hand-made grid per session taken from our
