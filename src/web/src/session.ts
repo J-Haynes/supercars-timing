@@ -11,7 +11,11 @@ export function isShootout(sessionName: string, sessionType: string): boolean {
 }
 
 /** Race distances Natsoft doesn't send (it sends <E L> = 0 for most races). */
-const KNOWN_RACE_LAPS: { meeting: RegExp; laps: number }[] = [{ meeting: /bathurst 1000/i, laps: 161 }]
+const KNOWN_RACE_LAPS: { meeting: RegExp; laps: number }[] = [
+  { meeting: /bathurst 1000/i, laps: 161 },
+  // Both Gold Coast races: "85 laps or 1 lap after" a time limit (Supercars schedule, 16 Sep 2026).
+  { meeting: /gold coast/i, laps: 85 },
+]
 
 /** Scheduled laps for a race: Natsoft's value if it sends one, else a known distance; 0 = unknown (e.g. timed). */
 export function raceLaps(session: SessionInfo): number {

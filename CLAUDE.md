@@ -139,6 +139,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   `DriverChangedAt` marks a swap; the tower shows the other driver(s) in detailed mode and a SWAP badge for 3 minutes.
   Natsoft driver `1` is the primary (full-time) driver in every entry. As on the broadcast, the tower marks who's in
   the car, left of the name: hollow white circle = primary, green dot = co-driver (`DriverMarker`).
+- After the chequered flag `raceOrder()` returns Natsoft's official classification and the tower shows official gaps:
+  Natsoft stops counting laps but keeps sending cool-down-lap timing points, and stops updating stopped cars' road
+  positions, so the road order scrambled the result. Use `raceOrder(timing)` (not `roadOrder`) anywhere a race order is needed.
 - Race order: Natsoft only re-orders `Position` at the control line, so the race tower uses `roadOrder()`
   (`liveGaps.ts`). It uses Natsoft's own road position (`CarRow.RoadPosition`, `<P LP>`) when every car has a unique
   one; otherwise it works it out: laps, then furthest timing point, then who reached it first (exact times at the
@@ -153,7 +156,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   recording (Natsoft's order before the green). Stopgap: the server should send each car's grid position instead.
 - Manufacturer colours (CSS vars): Ford blue, Chevrolet orange, Toyota red; `ManufacturerKey` in the controls bar.
 - Menu (`Menu.tsx`, ☰ in the header): live, results of previous Supercars sessions (`ResultsView.tsx`), upcoming
-  events from `calendar.ts` with countdowns and map status from `tracks/manifest.json`. Update `calendar.ts` when
+  events from `calendar.ts` with countdowns and map status from `tracks/manifest.json`. Clicking an upcoming event opens
+  `EventPreview.tsx`: the Supercars session timetable (`UpcomingEvent.sessions`, local track time, provisional, with
+  its source) and the track map (provisional maps show a work-in-progress note via `TrackMap`'s `note`). Update `calendar.ts` when
   Supercars publishes changes. There's no replay: previous sessions show results only (owner's call).
 - Live view hides support-category sessions (`isSupercarsSession()` in `session.ts`): the header shows "Waiting for
   the next Supercars session". They're still recorded.

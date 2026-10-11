@@ -61,7 +61,7 @@ function makeView(model: TrackModel, rotationDeg: number) {
   }
 }
 
-export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin }: {
+export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
   hoverId: string | null
@@ -74,6 +74,8 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
   onRotate: (degrees: number) => void
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
+  /** Replaces the "learning timing points" overlay, e.g. on an upcoming event's page. */
+  note?: string
 }) {
   const { timing, feed } = update
   const now = useSessionClock(timing.now, feed.state === 'live' || feed.state === 'replaying' ? feed.clockRate ?? 1 : 0)
@@ -189,7 +191,7 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
         </div>
       )}
       {awaitingCalibration && (
-        <div className="map-overlay">Learning where the timing points are from live pace. Cars appear after a lap or two.</div>
+        <div className={`map-overlay${note ? ' map-note' : ''}`}>{note ?? 'Learning where the timing points are from live pace. Cars appear after a lap or two.'}</div>
       )}
       <div className="map-caption">
         {track.name} · positions estimated between timing points

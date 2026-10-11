@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import type { RecordedSession } from '../types'
-import { UPCOMING, eventEnd, eventStart } from '../calendar'
+import { UPCOMING, eventEnd, eventStart, type UpcomingEvent } from '../calendar'
 import { trackManifest } from '../tracks'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
-export function Menu({ open, onClose, resultsId, onWatchLive, onResults }: {
+export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPreview }: {
   open: boolean
   onClose: () => void
   /** Session whose results are on screen, or null for live timing. */
   resultsId: string | null
   onWatchLive: () => void
   onResults: (session: RecordedSession) => void
+  /** Open an upcoming event's page (timetable and map). */
+  onPreview: (event: UpcomingEvent) => void
 }) {
   const [sessions, setSessions] = useState<RecordedSession[] | null>(null)
   const now = useNow(open)
@@ -78,20 +80,20 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults }: {
             const map = e.trackCode ? trackManifest[e.trackCode] : undefined
             const underWay = eventStart(e).getTime() <= now
             return (
-              <div key={e.name} className="upcoming">
-                <div className="upcoming-top">
+              <button key={e.name} type="button" className="upcoming" onClick={() => { onPreview(e); onClose() }} title="Open the event: session times and map">
+                <span className="upcoming-top">
                   <span className="upcoming-name">{e.name}</span>
                   <span className="soon">{underWay ? 'This weekend' : 'Coming soon'}</span>
-                </div>
-                <div className="session-meta">{e.venue} · {e.location}</div>
-                <div className="session-meta">{dateRange(e.startDate, e.endDate)}{e.format ? ` · ${e.format}` : ''}</div>
-                <div className="upcoming-bottom">
+                </span>
+                <span className="session-meta">{e.venue} · {e.location}</span>
+                <span className="session-meta">{dateRange(e.startDate, e.endDate)}{e.format ? ` · ${e.format}` : ''}</span>
+                <span className="upcoming-bottom">
                   <span className="countdown">{countdown(eventStart(e).getTime() - now)}</span>
                   <span className={`map-status ${map ? (map.provisional ? 'provisional' : 'mapped') : 'none'}`}>
                     {map ? (map.provisional ? 'Map: provisional' : 'Map: ready') : 'Map: not yet'}
                   </span>
-                </div>
-              </div>
+                </span>
+              </button>
             )
           })}
         </section>

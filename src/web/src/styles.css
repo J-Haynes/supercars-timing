@@ -604,3 +604,25 @@ main { flex: 1; padding: 0 16px 24px; }
 .chart-lab { user-select: none; -webkit-user-select: none; }
 .chart-lab input, .chart-lab select { user-select: text; -webkit-user-select: text; }
 .chart-lab-backdrop { overscroll-behavior: contain; }
+
+/* Upcoming event page (EventPreview): timetable beside the (work-in-progress) map. */
+button.upcoming { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; background: none; display: block; }
+button.upcoming > span { display: block; }
+button.upcoming > .upcoming-top, button.upcoming > .upcoming-bottom { display: flex; }
+button.upcoming:hover { border-color: var(--muted); }
+.event-preview .results-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.event-preview h2 { margin: 2px 0; font-size: 20px; }
+.event-sessions { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 10px 14px; align-self: start; }
+.event-sessions h3 { margin: 0 0 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.event-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.event-table td { padding: 7px 8px; border-bottom: 1px solid var(--line); }
+.event-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.event-table .event-day { color: var(--muted); white-space: nowrap; }
+.event-table tr.race td { font-weight: 600; }
+.event-table tr.done td { color: var(--muted); }
+.event-table tr.next td { background: rgba(47, 111, 223, .12); }
+.event-table .event-until { color: var(--muted); text-align: right; }
+.event-table tr.next .event-until { color: var(--text); }
+.event-laps { color: var(--muted); font-weight: 400; }
+/* A note on the map (e.g. work in progress) sits along the bottom so the circuit stays visible. */
+.map-overlay.map-note { top: auto; bottom: 46px; transform: translateX(-50%); max-width: 88%; font-size: 12px; padding: 8px 12px; }
