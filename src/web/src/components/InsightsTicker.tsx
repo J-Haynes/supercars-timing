@@ -3,7 +3,7 @@ import type { TimingSnapshot } from '../types'
 import { buildInsights, newMemory, type Insight } from '../insights'
 
 const ICONS: Record<Insight['kind'], string> = {
-  fastest: '⏱', lead: '🏁', penalty: '⚠', control: '📣', battle: '⚔', closing: '↗', minLaps: '⛽', mover: '⇅', longRun: '🔧',
+  fastest: '⏱', lead: '🏁', penalty: '⚠', control: '📣', caution: '🚨', battle: '⚔', closing: '↗', minLaps: '⛽', mover: '⇅', longRun: '🔧',
 }
 
 /**

@@ -4,7 +4,7 @@ import type { TrackDefinition } from '../tracks/types'
 import { TrackModel, type Vec } from '../map/trackModel'
 import { carPosition } from '../map/carPosition'
 import { useSessionClock } from '../map/useSessionClock'
-import { isRace, isShootout } from '../session'
+import { flagKind, isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from '../map/calibrate'
 import { usePositionSync } from '../map/usePositionSync'
 
@@ -98,8 +98,8 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
   const effective = useMemo(() => (calibrated ? { ...track, timingPoints: calibrated } : track), [track, calibrated])
   const awaitingCalibration = !!track.provisional && !calibrated
   // Just after the page loads, positions come from crossings made before it; say so until most cars have updated.
-  const flagNow = timing.session.flag.toLowerCase()
-  const sync = usePositionSync(timing.cars, `${timing.session.meeting}|${timing.session.name}`, flagNow === 'green' || flagNow === 'yellow')
+  const flagNow = flagKind(timing.session.flag)
+  const sync = usePositionSync(timing.cars, `${timing.session.meeting}|${timing.session.name}`, flagNow === 'green' || flagNow === 'caution')
 
   const geometry = useMemo(() => new TrackModel(track), [track])          // outline only: stable for the view
   const model = useMemo(() => new TrackModel(effective), [effective])     // with timing points: car positions

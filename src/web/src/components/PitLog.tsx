@@ -1,4 +1,5 @@
 import type { PitStopRow, TimingSnapshot } from '../types'
+import { cautionPeriods } from '../session'
 
 const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
 
@@ -21,6 +22,8 @@ function dedupe(log: PitStopRow[]): PitStopRow[] {
  * Built from each car's `pitLog`, so it only has stops seen live (and kept across reconnects/restarts).
  */
 export function PitLog({ timing, limit = 15 }: { timing: TimingSnapshot; limit?: number }) {
+  const cautions = cautionPeriods(timing.flagHistory)
+  const underCaution = (s: PitStopRow) => cautions.some((p) => s.inAt >= p.start && (p.end === undefined || s.inAt <= p.end))
   const stops = timing.cars
     .flatMap((car) => dedupe(car.pitLog ?? []).map((stop, i) => ({ car, stop, number: i + 1 })))
     .sort((a, b) => b.stop.inAt - a.stop.inAt)
@@ -45,6 +48,7 @@ export function PitLog({ timing, limit = 15 }: { timing: TimingSnapshot; limit?:
                   <td className="who">
                     {swap ? <>{surname(stop.driverIn)} → <strong>{surname(stop.driverOut)}</strong></> : surname(stop.driverIn)}
                     <span className="stop-no" title="This car's stop number (stops seen live)"> · stop {number}</span>
+                    {underCaution(stop) && <span className="sc-tag" title="Pitted under the safety car / FCY">SC</span>}
                   </td>
                   <td className="num">{inLane ? <span className="pit-badge">IN PIT</span> : stop.seconds > 0 ? `${stop.seconds.toFixed(1)}s` : ''}</td>
                 </tr>

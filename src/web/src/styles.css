@@ -485,3 +485,12 @@ main { flex: 1; padding: 0 16px 24px; }
 /* Pit badge: tabular digits so the running timer doesn't jiggle; green with the final time just after leaving. */
 .pit-badge { font-variant-numeric: tabular-nums; }
 .pit-badge.done { background: var(--green); color: #04210f; }
+
+/* Safety car / red flag banner above the race tower. */
+.sc-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 8px 12px; border-radius: 8px; font-size: 13px; }
+.sc-banner.caution { background: rgba(255, 210, 63, .14); border: 1px solid var(--yellow); color: var(--text); }
+.sc-banner.caution strong { color: var(--yellow); text-transform: uppercase; letter-spacing: .06em; }
+.sc-banner.red { background: rgba(255, 77, 79, .14); border: 1px solid var(--red); }
+.sc-banner.red strong { color: var(--red); text-transform: uppercase; letter-spacing: .06em; }
+.sc-banner span { color: var(--muted); }
+.sc-tag { margin-left: 6px; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 3px; background: var(--yellow); color: #2b2200; }

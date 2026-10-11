@@ -1,4 +1,5 @@
 import type { CarRow, PitStopRow, TimingSnapshot } from './types'
+import { flagKind } from './session'
 
 export interface CarPenalty {
   /** As race control worded it, e.g. "5 seconds" or "plp". */
@@ -25,8 +26,10 @@ export interface CarPenalty {
 function servable(stop: PitStopRow, timing: TimingSnapshot): boolean {
   const history = timing.flagHistory ?? []
   const flagAt = (t: number) => [...history].reverse().find((f) => f.time <= t)?.flag ?? 'Green'
-  if (flagAt(stop.inAt) !== 'Green') return false
-  return !history.some((f) => f.time > stop.inAt && f.time <= stop.outAt && f.flag !== 'Green')
+  // Only caution and red count against it (not e.g. a chequered flag); flagKind handles Natsoft's naming.
+  const blocks = (flag: string) => ['caution', 'red'].includes(flagKind(flag))
+  if (blocks(flagAt(stop.inAt))) return false
+  return !history.some((f) => f.time > stop.inAt && f.time <= stop.outAt && blocks(f.flag))
 }
 
 /** Drive-through equivalent for an unserved pit lane penalty (see CarPenalty.seconds). */

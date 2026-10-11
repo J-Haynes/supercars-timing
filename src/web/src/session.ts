@@ -38,3 +38,30 @@ export function minDriverLaps(session: SessionInfo): number {
 export function isSupercarsSession(sessionName: string): boolean {
   return /supercars championship/i.test(sessionName)
 }
+
+export type FlagKind = 'green' | 'caution' | 'red' | 'finished' | 'other'
+
+/**
+ * What a Natsoft session flag means. Support races sent "Yellow" for a full-course caution; what Natsoft sends for a
+ * Supercars safety car isn't confirmed yet, so likely alternatives ("SC", "FCY", "Safety Car") count as caution too.
+ */
+export function flagKind(flag: string): FlagKind {
+  const f = flag.trim().toLowerCase()
+  if (f === 'green') return 'green'
+  if (/\bred\b|suspend|stopped/.test(f)) return 'red'
+  if (/yellow|\bsc\b|safety|\bfcy\b|caution|\bvsc\b/.test(f)) return 'caution'
+  if (/check|chequer|ended|finish/.test(f)) return 'finished'
+  return 'other'
+}
+
+/** Caution periods (SC/FCY) from the flag history, oldest first; `end` is undefined while one is still out. */
+export function cautionPeriods(history: { time: number; flag: string }[] | undefined): { start: number; end?: number }[] {
+  const out: { start: number; end?: number }[] = []
+  for (const f of history ?? []) {
+    const caution = flagKind(f.flag) === 'caution'
+    const open = out.length > 0 && out[out.length - 1].end === undefined
+    if (caution && !open) out.push({ start: f.time })
+    else if (!caution && open) out[out.length - 1].end = f.time
+  }
+  return out
+}

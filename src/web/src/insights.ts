@@ -1,13 +1,13 @@
 import type { CarRow, TimingSnapshot } from './types'
 import { liveGap, parkedAtLine, roadOrder } from './liveGaps'
 import { startPosition } from './startingGrid'
-import { minDriverLaps, raceLaps } from './session'
+import { cautionPeriods, minDriverLaps, raceLaps } from './session'
 import { lapTime } from './format'
 
 /** One item in the insights ticker. `carIds` are highlighted in the tower and on the map on hover. */
 export interface Insight {
   id: string
-  kind: 'fastest' | 'lead' | 'penalty' | 'control' | 'battle' | 'closing' | 'minLaps' | 'mover' | 'longRun'
+  kind: 'fastest' | 'lead' | 'penalty' | 'control' | 'caution' | 'battle' | 'closing' | 'minLaps' | 'mover' | 'longRun'
   text: string
   carIds: string[]
   tone: 'purple' | 'green' | 'red' | 'yellow' | 'blue' | 'plain'
@@ -55,6 +55,21 @@ export function buildInsights(timing: TimingSnapshot, memory: InsightMemory): In
 
   remember(timing, cars, memory, now, order)
   const out: Insight[] = memory.events.filter((e) => now - e.at < EVENT_SECONDS).map((e) => e.insight).reverse()
+
+  // Safety car / FCY: while it's out (and for a few minutes after), plus who pitted under it (a cheaper stop).
+  const periods = cautionPeriods(timing.flagHistory)
+  const last = periods[periods.length - 1]
+  if (last && (last.end === undefined || now - last.end < EVENT_SECONDS)) {
+    const mins = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+    out.unshift(last.end === undefined
+      ? { id: `caution-${last.start}`, kind: 'caution', tone: 'yellow', carIds: [], text: `Safety car / full course yellow (caution #${periods.length})` }
+      : { id: `green-${last.end}`, kind: 'caution', tone: 'green', carIds: [], text: `Back to green after ${mins(last.end - last.start)} under caution` })
+    const pitted = cars.filter((c) => (c.pitLog ?? []).some((p) => p.inAt >= last.start && (last.end === undefined || p.inAt <= last.end)))
+    if (pitted.length > 0) {
+      out.push({ id: `caution-pits-${last.start}`, kind: 'caution', tone: 'yellow', carIds: pitted.map((c) => c.id),
+        text: `Pitted under caution: ${pitted.map((c) => surname(c.driver)).join(', ')}` })
+    }
+  }
 
   // Race control: penalties and incidents in the last few minutes, with the cars they name.
   for (const m of timing.raceControl ?? []) {

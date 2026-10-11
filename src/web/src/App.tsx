@@ -18,7 +18,8 @@ import { Ladder } from './components/Ladder'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useTrack } from './tracks'
 import { useStickToBottom } from './useStickToBottom'
-import { isRace, isShootout, isSupercarsSession } from './session'
+import { flagKind, isRace, isShootout, isSupercarsSession } from './session'
+import { SafetyCarBanner } from './components/SafetyCarBanner'
 import type { RecordedSession } from './types'
 
 export default function App() {
@@ -45,8 +46,8 @@ export default function App() {
   const showCard = !!timing && (settings.focusCard === 'on' || (settings.focusCard === 'auto' && isShootout(timing.session.name, timing.session.type)))
   const focusId = showCard && timing ? pickFocusCar(timing.cars, timing.now)?.id ?? null : null
   // Red / yellow (safety car, full-course yellow) flags frame the whole screen while they're out.
-  const flag = !results && !supportSession ? timing?.session.flag.toLowerCase() : undefined
-  const frame = flag === 'red' || flag === 'yellow' ? ` flag-frame flag-frame-${flag}` : ''
+  const kind = !results && !supportSession && timing ? flagKind(timing.session.flag) : undefined
+  const frame = kind === 'red' ? ' flag-frame flag-frame-red' : kind === 'caution' ? ' flag-frame flag-frame-yellow' : ''
 
   return (
     <div className={`app${frame}`}>
@@ -87,6 +88,7 @@ export default function App() {
                 {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
                 <div className="layout">
                   <div className="tower-column" ref={towerColumn}>
+                  {isRace(timing.session.type) && <SafetyCarBanner timing={timing} />}
                   {isRace(timing.session.type) && <InsightsTicker timing={timing} onHighlight={setHighlightIds} />}
                   <TimingTower
                     timing={timing}

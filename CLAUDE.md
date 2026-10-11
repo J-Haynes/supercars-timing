@@ -149,8 +149,11 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   times quicker than 0.8× the field median are rejected (`IsPlausibleSegment`): pit-lane timing lines produce them.
   The median comes from `RawSegmentSeconds` (timed laps, before the check). Never base it on accepted times: the
   slow first out-lap at Bathurst once pushed it so high that every real time was rejected and blocks stayed empty.
-- Flags: a red or yellow session flag frames the whole screen (`.flag-frame` on `.app`). The session flag is the only
-  safety-car signal; the per-car `SC` attribute is something else (see PROTOCOL.md).
+- Flags: always go through `flagKind()` (`session.ts`): "Yellow" and likely alternatives ("SC", "FCY", "Safety Car")
+  are caution, since Natsoft's value for a Supercars safety car isn't confirmed yet. Caution/red frame the screen
+  (`.flag-frame`), show `SafetyCarBanner` above the race tower (time out, laps under it if seen starting, caution
+  count, who pitted under it), add ticker items, and tag pit stops "SC". The session flag is the only safety-car
+  signal; the per-car `SC` attribute is something else (see PROTOCOL.md).
 - Laps to go (header, next to the live indicator): `raceLaps()` in `session.ts` uses Natsoft's `<E L>` when it's set,
   else `KNOWN_RACE_LAPS` (Bathurst 1000 = 161). Hidden when unknown (timed races).
 - Endurance races: Driver laps column (`DriverLaps` in `TimingTower.tsx`) from `CarRow.DriverLaps`, which comes from
