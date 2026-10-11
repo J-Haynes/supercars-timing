@@ -95,6 +95,8 @@ public class RecordingRegressionTests
 
         var s = Recordings.Replay(Race);
         Assert.Contains(s.FlagHistory, f => f.Flag == "Green");
+        // Flag changes are in time order (green after the safety car once carried the first green's time).
+        Assert.Equal(s.FlagHistory.Select(f => f.Time).Order(), s.FlagHistory.Select(f => f.Time));
         Assert.True(s.GreenAt > 0);
         Assert.Equal(161, s.ScheduledLaps);
         Assert.NotNull(s.Record);

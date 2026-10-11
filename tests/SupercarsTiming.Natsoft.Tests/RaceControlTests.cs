@@ -113,4 +113,16 @@ public class RaceControlTests
         Assert.Equal(["WaitStart", "Green", "Yellow"], s.FlagHistory.Select(f => f.Flag));
         Assert.Equal(2500, TimingSnapshot.From(s).FlagHistory[^1].Time, 3);
     }
+
+    [Fact]
+    public void Green_after_a_safety_car_is_timed_by_the_message_not_I()
+    {
+        // Real sequence: back to green after the safety car still carries I = the race's first green time.
+        var s = Fresh();
+        s.Apply("""<S T="1800.5000" S="Green" I="1800.3107" />""");
+        s.Apply("""<S T="2500.2000" S="Yellow" I="2500.1000" />""");
+        s.Apply("""<S T="2785.0000" S="Green" I="1800.3107" />""");
+        Assert.Equal([1800.3107, 2500.1, 2785.0], s.FlagHistory.Select(f => Math.Round(f.Time, 4)));
+        Assert.Equal(1800.3107, s.GreenAt, 4);   // the race start is still the first green
+    }
 }

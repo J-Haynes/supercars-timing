@@ -147,8 +147,11 @@ public sealed class TimingState
                 }
                 break;
             case "S":
+                // I is the change time for the first green, but stays at that first green time when the flag goes back
+                // to green after a safety car (Bathurst 1000: green again at ~17:22 with I = 11:34:38), so it's only
+                // trusted when it's within a few seconds of the message.
                 if (Str(e, "S") is { Length: > 0 } flag && (FlagHistory.Count == 0 || FlagHistory[^1].Flag != flag))
-                    FlagHistory.Add(new FlagChange(Dbl(e, "I") is double at && at > 0 ? at : Now, flag));
+                    FlagHistory.Add(new FlagChange(Dbl(e, "I") is double at && at > 0 && Now - at is >= 0 and < 10 ? at : Now, flag));
                 Flag = Str(e, "S") ?? Flag;
                 // I = when the flag changed. The first green is the race start (later greens follow safety cars).
                 if (Flag == "Green" && GreenAt == 0 && Dbl(e, "I") is double greenAt && greenAt > 0) GreenAt = greenAt;
