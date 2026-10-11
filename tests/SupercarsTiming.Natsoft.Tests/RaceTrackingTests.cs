@@ -110,4 +110,26 @@ public class RaceTrackingTests
         s.Apply(Snapshot.Replace("Race 31", "Race 32").Replace("R31", "R32"));
         Assert.Empty(s.Cars["22"].LapsByDriver);
     }
+
+    [Fact]
+    public void Reconnect_keeps_history_when_the_cars_come_after_the_snapshot()
+    {
+        // Live, Natsoft's <New> has no cars; they arrive in a full <L Y="f"> straight after (Bathurst 1000 restart).
+        var s = Fresh();
+        Car(s, 1100, """L="11" LCD="11" """);
+        Car(s, 1150, """P="Y" LLP="11" PS="1" PI="1150.0000" """);
+        Car(s, 1188, """P="N" PT="38.0000" """);
+        Car(s, 1300, """L="12" LCD="10" """, driver: "2");         // co-driver: 10 laps (Natsoft's count)
+
+        var noCars = Snapshot.Replace("""<L><P L="1" C="22" D="1"><D L="10" P="N" PS="0" /></P></L>""", "").Replace("1000.0000", "1500.0000");
+        s.Apply(noCars);
+        Assert.Empty(s.Cars);
+        s.Apply("""<L T="1500.5000" Y="f" L="26"><P L="1" LP="1" C="22" D="2"><D L="14" LCD="12" P="N" PS="1" /></P></L>""");
+
+        var car = s.Cars["22"];
+        Assert.Single(car.PitLog);                                  // pit stop carried over
+        Assert.Equal(11, car.LapsByDriver["1"]);                    // primary's laps carried over
+        Assert.Equal(12, car.LapsByDriver["2"]);                    // Natsoft's newer LCD wins over our 10
+        Assert.Equal(11, car.StintStartLap);
+    }
 }

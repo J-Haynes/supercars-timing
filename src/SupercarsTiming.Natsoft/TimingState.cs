@@ -54,6 +54,12 @@ public sealed class TimingState
     /// <summary>Number of messages applied since the last snapshot reset.</summary>
     public long MessageCount { get; private set; }
 
+    /// <summary>
+    /// After a snapshot of the same session: each car's state from before it, waiting for that car to reappear.
+    /// Natsoft's snapshot doesn't always list the cars; live, they come in a separate full update straight after.
+    /// </summary>
+    readonly Dictionary<string, CarState> _carryFrom = [];
+
     /// <summary>True while applying a session snapshot, whose LP values say where each car is but not when it got there.</summary>
     bool _inSnapshot;
 
@@ -81,10 +87,13 @@ public sealed class TimingState
                 _inSnapshot = true;
                 try { foreach (var child in root.Elements()) ApplyChild(child); }
                 finally { _inSnapshot = false; }
+                _carryFrom.Clear();
                 if (previous.SessionCode == SessionCode && previous.SessionName == SessionName && SessionName != "")
                 {
+                    foreach (var (id, old) in previous.Cars) _carryFrom[id] = old;
+                    // Cars listed in the snapshot itself; the rest carry over when they next appear (ApplyCar).
                     foreach (var c in Cars.Values)
-                        if (previous.Cars.TryGetValue(c.Id, out var old)) c.CarryHistoryFrom(old, Now);
+                        if (_carryFrom.Remove(c.Id, out var old)) c.CarryHistoryFrom(old, Now);
                 }
                 else
                 {
@@ -164,7 +173,14 @@ public sealed class TimingState
         var id = Str(p, "C");
         if (id is null) return;
         if (!Cars.TryGetValue(id, out var c)) Cars[id] = c = new CarState { Id = id };
+        ApplyCarFields(c, p);
+        // First update for a car since a same-session snapshot (in or after it): bring its history across now that
+        // its current laps, driver and pit status are known.
+        if (!_inSnapshot && _carryFrom.Remove(id, out var old)) c.CarryHistoryFrom(old, Now);
+    }
 
+    void ApplyCarFields(CarState c, XElement p)
+    {
         c.Position = Int(p, "L") ?? c.Position;
         // LP on <P> (not <D>, where LP is the timing point): position on the road at the last timing point.
         c.RoadPosition = Int(p, "LP") ?? c.RoadPosition;
@@ -436,8 +452,11 @@ public sealed class CarState
     /// </summary>
     internal void CarryHistoryFrom(CarState old, double now)
     {
-        foreach (var (k, v) in old.LapsByDriver) LapsByDriver[k] = v;
-        if (old.LapsKnown && Laps > old.Laps && old.DriverIndex == DriverIndex && old.PitStops == PitStops)
+        // Counts Natsoft has already sent since the snapshot (LCD) are current; only fill in the others.
+        var fromNatsoft = LapsByDriver.Keys.ToHashSet();
+        foreach (var (k, v) in old.LapsByDriver)
+            if (!fromNatsoft.Contains(k)) LapsByDriver[k] = v;
+        if (!fromNatsoft.Contains(DriverIndex) && old.LapsKnown && Laps > old.Laps && old.DriverIndex == DriverIndex && old.PitStops == PitStops)
             LapsByDriver[DriverIndex] = LapsByDriver.GetValueOrDefault(DriverIndex) + Laps - old.Laps;
         PitLog.AddRange(old.PitLog);
         // It was in the pits when we lost the connection and has left since: we missed the exit time.

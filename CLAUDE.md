@@ -22,7 +22,8 @@ clever code, and explain non-obvious decisions in comments or the PR description
     results, and `IsSupercarsChampionship()` (support categories share the feed; the app only shows Supercars)
   - `TimingState`: applies XML messages to an in-memory model (`Entries`, `Cars`, flag, clock). A `<New>` snapshot of
     the *same* session (reconnect, restart) keeps each car's history (`CarState.CarryHistoryFrom`): laps per driver,
-    pit log, mini-sector bests. A different session starts from scratch.
+    pit log, mini-sector bests. Live snapshots don't list the cars (they follow in an `<L Y="f">`), so each car's old
+    state waits in `_carryFrom` until the car reappears. A different session starts from scratch.
   - `TimingSnapshot`: flat, serialisable view of `TimingState` sent to the UI
 - `src/SupercarsTiming.Server`: ASP.NET Core minimal API + SignalR.
   - `Feed/TimingFeedService`: background service, live or replay → `TimingStore`. Live mode records to
