@@ -42,6 +42,8 @@ public class RaceControlTests
     [Theory]
     [InlineData("Stewards: Penalty Car 19 - 5 seconds - driving infringement", "19", "5 seconds")]
     [InlineData("Stewards: penalty car 7 - Drive Through", "7", "Drive Through")]
+    [InlineData("Stewards: Penalty Car 19  plp  pit stop infringement", "19", "plp")]
+    [InlineData("Stewards: Penalty Car 888  10 seconds  unsafe release", "888", "10 seconds")]
     [InlineData("Stewards: Turn 4 Incident under investigation Cars 34 & 38 & 777", null, null)]
     public void Penalty_wording(string text, string? car, string? what)
     {

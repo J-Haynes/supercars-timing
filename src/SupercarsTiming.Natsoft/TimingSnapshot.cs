@@ -140,13 +140,17 @@ public sealed record TimingSnapshot(
     }
 
     /// <summary>
-    /// Car number and penalty from a race control message, e.g. "Stewards: Penalty Car 19 - 5 seconds - driving
-    /// infringement" gives ("19", "5 seconds"). Null for anything else. The wording is free text, so this is best effort.
+    /// Car number and penalty from a race control message. Race control words them in different ways:
+    /// "Stewards: Penalty Car 19 - 5 seconds - driving infringement" gives ("19", "5 seconds"), and
+    /// "Stewards: Penalty Car 19  plp  pit stop infringement" (double spaces, no dashes) gives ("19", "plp").
+    /// Null for anything else. Free text, so best effort; the frontend's parsePenalty (penalties.ts) matches this.
     /// </summary>
     public static (string Car, string What)? Penalty(string text)
     {
-        var m = Regex.Match(text, @"\bPenalty\s+Car\s+(\d+)\s*-\s*([^-]+)", RegexOptions.IgnoreCase);
-        return m.Success ? (m.Groups[1].Value, m.Groups[2].Value.Trim()) : null;
+        var m = Regex.Match(text, @"\bPenalty\s+Car\s+(\d+)\s*(?:-\s*)?(.*)$", RegexOptions.IgnoreCase);
+        if (!m.Success) return null;
+        var what = Regex.Split(m.Groups[2].Value, @"\s+-\s+|\s{2,}").Select(s => s.Trim()).FirstOrDefault(s => s.Length > 0);
+        return what is null ? null : (m.Groups[1].Value, what);
     }
 
     static string Manufacturer(string? vehicle) => vehicle switch
