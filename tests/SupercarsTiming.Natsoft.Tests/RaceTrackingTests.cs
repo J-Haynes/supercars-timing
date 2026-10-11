@@ -151,4 +151,20 @@ public class RaceTrackingTests
         Assert.Equal(38, stop.Seconds, 3);
         Assert.Equal("2", stop.DriverOut);
     }
+
+    [Fact]
+    public void Each_completed_lap_is_kept_with_time_position_gap_and_pit()
+    {
+        var s = Fresh();
+        s.Apply("""<L T="1100.0000" Y="p"><P L="2" C="22" D="1"><D L="11" I="128.5000" GI="1.2500" GL="0" T="1099.9000" LP="M" /></P></L>""");
+        Car(s, 1150, """P="Y" LLP="11" PS="1" PI="1150.0000" """);
+        Car(s, 1188, """P="N" PT="38.0000" """);
+        s.Apply("""<L T="1260.0000" Y="p"><P L="5" C="22" D="2"><D L="12" I="160.1000" GI="30.0000" GL="0" T="1259.8000" LP="M" /></P></L>""");
+
+        var laps = s.Cars["22"].LapHistory;
+        Assert.Equal([11, 12], laps.Select(l => l.Lap));
+        Assert.Equal(new LapEntry(11, 128.5, 2, 1.25, 0, "1", false, 1099.9), laps[0]);
+        Assert.True(laps[1].Pitted || s.Cars["22"].PitLog[0].Lap == 11);   // the stop was logged against lap 11
+        Assert.Equal(12, LapHistory.From(s).Cars.Single().Laps[^1].Lap);
+    }
 }

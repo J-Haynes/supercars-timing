@@ -31,6 +31,12 @@ public sealed class TimingStore
         lock (_lock) { Status = status; _dirty = true; }
     }
 
+    /// <summary>Per-car lap history for the charts. Built on request (a few times a minute), not with every update.</summary>
+    public LapHistory Laps()
+    {
+        lock (_lock) return LapHistory.From(_state);
+    }
+
     /// <summary>Current snapshot, rebuilt only when something changed.</summary>
     public TimingSnapshot Snapshot()
     {

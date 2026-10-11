@@ -112,4 +112,18 @@ public class RecordingRegressionTests
             Assert.True(Math.Abs(a - b) / b < 0.1, $"stretch {from}: stored median {a:0.00}s vs splits {b:0.00}s");
         }
     }
+
+    [RecordingFact(Race)]
+    public void Race_lap_history_covers_the_race()
+    {
+        // Charts need a lap entry for (almost) every lap. A few can be missed while the server restarts.
+        var s = Recordings.Replay(Race);
+        Assert.All(s.Cars.Values, c =>
+        {
+            Assert.InRange(c.LapHistory.Count, c.Laps - 3, c.Laps);
+            Assert.Equal(c.LapHistory.Count, c.LapHistory.Select(l => l.Lap).Distinct().Count());
+        });
+        var times = s.Cars.Values.SelectMany(c => c.LapHistory).Where(l => l.Time > 0).Select(l => l.Time).Order().ToList();
+        Assert.InRange(times[times.Count / 2], 120, 140);   // a typical Bathurst race lap
+    }
 }

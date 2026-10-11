@@ -208,3 +208,18 @@ public sealed record CarRow(
 
 /// <summary>A pit stop. Seconds = time in pit lane, 0 while the car is still in. Driver names differ on a swap.</summary>
 public sealed record PitStopRow(int Lap, double InAt, double OutAt, double Seconds, string DriverIn, string DriverOut);
+
+/// <summary>Per-car lap history for the charts (GET /api/laps). Separate from the snapshot: it's large.</summary>
+public sealed record LapHistory(string Session, IReadOnlyList<CarLaps> Cars)
+{
+    public static LapHistory From(TimingState s) => new(s.SessionName, s.Cars.Values
+        .Select(c =>
+        {
+            var e = s.Entries.GetValueOrDefault(c.Id);
+            return new CarLaps(c.Id, e?.CarNumber ?? c.Id, e?.Drivers.GetValueOrDefault(c.DriverIndex) ?? "",
+                e?.Drivers.OrderBy(d => d.Key).Select(d => d.Value).ToArray() ?? [], c.LapHistory.ToList());
+        })
+        .ToList());
+}
+
+public sealed record CarLaps(string Id, string CarNumber, string Driver, IReadOnlyList<string> Drivers, IReadOnlyList<LapEntry> Laps);

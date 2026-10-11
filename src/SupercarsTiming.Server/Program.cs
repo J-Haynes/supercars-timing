@@ -21,6 +21,8 @@ var app = builder.Build();
 
 app.MapGet("/api/health", (TimingStore store) => Results.Ok(store.Status));
 app.MapGet("/api/snapshot", (TimingStore store) => Results.Ok(new TimingUpdate(store.Status, store.Snapshot())));
+// Lap history for the charts: large, so it's fetched on its own every few seconds rather than pushed with each update.
+app.MapGet("/api/laps", (TimingStore store) => Results.Ok(store.Laps()));
 // Recorded sessions, newest first. Supercars Championship only unless ?all=true (support categories are recorded too).
 app.MapGet("/api/sessions", (SessionCatalog catalog, bool? all) => Results.Ok(catalog.List()
     .Where(s => all == true || SessionIndex.IsSupercarsChampionship(s.Name))

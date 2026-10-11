@@ -203,6 +203,7 @@ public sealed class TimingState
         c.DriverSeen = true;
 
         if (p.Element("D") is not { } d) return;
+        var lapsBefore = c.Laps;
 
         // Pit status first, so a pit-lane crossing in the same update isn't counted as racing pace.
         var leaving = false;
@@ -269,6 +270,14 @@ public sealed class TimingState
         // Timing point last: the lap time (I), best lap (FI) and intermediates (I1/I2) in this same
         // update are needed to record the lap's splits.
         if (Str(d, "LP") is { } lp && lp != c.LastPoint) OnTimingPoint(c, lp, d);
+
+        // Lap history for the charts: one entry per completed lap seen live, with the lap time, position and gap
+        // Natsoft sends at the line in the same update. Snapshot laps happened before we connected (no detail).
+        if (!_inSnapshot && c.Laps > lapsBefore && c.Laps > 0 && (c.LapHistory.Count == 0 || c.LapHistory[^1].Lap < c.Laps))
+        {
+            c.LapHistory.Add(new LapEntry(c.Laps, c.LastLap, c.Position, c.Gap, c.GapLaps, c.DriverIndex,
+                c.InPit || c.PitLog.Any(p => p.Lap == c.Laps), c.LastLineCrossing > 0 ? c.LastLineCrossing : Now));
+        }
     }
 
     /// <summary>
@@ -389,6 +398,8 @@ public sealed class CarState
     public int StintStartLap { get; set; }
     /// <summary>Pit stops seen live this session, oldest first.</summary>
     public List<PitStop> PitLog { get; } = [];
+    /// <summary>Each completed lap seen live, oldest first (for lap time and gap charts).</summary>
+    public List<LapEntry> LapHistory { get; } = [];
     public double LastLap { get; set; }
     public double BestLap { get; set; }
     public int BestLapNo { get; set; }
@@ -483,6 +494,11 @@ public sealed class CarState
         // It was in the pits when we lost the connection and has left since: we missed the exit time.
         if (!InPit && PitLog.LastOrDefault() is { OutAt: 0 } open) open.OutAt = now;
         StintStartLap = old.StintStartLap;
+        // Laps recorded since the snapshot come after the old ones; keep one entry per lap.
+        var newLaps = LapHistory.ToList();
+        LapHistory.Clear();
+        LapHistory.AddRange(old.LapHistory);
+        LapHistory.AddRange(newLaps.Where(l => LapHistory.Count == 0 || l.Lap > LapHistory[^1].Lap));
         DriverChangedAt = old.DriverChangedAt;
         LapsSincePit = old.LapsSincePit;
         foreach (var (k, v) in old.SegmentSeconds) SegmentSeconds[k] = v;
@@ -497,6 +513,12 @@ public sealed class CarState
 public sealed record RaceControlMessage(double Time, string Text);
 
 public sealed record FlagChange(double Time, string Flag);
+
+/// <summary>
+/// One completed lap: lap number, lap time (s), official position and gap to the leader at the line (GI/GL),
+/// driver index, whether the car pitted on this lap, and when it crossed the line (Natsoft time).
+/// </summary>
+public sealed record LapEntry(int Lap, double Time, int Position, double Gap, int GapLaps, string Driver, bool Pitted, double At);
 
 public sealed record LapRecord(double Seconds, string Driver, string Vehicle);
 
