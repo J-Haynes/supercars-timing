@@ -60,10 +60,12 @@ function makeView(model: TrackModel, rotationDeg: number) {
   }
 }
 
-export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, onRotate, onHover, onTogglePin }: {
+export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin }: {
   track: TrackDefinition
   update: TimingUpdate
   hoverId: string | null
+  /** Cars named by the insight under the mouse. */
+  highlightIds?: string[]
   /** Car to emphasise automatically (e.g. the car on its Shootout lap). */
   focusId?: string | null
   pinned: string[]
@@ -112,7 +114,7 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
   const cap = isRace(timing.session.type) ? undefined : baseline
 
   // Draw order: later = on top. Leader above the field, then pinned, focused, and the hovered car on top.
-  const layer = (c: CarRow) => (c.id === hoverId ? 3 : c.id === focusId ? 2 : pinned.includes(c.carNumber) ? 1 : 0)
+  const layer = (c: CarRow) => (c.id === hoverId || highlightIds.includes(c.id) ? 3 : c.id === focusId ? 2 : pinned.includes(c.carNumber) ? 1 : 0)
   const cars = [...timing.cars].sort((a, b) => layer(a) - layer(b) || (b.position || 99) - (a.position || 99))
   let pitIndex = 0
   // In the Shootout, show cars on their out-lap, flying lap and in-lap, and hide them once they're back in the
@@ -127,7 +129,7 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
   const s = (d: number) => view.toScreen(model.pointAt(d))
 
   return (
-    <div className="track-map">
+    <div className={`track-map${!awaitingCalibration && !sync.synced ? ' syncing' : ''}`}>
       <div className="map-tools" role="toolbar" aria-label="Map view">
         <button type="button" onClick={() => onRotate(rotation - 15)} title="Rotate left">⟲</button>
         <button type="button" onClick={() => onRotate(rotation + 15)} title="Rotate right">⟳</button>
@@ -163,7 +165,7 @@ export function TrackMap({ track, update, hoverId, focusId, pinned, rotation, on
           const dim = state.kind === 'pit' || (state.kind === 'track' && state.stale)
           return (
             <CarDot key={car.id} car={car} p={p} dim={dim} scale={1 / Math.sqrt(zoom)}
-              hovered={car.id === hoverId} focused={car.id === focusId} pinned={pinned.includes(car.carNumber)}
+              hovered={car.id === hoverId || highlightIds.includes(car.id)} focused={car.id === focusId} pinned={pinned.includes(car.carNumber)}
               onHover={onHover} onTogglePin={onTogglePin} />
           )
         })}

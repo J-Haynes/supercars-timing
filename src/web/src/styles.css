@@ -423,3 +423,31 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--yellow); animation: sync-pulse 1s ease-in-out infinite alternate; }
 @keyframes sync-pulse { from { opacity: 1; } to { opacity: .3; } }
 @media (prefers-reduced-motion: reduce) { .map-sync-dot { animation: none; } }
+
+/* Map while syncing after a page load: the track and cars fade to grey; the notice stays sharp on top. */
+.track-map svg { transition: opacity .4s, filter .4s; }
+.track-map.syncing svg { opacity: .35; filter: grayscale(1); }
+
+/* Tower rows highlighted from the insights ticker. */
+.tower tbody tr.highlighted { background: rgba(47, 111, 223, .22); box-shadow: inset 4px 0 0 #2f6fdf; }
+
+/* Insights ticker above the tower. */
+.tower-column { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.insights { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 6px 10px; overflow: hidden; }
+.insights-label { flex: none; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.insights-track { flex: 1; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+.insights-scroll { display: inline-flex; gap: 10px; white-space: nowrap; animation: insights-scroll linear infinite; }
+.insights:hover .insights-scroll { animation-play-state: paused; }
+@keyframes insights-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .insights-track { overflow-x: auto; mask-image: none; }
+  .insights-scroll { animation: none; }
+}
+.insight { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 13px; background: var(--bg); border: 1px solid var(--line); cursor: default; }
+.insight:hover { border-color: var(--text); }
+.insight-icon { font-size: 12px; }
+.insight.tone-purple { border-color: rgba(181, 124, 255, .5); }
+.insight.tone-green { border-color: rgba(61, 220, 132, .45); }
+.insight.tone-red { border-color: rgba(255, 77, 79, .5); }
+.insight.tone-yellow { border-color: rgba(255, 210, 63, .45); }
+.insight.tone-blue { border-color: rgba(47, 111, 223, .55); }

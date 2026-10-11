@@ -107,7 +107,7 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   track, fix the inputs (OSM relation, control-line node, recording) and rebuild rather than hand-editing the JSON.
 - `FeedStatus.ClockRate` (replay speed) drives the client-side clock, so replays at 10× animate correctly.
 - After a page load the map shows "Syncing car positions · n/N cars" (`usePositionSync`) until 90% of on-track cars have
-  passed a timing point since (max 45 s), only while the flag is green or yellow.
+  passed a timing point since (max 45 s), only while the flag is green or yellow. The map is greyed out meanwhile.
 
 ## UI essentials
 
@@ -165,6 +165,12 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
   the fastest-lap car in the tower. Penalties are parsed
   from the text (`TimingSnapshot.Penalty()`, best effort) into `CarRow.Penalties` and badged in the tower ("+5s").
   Race time in the header = now − `SessionInfo.GreenAt` (first green flag).
+- Insights ticker (`InsightsTicker.tsx`, races, above the tower; logic in `insights.ts`): recent events (new fastest
+  lap, lead change, race control penalties/incidents), battles (< 1 s on the road, trains of 3+), closing trends (gap
+  at the line shrinking 3 laps running), minimum-lap risk, big movers and cars running long. Movers are pit-adjusted:
+  each stop a car still owes vs the most-stopped car adds the typical loss (median pit-lane time − 10 s), so not having
+  stopped yet isn't "moving up". Hovering an item highlights its cars (`highlightIds` in App → tower rows and map).
+- Pit badge counts time in the pit lane ("PIT 23s") from the open pit stop's pit-in time.
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel` at the bottom of the page; closing is remembered.
 - Shootout: the map shows cars on out-lap, flying lap and in-lap, and hides them once they're in the pits. Natsoft
   doesn't flag that pit entry: an in-lap car past the last timing point and overdue at the line is treated as in

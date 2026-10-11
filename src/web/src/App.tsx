@@ -13,6 +13,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
 import { PitLog } from './components/PitLog'
 import { RaceControl } from './components/RaceControl'
+import { InsightsTicker } from './components/InsightsTicker'
 import { SettingsPanel } from './components/SettingsPanel'
 import { useTrack } from './tracks'
 import { isRace, isShootout, isSupercarsSession } from './session'
@@ -24,6 +25,8 @@ export default function App() {
   // Everything below shows the delayed update, so the tower, map and clock stay in sync with the broadcast.
   const { update, buffered } = useDelayedUpdate(latest, settings.delay)
   const [hoverId, setHoverId] = useState<string | null>(null)
+  // Cars named by the insight under the mouse, highlighted in the tower and on the map.
+  const [highlightIds, setHighlightIds] = useState<string[]>([])
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // null = live timing; otherwise the recorded session whose results are on screen.
@@ -80,15 +83,19 @@ export default function App() {
               <>
                 {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
                 <div className="layout">
+                  <div className="tower-column">
+                  {isRace(timing.session.type) && <InsightsTicker timing={timing} onHighlight={setHighlightIds} />}
                   <TimingTower
                     timing={timing}
                     simple={settings.simple}
                     columnPrefs={settings.columns}
                     hoverId={hoverId}
+                    highlightIds={highlightIds}
                     pinned={settings.pinned}
                     onHover={setHoverId}
                     onTogglePin={togglePinned}
                   />
+                  </div>
                   <aside className="map-panel">
                     {track ? (
                       <ErrorBoundary fallback={<div className="map-missing">The track map hit an error. Check the browser console.</div>}>
@@ -96,6 +103,7 @@ export default function App() {
                           track={track}
                           update={update}
                           hoverId={hoverId}
+                          highlightIds={highlightIds}
                           focusId={focusId}
                           pinned={settings.pinned}
                           rotation={settings.mapRotation[track.code] ?? 0}

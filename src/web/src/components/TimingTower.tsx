@@ -101,7 +101,7 @@ const COLUMNS: Record<string, Column> = {
           {(car.penalties ?? []).map((p, i) => (
             <span key={i} className="penalty-badge" title={`Penalty: ${p}`}>{penaltyBadge(p)}</span>
           ))}
-          {car.inPit && <span className="pit-badge">PIT</span>}
+          {car.inPit && <span className="pit-badge" title="In the pit lane">PIT{pitSeconds(car, now)}</span>}
         </>
       )
     },
@@ -180,6 +180,12 @@ function DriverMarker({ car }: { car: CarRow }) {
   )
 }
 
+/** " 23s": time in the pit lane so far, from the open pit stop's pit-in time; "" if we don't know it. */
+function pitSeconds(car: CarRow, now: number): string {
+  const stop = [...(car.pitLog ?? [])].reverse().find((s) => s.outAt === 0)
+  return stop && stop.inAt > 0 && now >= stop.inAt ? ` ${Math.floor(now - stop.inAt)}s` : ''
+}
+
 /** Small stopwatch for the fastest lap badge; uses the text colour so it suits the badge. */
 function StopwatchIcon() {
   return (
@@ -228,12 +234,14 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHover, onTogglePin }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], pinned, onHover, onTogglePin }: {
   timing: TimingSnapshot
   simple: boolean
   /** The viewer's detailed-mode layout per session kind (settings panel). */
   columnPrefs: Partial<Record<SessionKind, ColumnPrefs>>
   hoverId: string | null
+  /** Cars named by the insight under the mouse. */
+  highlightIds?: string[]
   pinned: string[]
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
@@ -268,7 +276,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, pinned, onHo
         <tbody>
           {cars.map((car, i) => {
             const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race ? i + 1 : car.position, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, minLaps, lapsLeft }
-            const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', pinned.includes(car.carNumber) && 'pinned']
+            const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr
                 key={car.id}
