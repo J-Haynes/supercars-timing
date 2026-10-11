@@ -9,6 +9,30 @@ export type CarMapState =
 /** Visual pacing allowance (see where it's used). Doesn't affect `overdue`/`stale`, which other logic relies on. */
 export const VISUAL_SLACK = 1.04
 
+/**
+ * How the map paces cars between timing points, per series.
+ * - slack: expect the stretch to take this much longer than last time (visual only)
+ * - skipAfter: a car this late (x the expected time, beyond 1) is assumed past the next point (its crossing skipped)
+ * - creepFrom: under green too, a late car eases in towards the next point from this fraction on
+ */
+export interface Pacing {
+  slack: number
+  skipAfter?: number
+  creepFrom?: number
+}
+
+/** Tuned at the Bathurst 1000 (Natsoft: few, long stretches). */
+export const SUPERCARS_PACING: Pacing = { slack: VISUAL_SLACK }
+
+/**
+ * F1's mini-sectors, tuned offline against real car positions (Position.z) in five 2025 races (Qatar, Sao Paulo,
+ * Mexico City, Austin, Singapore; scratch script, 11 Oct 2026). Against the Supercars settings: frozen dots 1.5 % ->
+ * 0.1 % of the time, average error under green 13.7 -> 12.5 m (the slack kept cars ~7 m behind), speed glitches
+ * 7.1 -> 5.9 %, safety car error 25.3 -> 26.1 m. Smarter pace guesses (recent pace ratio, cars just through the
+ * stretch, the car ahead) were no better than each car's own last time through the stretch.
+ */
+export const F1_PACING: Pacing = { slack: 1.0, skipAfter: 0.3, creepFrom: 0.9 }
+
 export interface CautionPace {
   /** Natsoft time the caution started. */
   since: number
@@ -81,35 +105,11 @@ function stretchTimes(cars: CarRow[], order: string[], since: number, now: numbe
 /** Out-lap pace (x typical) before the car has completed a stretch. Checked against Bathurst recordings. */
 const OUT_LAP_PACE = 1.3
 
-/**
- * Estimates where a car is on the lap.
- *
- * Natsoft only tells us the last timing point each car passed and when. We assume the car keeps the
- * pace it (or the field) had through the same segment last time, and convert "fraction of the segment's
- * time elapsed" into distance using the simulated speed profile, so cars slow for corners and speed up
- * on straights instead of moving at a constant rate.
- *
- * @param order point order: "M" then the snapshot's timing point IDs
- * @param now   estimated current Natsoft time (seconds)
- */
-export function carPosition(
-  car: CarRow, track: TrackModel, order: string[], fallback: number[], now: number,
-  /** Optional upper bound per segment (seconds). See TrackMap: used outside races. */
-  cap?: number[],
-  /** The track file's typical time per segment, used to estimate out-lap and caution pace. */
-  baseline?: number[],
-  /** While a safety car / FCY is out: when it started and the field's pace under it (see cautionPace). */
-  caution?: CautionPace,
-): CarMapState {
-  if (car.inPit) return { kind: 'pit' }
-  const i = order.indexOf(car.lastPoint)
-  const from = track.pointDistance.get(car.lastPoint)
-  if (i < 0 || from === undefined || !car.lastPointAt) return { kind: 'unknown' }
-
-  const nextId = order[(i + 1) % order.length]
-  let to = track.pointDistance.get(nextId) ?? from
-  if (to <= from) to += track.length // the segment crosses the control line
-
+/** Expected seconds for the stretch from point i (see carPosition for the rules). */
+function expectedSeconds(
+  car: CarRow, i: number, order: string[], fallback: number[], cap: number[] | undefined, baseline: number[] | undefined,
+  caution: CautionPace | undefined,
+): number {
   // segmentSeconds may be missing if the server is older than the frontend.
   let expected = car.segmentSeconds?.[i] || fallback[i] || 0
   // Outside races a car's "recent pace" is often an out-lap or cool-down lap. Capping it near the
@@ -151,28 +151,82 @@ export function carPosition(
       expected = Math.max(expected, baseline[i] * Math.min(Math.max(ratio, 1), 3))
     }
   }
+  return expected
+}
+
+/**
+ * Estimates where a car is on the lap.
+ *
+ * Natsoft only tells us the last timing point each car passed and when. We assume the car keeps the
+ * pace it (or the field) had through the same segment last time, and convert "fraction of the segment's
+ * time elapsed" into distance using the simulated speed profile, so cars slow for corners and speed up
+ * on straights instead of moving at a constant rate.
+ *
+ * @param order point order: "M" then the snapshot's timing point IDs
+ * @param now   estimated current Natsoft time (seconds)
+ */
+export function carPosition(
+  car: CarRow, track: TrackModel, order: string[], fallback: number[], now: number,
+  /** Optional upper bound per segment (seconds). See TrackMap: used outside races. */
+  cap?: number[],
+  /** The track file's typical time per segment, used to estimate out-lap and caution pace. */
+  baseline?: number[],
+  /** While a safety car / FCY is out: when it started and the field's pace under it (see cautionPace). */
+  caution?: CautionPace,
+  /** Pacing settings for the series (SUPERCARS_PACING or F1_PACING). */
+  pacing: Pacing = SUPERCARS_PACING,
+): CarMapState {
+  if (car.inPit) return { kind: 'pit' }
+  const i = order.indexOf(car.lastPoint)
+  const from = track.pointDistance.get(car.lastPoint)
+  if (i < 0 || from === undefined || !car.lastPointAt) return { kind: 'unknown' }
+
+  const expected = expectedSeconds(car, i, order, fallback, cap, baseline, caution)
   if (expected <= 0) return { kind: 'track', distance: track.wrap(from), stale: false, overdue: false }
 
   const elapsed = Math.max(0, now - car.lastPointAt)
+  const stale = elapsed > expected * 2.5
+  const overdue = elapsed > expected
   // Hold just short of the next point if the car is late: it hasn't crossed yet, so it can't be past it.
   // For the animation only, assume the stretch takes a little longer than last time: a car a few tenths slower
   // would otherwise reach 99% and wait there until its crossing arrives (measured at every timing point, median
   // 0.4 s). Arriving a few metres "early" is taken up by the smoothing in map/smoothing.ts instead.
-  const raw = elapsed / (expected * VISUAL_SLACK)
-  // Under a caution a car can be very late (SC pace varies by stretch). Rather than drive to 99% and freeze, it
-  // eases in towards the point from 85% on (same speed at 85%, slowing smoothly), and the smoothing glides it on
-  // when the crossing arrives. Green flag: unchanged.
-  const fraction = caution && raw > CAUTION_TUNING.creepFrom
-    ? Math.min(CAUTION_TUNING.creepFrom + (0.99 - CAUTION_TUNING.creepFrom) * (1 - Math.exp(-(raw - CAUTION_TUNING.creepFrom) / (0.99 - CAUTION_TUNING.creepFrom))), 0.99)
-    : Math.min(raw, 0.99)
-  const stale = elapsed > expected * 2.5
-  const overdue = elapsed > expected
+  const raw = elapsed / (expected * pacing.slack)
+  // F1 doesn't send every mini-sector (about 4 % are skipped): a car waiting for a crossing that never comes froze
+  // until the one after. Once it's this late, assume the crossing was skipped and carry on through the next stretch.
+  if (pacing.skipAfter !== undefined && raw > 1 + pacing.skipAfter) {
+    const j = (i + 1) % order.length
+    const nextFrom = track.pointDistance.get(order[j])
+    const nextExpected = expectedSeconds(car, j, order, fallback, cap, baseline, caution)
+    if (nextFrom !== undefined && nextExpected > 0) {
+      const raw2 = (elapsed - expected * pacing.slack * (1 + pacing.skipAfter)) / (nextExpected * pacing.slack)
+      return { kind: 'track', distance: place(track, nextFrom, order[(j + 1) % order.length], ease(raw2, caution, pacing)), stale, overdue }
+    }
+  }
+  return { kind: 'track', distance: place(track, from, order[(i + 1) % order.length], ease(raw, caution, pacing)), stale, overdue }
+}
 
-  // Same fraction of the *simulated* time through this segment, then back to distance.
+/**
+ * Fraction of the stretch to draw for `raw` (elapsed / expected). A late car eases in towards the next point from
+ * creepFrom on (same speed there, slowing smoothly) instead of driving to 99% and freezing; the smoothing glides it
+ * on when the crossing arrives. Under a caution always (SC pace varies by stretch); under green if the series' pacing
+ * says so.
+ */
+function ease(raw: number, caution: CautionPace | undefined, pacing: Pacing): number {
+  const from = caution ? CAUTION_TUNING.creepFrom : pacing.creepFrom
+  return from !== undefined && raw > from
+    ? Math.min(from + (0.99 - from) * (1 - Math.exp(-(raw - from) / (0.99 - from))), 0.99)
+    : Math.min(Math.max(raw, 0), 0.99)
+}
+
+/** Distance at `fraction` of the *simulated* time through the stretch from `from` to point `toId`. */
+function place(track: TrackModel, from: number, toId: string, fraction: number): number {
+  let to = track.pointDistance.get(toId) ?? from
+  if (to <= from) to += track.length // the segment crosses the control line
   const lap = track.lapSimTime
   const t0 = track.simTimeAt(from)
   const t1 = to > track.length ? lap + track.simTimeAt(to - track.length) : track.simTimeAt(to)
   const target = t0 + fraction * (t1 - t0)
   const distance = target > lap ? track.length + track.distanceAtSimTime(target - lap) : track.distanceAtSimTime(target)
-  return { kind: 'track', distance: track.wrap(distance), stale, overdue }
+  return track.wrap(distance)
 }

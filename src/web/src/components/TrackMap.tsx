@@ -1,9 +1,9 @@
-import { teamStyle } from '../series'
+import { isF1, teamStyle } from '../series'
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { CarRow, TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
 import { TrackModel, type Vec } from '../map/trackModel'
-import { carPosition, cautionPace } from '../map/carPosition'
+import { carPosition, cautionPace, F1_PACING, SUPERCARS_PACING } from '../map/carPosition'
 import { useSessionClock } from '../map/useSessionClock'
 import { cautionPeriods, flagKind, isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from '../map/calibrate'
@@ -169,7 +169,7 @@ export function TrackMap({ track, update, hoverId, highlightIds = [], focusId, p
           if (shootout && car.inPit) return null
           const inLap = shootout && car.lapsSincePit >= 2
           // In-laps are slow: don't cap them at racing pace.
-          const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap, baseline, caution)
+          const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap, baseline, caution, isF1 ? F1_PACING : SUPERCARS_PACING)
           if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) return null
           let p: Vec
           if (state.kind === 'track') {

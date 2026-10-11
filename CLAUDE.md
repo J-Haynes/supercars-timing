@@ -77,7 +77,7 @@ see "Next round" below.
 - `deploy/`: the systemd user service and its README (install, logs, Tailscale serve).
 - `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
   README has the Gold Coast checklist), `tools/F1TrackBuilder/build_track.py` (F1 track files from an archived
-  session's car positions; see its docstring).
+  session's car positions; see its docstring), `tools/F1MapEval/evalmap.py` (scores map placement against real positions).
 - `tests/SupercarsTiming.Natsoft.Tests`: xUnit, including `RecordingRegressionTests` on real recordings.
 - `docs/PROTOCOL.md` (the feed, field by field: **update it whenever you learn something**), `docs/PROTOCOL-F1.md`
   (the F1 feed), `docs/PLANNING.md`
@@ -223,6 +223,12 @@ the server in live mode by hand.
   Mini-sectors per sector differ by circuit (read from the data). Like every track file, they need the control line as timing point `M` at distance 0 (without it cars zipped a whole lap at the line). The pit lane is traced from cars' positions while
   `InPit` (Interlagos has a stray branch into the infield). Cars in the pits are drawn along it. Rebuild a circuit
   from its Practice 1 archive if the 2026 mini-sectors differ from 2025's (tower ids won't match the map's).
+- **Map pacing** (`F1_PACING` in `carPosition.ts`; Supercars keeps `SUPERCARS_PACING`): no slack, a car 30 % late
+  is assumed past a skipped mini-sector (F1 skips ~4 % of crossings; they froze dots), late cars ease in under green
+  too. Tuned with `tools/F1MapEval/evalmap.py`, which replays archived races (they include real positions) and scores
+  placements against them: measure any map change there first. Findings: the car's own last time through a
+  stretch beat smarter pace guesses; the big remaining lever is drawing the map a few seconds behind live
+  (interpolating between known crossings: 3 s halves speed glitches and cuts SC error 26 -> 17 m), not built.
 - **Car positions (Position.z) need an F1 TV login:** not used; see `docs/PLANNING.md` before building on it.
 
 ## Next round: Gold Coast 500 (23-25 Oct 2026)
