@@ -11,19 +11,25 @@ const trackTime = (t: number) => new Date(t * 1000).toISOString().slice(11, 19)
 export function RaceControl({ timing, limit = 12 }: { timing: TimingSnapshot; limit?: number }) {
   const messages = (timing.raceControl ?? []).slice(0, limit)
   const record = timing.session.lapRecord
-  const beaten = record && timing.best.lap && timing.best.lap < record.seconds
-    ? timing.cars.find((c) => Math.abs(c.bestLap - (timing.best.lap ?? 0)) < 0.0005)
-    : undefined
+  // Today's fastest lap. Natsoft's "record" (<E RI RC>) is the stored race lap record for this track and category,
+  // not today's: viewers read "Lap record: Will Brown" as the fastest lap, so both are labelled.
+  const fastest = timing.best.lap ? timing.cars.find((c) => Math.abs(c.bestLap - (timing.best.lap ?? 0)) < 0.0005) : undefined
+  const beaten = record && timing.best.lap && timing.best.lap < record.seconds ? fastest : undefined
 
   return (
     <section className="race-control" aria-label="Race control">
       <h2>Race control</h2>
+      {fastest && timing.best.lap && (
+        <div className="fastest-lap">
+          Fastest lap: <strong>{lapTime(timing.best.lap)}</strong> {fastest.driver} (#{fastest.carNumber}{fastest.bestLapNo ? `, lap ${fastest.bestLapNo}` : ''})
+        </div>
+      )}
       {record && (
         <div className={`lap-record${beaten ? ' beaten' : ''}`}>
           {beaten ? (
-            <>New lap record: <strong>{lapTime(timing.best.lap)}</strong> {beaten.driver} (was {lapTime(record.seconds)}, {record.driver})</>
+            <>New race lap record! Previous: {lapTime(record.seconds)}, {record.driver}</>
           ) : (
-            <>Lap record: <strong>{lapTime(record.seconds)}</strong> {record.driver} · {record.vehicle}</>
+            <>Race lap record: {lapTime(record.seconds)} {record.driver} · {record.vehicle}</>
           )}
         </div>
       )}

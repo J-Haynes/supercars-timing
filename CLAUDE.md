@@ -85,7 +85,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Gaps: practice/qualifying show `GI`/`GNI` (gap to the fastest lap). `GI` only changes at the control line, so in
   races the frontend works out live gaps at every timing point (`liveGaps.ts`): each car's crossing time is
   `lapStartAt` + its split (this lap or last lap), compared with the leader's / car ahead's crossing of the same
-  point on the same lap. Matches `GI` exactly at the line; falls back to `GI` for lapped cars or after a pit stop.
+  point on the same lap. Matches `GI` exactly at the line. On out-laps (no `lapStartAt` yet) the car's own crossing is
+  its message time; `GI` would still be the gap from the pit lane, before the stop. The gap column shows PIT / OUT
+  (`parkedAtLine`) until the next timing point; fallback is `LGI`/`LGNI` (they follow the road order), not `GI`.
   `LGI`/`LGNI` also update per timing point but are often out of order with the positions (2.2 vs 0.2 inversions per
   check, Bathurst 1000 2026), so they're kept in the model but not shown.
 - Sector fields reset to 0 at the start of a lap. 0 means "no time yet" everywhere.
@@ -156,7 +158,9 @@ Read `docs/PROTOCOL.md` before touching parsing. The traps:
 - Pit stop log (`PitLog.tsx`, under the map in races): from `CarRow.PitLog` (`PI` in, `PT` = pit-lane seconds out,
   driver swap attached to the stop if it arrives up to 120 s after the exit).
 - Race control (`RaceControl.tsx`, under the map): `TimingSnapshot.RaceControl` from `<G R>` (newest first, last 50),
-  with the lap record (`SessionInfo.LapRecord`, from `<E RI RC RV>`) on top, purple if beaten. Penalties are parsed
+  with today's fastest lap on top and, under it, the stored race lap record (`SessionInfo.LapRecord`, `<E RI RC RV>`;
+  not today's lap, so it's labelled "Race lap record"), purple if beaten. Races also get a purple stopwatch badge on
+  the fastest-lap car in the tower. Penalties are parsed
   from the text (`TimingSnapshot.Penalty()`, best effort) into `CarRow.Penalties` and badged in the tower ("+5s").
   Race time in the header = now − `SessionInfo.GreenAt` (first green flag).
 - Tips live in `tips.ts` (one string each) and render in `TipsPanel` at the bottom of the page; closing is remembered.

@@ -5,7 +5,7 @@ import { MiniSectors } from './MiniSectors'
 import { isRace, minDriverLaps, raceLaps } from '../session'
 import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
 import { startPosition } from '../startingGrid'
-import { liveGap, roadOrder } from '../liveGaps'
+import { liveGap, parkedAtLine, roadOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
 
 interface Ctx {
@@ -50,9 +50,18 @@ const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
 // tell (e.g. just out of the pits). Practice/qualifying: GI is the gap to the fastest lap, so it stays as is.
 const gapOf = (c: Ctx) => {
   const { car } = c
-  const gap = c.race && car.gapLaps === 0 && c.leader ? liveGap(car, c.leader, c.order) : null
-  const int = c.race && car.intervalLaps === 0 && c.ahead ? liveGap(car, c.ahead, c.order) : null
-  return { gap: gap ?? car.gap, laps: car.gapLaps, int: int ?? car.interval, intLaps: car.intervalLaps }
+  if (!c.race) return { gap: car.gap, laps: car.gapLaps, int: car.interval, intLaps: car.intervalLaps, status: '' }
+  // In the pit lane, or out of it but not yet at a timing point: no meaningful gap until the next point.
+  const status = car.inPit ? 'PIT' : parkedAtLine(car) ? 'OUT' : ''
+  const gap = car.gapLaps === 0 && c.leader ? liveGap(car, c.leader, c.order) : null
+  const int = car.intervalLaps === 0 && c.ahead ? liveGap(car, c.ahead, c.order) : null
+  // Fallback: Natsoft's per-timing-point gaps (LGI/LGNI follow the road order), not the once-a-lap GI/GNI.
+  const liveOk = car.liveGapLaps === 0 && car.liveGap > 0
+  return {
+    gap: gap ?? (liveOk ? car.liveGap : car.gap), laps: car.gapLaps,
+    int: int ?? (car.liveIntervalLaps === 0 && car.liveInterval > 0 ? car.liveInterval : car.interval), intLaps: car.intervalLaps,
+    status,
+  }
 }
 
 const COLUMNS: Record<string, Column> = {
@@ -75,7 +84,7 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple }) => {
+    cell: ({ car, now, simple, race, best }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
@@ -85,6 +94,10 @@ const COLUMNS: Record<string, Column> = {
           {car.driver}
           {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
           {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
+          {/* Races only: in practice and qualifying the fastest lap is simply P1. */}
+          {race && best.lap && Math.abs(car.bestLap - best.lap) < 0.0005 && (
+            <span className="fastest-badge" title={`Fastest lap: ${lapTime(car.bestLap)}`} aria-label="Fastest lap"><StopwatchIcon /></span>
+          )}
           {(car.penalties ?? []).map((p, i) => (
             <span key={i} className="penalty-badge" title={`Penalty: ${p}`}>{penaltyBadge(p)}</span>
           ))}
@@ -104,13 +117,13 @@ const COLUMNS: Record<string, Column> = {
   gap: {
     key: 'gap', header: 'Gap', numeric: true,
     className: (race) => (race ? 'primary' : ''),
-    cell: (c) => { const g = gapOf(c); return gapText(g.gap, g.laps, c.isFirst) },
+    cell: (c) => { const g = gapOf(c); return g.status && !c.isFirst ? <span className="gap-status">{g.status}</span> : gapText(g.gap, g.laps, c.isFirst) },
   },
   int: {
     key: 'int', header: 'Int', numeric: true,
     cell: (c) => {
       const g = gapOf(c)
-      if (c.isFirst) return ''
+      if (c.isFirst || g.status) return ''
       if (g.intLaps > 0) return `+${g.intLaps}L`
       const s = seconds(g.int)
       return s && `+${s}`
@@ -164,6 +177,18 @@ function DriverMarker({ car }: { car: CarRow }) {
       title={primary ? 'Primary driver in the car' : 'Co-driver in the car'}
       aria-label={primary ? 'Primary driver' : 'Co-driver'}
     />
+  )
+}
+
+/** Small stopwatch for the fastest lap badge; uses the text colour so it suits the badge. */
+function StopwatchIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">
+      <rect x="6" y="0.5" width="4" height="1.8" rx="0.6" fill="currentColor" />
+      <circle cx="8" cy="9.3" r="5.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 9.3V5.9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <path d="M12.6 3.6l1.2-1.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   )
 }
 

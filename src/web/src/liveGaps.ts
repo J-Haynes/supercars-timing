@@ -30,11 +30,16 @@ function crossingTime(car: CarRow, order: string[], point: string, lapNo: number
   return null
 }
 
-/** Seconds `car` is behind `ref` at the last timing point it crossed, or null when we can't tell. */
+/**
+ * Seconds `car` is behind `ref` at the last timing point it crossed, or null when we can't tell.
+ * The car's own crossing falls back to its message time: on an out-lap it has no lap start (that's set at its next
+ * line crossing), and Natsoft's GI is still the gap from the pit lane, before the stop (Seton showed +5.6 s while
+ * actually 53 s behind).
+ */
 export function liveGap(car: CarRow, ref: CarRow, order: string[]): number | null {
-  if (car.inPit || !car.lastPoint || car.id === ref.id) return null
+  if (car.inPit || parkedAtLine(car) || !car.lastPoint || car.id === ref.id) return null
   const lapNo = car.laps + 1
-  const mine = crossingTime(car, order, car.lastPoint, lapNo)
+  const mine = crossingTime(car, order, car.lastPoint, lapNo) ?? (car.lastPointAt || null)
   const theirs = crossingTime(ref, order, car.lastPoint, lapNo)
   if (mine === null || theirs === null || mine < theirs) return null
   return mine - theirs
@@ -45,7 +50,7 @@ export function liveGap(car: CarRow, ref: CarRow, order: string[]): number | nul
  * point). It's effectively parked at the line, so every car on the same lap that crosses the line afterwards has
  * passed it. LapsSincePit only counts line crossings out of the pits, so 0 + "M" means the last crossing was in it.
  */
-function parkedAtLine(car: CarRow): boolean {
+export function parkedAtLine(car: CarRow): boolean {
   return car.lastPoint === 'M' && (car.inPit || car.lapsSincePit === 0)
 }
 
