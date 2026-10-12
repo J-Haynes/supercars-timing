@@ -283,6 +283,11 @@ main { flex: 1; padding: 0 16px 24px; }
 .menu-head button { background: none; border: 0; color: var(--muted); font-size: 22px; cursor: pointer; }
 .menu h2 { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin: 20px 0 8px; }
 .menu h3 { font-size: 14px; margin: 12px 0 4px; }
+.menu-meeting { display: flex; align-items: baseline; gap: 6px; width: 100%; padding: 6px 4px; background: none; border: 0; border-radius: 6px;
+  color: var(--text); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.menu-meeting:hover { background: #1a2129; }
+.menu-chevron { width: 12px; color: var(--muted); }
+.menu-count { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; white-space: nowrap; }
 .menu-day { color: var(--muted); font-size: 12px; margin: 8px 0 4px; }
 .menu-muted { color: var(--muted); font-size: 13px; }
 .menu-item {

@@ -31,6 +31,16 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
   }, [onClose])
 
   const byMeeting = groupBy(sessions ?? [], (s) => s.meeting || 'Other')
+  // Each meeting's sessions are folded under its name; the meeting on screen starts unfolded.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const activeMeeting = sessions?.find((s) => s.id === resultsId)?.meeting
+  const isOpen = (meeting: string) => expanded.has(meeting) || meeting === activeMeeting
+  const toggle = (meeting: string) => setExpanded((prev) => {
+    const next = new Set(prev)
+    if (isOpen(meeting)) next.delete(meeting)
+    else next.add(meeting)
+    return next
+  })
 
   return (
     <>
@@ -55,8 +65,14 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
           {sessions?.length === 0 && <p className="menu-muted">No results yet. Supercars sessions appear here once they've been recorded.</p>}
           {Object.entries(byMeeting).map(([meeting, list]) => (
             <div key={meeting} className="menu-group">
-              <h3>{meeting.replace(/^\d{4}\s+/, '')}</h3>
-              {Object.entries(groupBy(list, (s) => dayLabel(s.start))).map(([day, daySessions]) => (
+              <h3>
+                <button type="button" className="menu-meeting" aria-expanded={isOpen(meeting)} onClick={() => toggle(meeting)}>
+                  <span className="menu-chevron" aria-hidden>{isOpen(meeting) ? '▾' : '▸'}</span>
+                  {meeting.replace(/^\d{4}\s+/, '')}
+                  <span className="menu-count">{list.length} {list.length === 1 ? 'session' : 'sessions'}</span>
+                </button>
+              </h3>
+              {isOpen(meeting) && Object.entries(groupBy(list, (s) => dayLabel(s.start))).map(([day, daySessions]) => (
                 <div key={day}>
                   <div className="menu-day">{day}</div>
                   {daySessions.map((s) => {
