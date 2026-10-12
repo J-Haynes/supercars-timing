@@ -18,6 +18,8 @@ export interface Settings {
   /** The 3D map (TrackMap3D, the default) or the flat map. Named mapView, not the earlier mapMode, so browsers that
    * saved mapMode: '2d' while 2D was the default start in 3D. */
   mapView: '3d' | '2d'
+  /** Map column width in px on wide screens (dragged with ColumnSplitter); null = automatic. */
+  mapWidth: number | null
   /** 3D map camera: turn slowly around the track, or chase `followCar`. */
   mapCamera: 'orbit' | 'follow'
   /** Car number the 3D camera follows (null: the leader). */
@@ -28,7 +30,7 @@ export interface Settings {
 
 // Each series keeps its own settings (column layouts differ).
 const KEY = isF1 ? 'supercars-timing:f1-settings' : 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapCamera: 'orbit', followCar: null, focusCard: 'auto', columns: {} }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, mapCamera: 'orbit', followCar: null, focusCard: 'auto', columns: {} }
 
 function load(): Settings {
   try {

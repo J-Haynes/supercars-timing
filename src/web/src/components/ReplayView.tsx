@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
 import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
@@ -6,6 +6,7 @@ import { cautionPeriods, isRace, leaderLap } from '../session'
 import { TimingTower } from './TimingTower'
 import { DriverDialog, type DriverTab } from './DriverDialog'
 import { MapView } from './MapView'
+import { ColumnSplitter } from './ColumnSplitter'
 import { SafetyCarBanner } from './SafetyCarBanner'
 import { RaceControl } from './RaceControl'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -151,7 +152,8 @@ export function ReplayView({ session, onBack }: { session: RecordedSession; onBa
       </div>
 
       {!update ? <p className="menu-muted">Loading replay…</p> : (
-        <div className="layout">
+        <div className={`layout${settings.mapWidth ? ' sized' : ''}`}
+          style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
           <div className="tower-column">
             {isRace(update.timing.session.type) && <SafetyCarBanner timing={update.timing} />}
             <TimingTower timing={update.timing} simple={settings.simple} columnPrefs={settings.columns} hoverId={hoverId}
@@ -164,6 +166,7 @@ export function ReplayView({ session, onBack }: { session: RecordedSession; onBa
                 onChange={(carId, compareId, tab) => setDriverView({ carId, compareId, tab })} />
             )}
           </div>
+          <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
           <aside className="map-panel">
             {track ? (
               <ErrorBoundary fallback={<div className="map-missing">The track map hit an error.</div>}>

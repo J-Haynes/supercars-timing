@@ -101,16 +101,27 @@ main { flex: 1; padding: 0 16px 24px; }
 /* Layout: tower + map side by side on wide screens */
 .layout { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
 .map-panel { order: -1; }
+/* The drag handle between tower and map (ColumnSplitter): only on wide screens, where they sit side by side. */
+.col-splitter { display: none; }
 @media (min-width: 1500px) {
-  .layout { grid-template-columns: minmax(0, 1fr) minmax(380px, 30%); align-items: start; }
+  /* Three columns: tower, the 16 px handle (it is the gap), map. */
+  .layout { grid-template-columns: minmax(0, 1fr) 16px minmax(380px, 30%); column-gap: 0; align-items: start; }
+  /* A width the viewer dragged to, kept within limits as the window changes (the tower keeps at least 520 px). */
+  .layout.sized, .layout.simple.sized { grid-template-columns: minmax(0, 1fr) 16px clamp(380px, var(--map-width), calc(100% - 536px)); }
   .map-panel { order: 0; }
+  .col-splitter { display: block; position: sticky; top: 0; align-self: stretch; height: 100%; min-height: 100vh; cursor: col-resize; touch-action: none; }
+  .col-splitter::after { content: ''; position: absolute; top: 0; bottom: 0; left: 7px; width: 2px; border-radius: 1px; background: transparent; transition: background .15s; }
+  .col-splitter:hover::after, .col-splitter.dragging::after, .col-splitter:focus-visible::after { background: var(--line); }
+  .col-splitter.dragging::after { background: var(--muted); }
+  .col-splitter:focus-visible { outline: none; }
+  body:has(.col-splitter.dragging) { cursor: col-resize; user-select: none; }
   /* The left column scrolls with the page until its bottom reaches the bottom of the screen, then stays there while
      the taller right column keeps scrolling (--stick-height comes from useStickToBottom). */
   .tower-column { position: sticky; top: min(12px, calc(100vh - var(--stick-height, 0px) - 12px)); align-self: start; }
   /* Simple mode has few columns: the tower only takes the width its columns need and the map gets the rest
      (at 1900 px the tower was 1280 px wide, mostly empty, and the map 540 px). The ticker and the other panels in the
      column don't count towards its width (contain), so the column is as wide as the table. */
-  .layout.simple { grid-template-columns: fit-content(1100px) minmax(380px, 1fr); }
+  .layout.simple { grid-template-columns: fit-content(1100px) 16px minmax(380px, 1fr); }
   .layout.simple .tower-column > :not(.tower-wrap) { contain: inline-size; }
   /* The charts scale with their width: in the wider column their text doubled. Keep them their usual height. */
   .layout.simple .panel-charts .line-chart:not(.zoomable) svg { max-height: 300px; }

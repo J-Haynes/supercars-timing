@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { useTiming } from './useTiming'
 import { useDelayedUpdate } from './useDelayedUpdate'
 import { useSettings } from './settings'
@@ -7,6 +7,7 @@ import { Controls } from './components/Controls'
 import { TimingTower } from './components/TimingTower'
 import { DriverDialog, type DriverTab } from './components/DriverDialog'
 import { MapView } from './components/MapView'
+import { ColumnSplitter } from './components/ColumnSplitter'
 import { TipsPanel } from './components/TipsPanel'
 import { Menu } from './components/Menu'
 import { ResultsView } from './components/ResultsView'
@@ -108,7 +109,8 @@ export default function App() {
               <>
                 {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
                 <MobileTabs tab={mobileTab} race={isRace(timing.session.type)} onTab={(t) => { setMobileTab(t); saveMobileTab(t) }} />
-                <div className={settings.simple ? 'layout simple' : 'layout'} data-tab={mobileTab}>
+                <div className={`layout${settings.simple ? ' simple' : ''}${settings.mapWidth ? ' sized' : ''}`} data-tab={mobileTab}
+                  style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
                   <div className="tower-column" ref={towerColumn}>
                   {isRace(timing.session.type) && <SafetyCarBanner timing={timing} />}
                   {isRace(timing.session.type) && <InsightsTicker timing={timing} onHighlight={setHighlightIds} />}
@@ -134,6 +136,7 @@ export default function App() {
                     onOpen={() => updateSettings({ tipDismissed: false })}
                   />
                   </div>
+                  <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
                   <aside className="map-panel">
                     <div className="panel-map">
                     {track ? (

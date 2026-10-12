@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { TimingUpdate } from '../types'
 import { eventStart, sessionTime, type UpcomingEvent } from '../calendar'
 import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
 import { MapView } from './MapView'
+import { ColumnSplitter } from './ColumnSplitter'
 import { ErrorBoundary } from './ErrorBoundary'
 import { isF1, SERIES_LABEL, SERIES } from '../series'
 
@@ -48,7 +49,8 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
         </div>
         <button type="button" className="link-button" onClick={onLive}>Back to live timing</button>
       </div>
-      <div className="layout">
+      <div className={`layout${settings.mapWidth ? ' sized' : ''}`}
+        style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
         <section className="event-sessions">
           <h3>{SERIES_LABEL[SERIES]} sessions <span className="ladder-live">provisional, local track time (UTC{event.utcOffset})</span></h3>
           {sessions.length === 0 ? (
@@ -75,6 +77,7 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
             <p className="chart-note">Times from <a href={event.sessionsSource} target="_blank" rel="noreferrer">{new URL(event.sessionsSource).hostname.replace(/^www\./, '')}</a>; they can change before the weekend.{isF1 && event.trackCode ? ' The map was built from F1\'s recorded car positions at this circuit.' : ''} Live timing appears automatically when a session starts.</p>
           )}
         </section>
+        <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
         <aside className="map-panel">
           {track ? (
             <ErrorBoundary fallback={<div className="map-missing">The track map hit an error.</div>}>
