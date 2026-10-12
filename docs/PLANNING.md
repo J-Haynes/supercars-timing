@@ -158,6 +158,23 @@ every race's "Sector and Lap Times" report: sectors and lap times per car, in-la
 - F1: `tools/PitLoss/f1_archive.py <year>` downloads PitStopSeries and TimingData for each circuit we have a map for
   (cached in `data/recordings/f1-archive/`) and prints the table above.
 
+**Loose ends (12 Oct 2026):**
+- F1 `PRIORS` come from 2025. The 2026 Singapore GP is in our own recording (`data/recordings/f1/`): replay it on the
+  demo server, save snapshots and update `F1-61`; do the same for each 2026 race as it's run.
+- The server doesn't read F1's `PitStopSeries` (pit-lane and stationary time per stop, live): it would give exact F1
+  stop costs and stationary times for a pit stop leaderboard. A server change (restart needed).
+- Pit lane speed limits for the Finals tracks weren't found for 2026; they'd allow an estimate before any stop.
+- The demo server (:5081) isn't on the tailnet; `tailscale serve --https=8443 http://localhost:5081` would add it
+  (the owner's call).
+
+## Known limits of the 3D maps (12 Oct 2026)
+
+- OSM landmark names are imperfect (Singapore's "Samsung" and "HSBC" are signs on buildings); Austin, Interlagos,
+  Lusail and Sandown have none.
+- Bathurst's trees are only what OSM maps (97 trees, tree rows, 13 woods): the real mountain has more cover. The
+  hillside sign reads MOUNT PANORAMA (OSM's 13 letters); grandstand heights are assumed (9 m).
+- Not yet tried: the Follow camera at the Gold Coast, the 3D map on a real phone's GPU.
+
 ## Ideas not built yet
 
 From the Bathurst brainstorm (built: safety car mode, charts, battle graph, finals ladder, phone layout, regression
