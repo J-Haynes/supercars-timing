@@ -24,7 +24,7 @@ Gold Coast (no recording yet, so provisional):
 ```bash
 dotnet run --project tools/TrackBuilder -- \
   --code SURF --relation 9325885 --name "Surfers Paradise" --match SURFERS \
-  --control-way "Gold Coast Highway" --lap-time 71 --elevation none
+  --control-way "Gold Coast Highway" --lap-time 71 --elevation none --scenery 900
 ```
 
 Bathurst (from a recording):
@@ -47,6 +47,7 @@ dotnet run --project tools/TrackBuilder -- \
 | `--sessions` | Only learn pace from sessions whose name contains this (default `Supercars`) |
 | `--control-node` | OSM node ID for the control line if there's no `Finish Line`/`Start Line` node |
 | `--osm` | OSM cache file (default `tools/TrackBuilder/osm/<CODE>.osm.json`; downloaded if missing) |
+| `--scenery` | Metres around the circuit to fetch scenery for the 3D map (e.g. `900`); see "Scenery" |
 | `--elevation` | Height cache (default `tools/TrackBuilder/elevation/<CODE>.json`; looked up if missing), or `none` |
 | `--out` | Output file (default `src/web/src/tracks/<CODE>.json`) |
 
@@ -86,6 +87,23 @@ map draws it as a side view of the lap with the cars on it (`ElevationStrip.tsx`
   Look at the raw cache before trusting heights on any circuit lined with buildings.
 - F1 tracks have no heights yet: they aren't geolocated, so OpenTopoData can't be asked. F1's archived car
   positions may include a height (`Z`); `tools/F1TrackBuilder` could use that.
+
+## Scenery (3D map)
+
+With `--scenery <metres>`, TrackBuilder also writes `src/web/src/tracks/scenery/<CODE>.json`: buildings, water,
+beaches and parks within that distance of the circuit, from OpenStreetMap through the Overpass API (with mirrors
+if the main server is busy; the raw answer is cached in `tools/TrackBuilder/osm/<CODE>.scenery.osm.json`,
+git-ignored, so delete it to fetch fresh data). The 3D map loads it only when it's showing that track.
+
+- **Rings:** multipolygons (the Nerang River with the canal islands as holes) are joined from their member ways.
+- **The sea:** OSM maps it only as a coastline line (land on the left, water on the right), so TrackBuilder closes
+  the coastline round the box edge on its water side.
+- **Heights:** OSM `height`, else `building:levels` × 3.2 m, else an assumed 2 storeys (`assumed: true`). At Surfers
+  Paradise (Oct 2026): 2,052 buildings, 43 with a height, 1,069 with levels, 940 assumed (mostly canal-side houses).
+  The council's open "building height" layer (data.gov.au) is a planning limit, not a measured height, so it isn't used.
+- Scenery assumes a flat track (buildings stand at height 0). Add ground heights before using it with `elevation`.
+- Checked against the circuit: our Surfers Paradise centreline is 2,985 m; snaplap gives "about 2.96 km"
+  (https://www.snaplap.net/surfers-paradise-street-circuit/).
 
 ## Adding a circuit
 
@@ -129,7 +147,7 @@ grep -o 'T C=\\u0022[A-Z]*' data/recordings/<P1 file>.jsonl | head -1   # record
 # 2. Rebuild from the recording (replace SURF with the real code if it differs)
 dotnet run --project tools/TrackBuilder -- \
   --code SURF --relation 9325885 --name "Surfers Paradise" --match SURFERS \
-  --control-way "Gold Coast Highway" --elevation none --recording data/recordings/<P1 file>.jsonl
+  --control-way "Gold Coast Highway" --elevation none --scenery 900 --recording data/recordings/<P1 file>.jsonl
 
 # 3. Build the site (the server serves it; no restart needed) and check the map during the next session
 cd src/web && npm run build

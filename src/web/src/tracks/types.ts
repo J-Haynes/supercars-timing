@@ -24,3 +24,21 @@ export interface TrackDefinition {
   labels: { name: string; distance: number }[]
   pitLane: [number, number][]
 }
+
+/** Scenery for the 3D map (TrackBuilder --scenery, tracks/scenery/<CODE>.json), in the track file's metres. */
+export interface SceneryDefinition {
+  attribution: string
+  /** [minX, minY, maxX, maxY]: everything is clipped to this box around the circuit. */
+  box: [number, number, number, number]
+  /** Footprint rings with height and base in metres; `assumed` = no height or levels in OSM (drawn 2 storeys). */
+  buildings: { h: number; min: number; ring: [number, number][]; assumed: boolean }[]
+  /** Lakes, rivers and the sea. */
+  water: SceneryArea[]
+  beach: SceneryArea[]
+  parks: SceneryArea[]
+}
+
+export interface SceneryArea {
+  outer: [number, number][]
+  holes: [number, number][][]
+}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
+import { useScenery } from '../tracks'
 import { TrackModel } from '../map/trackModel'
 import { useCarPlacement } from '../map/useCarPlacement'
 import { HEIGHT_SCALE, TrackScene, type CameraMode } from '../map/scene3d'
@@ -49,6 +50,10 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
     }
     return () => { scene.current?.dispose(); scene.current = null }
   }, [geometry])
+
+  // Buildings, water and beaches, for tracks that have them (TrackBuilder --scenery).
+  const scenery = useScenery(track.code)
+  useEffect(() => { scene.current?.setScenery(scenery) }, [scenery, geometry])
 
   const leader = cars.find((c) => c.position === 1)
   const followed = (followCar && cars.find((c) => c.carNumber === followCar)) || leader
@@ -105,7 +110,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
         {track.name} · 3D · positions estimated between timing points
         {track.elevation?.length ? ` · heights ×${HEIGHT_SCALE}` : ' · no height data for this track'}
         {camera === 'orbit' ? ' · drag to turn, scroll or pinch to zoom' : ` · following ${followed ? `#${followed.carNumber} ${followed.driver}` : 'the leader'}`}
-        {' · '}double-click a car to pin it · {track.source.attribution}
+        {' · '}double-click a car to pin it · {track.source.attribution}{scenery ? ` · ${scenery.attribution}` : ''}
       </div>
     </div>
   )

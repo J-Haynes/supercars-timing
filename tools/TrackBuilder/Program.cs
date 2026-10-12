@@ -17,6 +17,8 @@ if (!opt.TryGetValue("code", out var code) || !opt.TryGetValue("relation", out v
           --match <text>         Also use this file for Natsoft track names containing this text (e.g. "SURFERS")
           --sessions <text>      Only learn timing from sessions containing this (default: "Supercars")
           --osm <file>           OSM cache (default: tools/TrackBuilder/osm/<CODE>.osm.json; downloaded if missing)
+          --scenery <metres>     Also write scenery for the 3D map (buildings, water, beach, sea from OSM via Overpass)
+                                 for this far around the circuit, to src/web/src/tracks/scenery/<CODE>.json
           --elevation <file>     Height cache (default: tools/TrackBuilder/elevation/<CODE>.json; looked up if missing),
                                  or "none" for no heights (flat tracks among buildings, where SRTM shows rooftops)
           --control-node <id>    OSM node for the timing control line (default: node named "Finish Line", then "Start Line")
@@ -137,7 +139,18 @@ if (elevation is not null)
 }
 else Console.WriteLine("Elevation: none (--elevation none)");
 
-// 7. Pit lane polyline
+// 7. Scenery for the 3D map (optional): buildings, water, beaches and the sea around the circuit
+if (opt.TryGetValue("scenery", out var sceneryMargin))
+{
+    var scenery = await Scenery.BuildAsync(samples, projection, double.Parse(sceneryMargin, CultureInfo.InvariantCulture),
+        Path.Combine(root, $"tools/TrackBuilder/osm/{code}.scenery.osm.json"));
+    var sceneryPath = Path.Combine(Path.GetDirectoryName(outPath)!, "scenery", $"{code}.json");
+    Directory.CreateDirectory(Path.GetDirectoryName(sceneryPath)!);
+    await File.WriteAllTextAsync(sceneryPath, JsonSerializer.Serialize(scenery) + "\n");
+    Console.WriteLine($"Wrote {Path.GetRelativePath(root, sceneryPath)} ({new FileInfo(sceneryPath).Length / 1024} KB)");
+}
+
+// 8. Pit lane polyline
 var pitIds = osm.PitLaneWays.Count > 0 ? OsmCircuit.Chain(osm.PitLaneWays) : [];
 
 static double R(double v) => Math.Round(v, 1);

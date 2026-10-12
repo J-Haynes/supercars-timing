@@ -75,6 +75,8 @@ see "Next round" below.
     Natsoft track code with name fallback (`tracks/manifest.json`). `MOUN` is real; `SURF` (Gold Coast) is provisional.
     Track files may carry `elevation` (smoothed SRTM heights; `MOUN` only, see TrackBuilder README "Elevation"),
     drawn by `ElevationStrip.tsx` under the map with the cars the map placed that frame.
+    `tracks/scenery/<CODE>.json` (TrackBuilder `--scenery`; `SURF` only): OSM buildings, water, beach, parks and the
+    sea for the 3D map, loaded lazily by `useScenery`.
 - `src/SupercarsTiming.Server/F1` (F1 lives in the server project): `F1Client` (SignalR to
   livetiming.formula1.com), `F1Message` + `F1Recording` (our JSONL recordings and F1's archive folders), `F1State`
   (merges F1's patches, works out mini-sector crossings, laps, pit stops, flags; builds the same `TimingSnapshot`),
@@ -257,7 +259,7 @@ the server in live mode by hand.
 - **Before the weekend:** set `FINALS_ROUNDS[0].cupWinners.enduro` in `finals.ts` (Enduro Cup winner, +25) and check the
   Bathurst result our Finals seeding uses against the official one (post-race penalties aren't in the feed). Add a
   `startingGrid.ts` entry for each race once the grid is known (or send grid positions from the server).
-- **After Practice 1:** rebuild the `SURF` map from the recording (checklist in `tools/TrackBuilder/README.md`;
+- **After Practice 1:** rebuild the `SURF` map from the recording (keep `--elevation none --scenery 900`) (checklist in `tools/TrackBuilder/README.md`;
   Natsoft's track code there is still a guess). Check that the Gold Coast feed behaves like Bathurst (flags, `<E L>`).
 - `championship.ts` only knows the Bathurst 1000; the Finals ladder takes over at Finals rounds.
 

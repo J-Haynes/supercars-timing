@@ -26,3 +26,6 @@ data/recordings/*
 .vscode/*
 !.vscode/extensions.json
 .DS_Store
+
+# Raw Overpass answers for TrackBuilder --scenery (large; fetched again when missing)
+tools/TrackBuilder/osm/*.scenery.osm.json

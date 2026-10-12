@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import type { SceneryArea, SceneryDefinition } from '../tracks/types'
 import type { CarRow } from '../types'
 import type { TrackModel, Vec } from './trackModel'
 import type { Placement } from './useCarPlacement'
@@ -24,6 +26,8 @@ const DOT_PER_DISTANCE = 100
 const BG = 0x12161b // --panel
 const MAKER_COLOURS: Record<string, number> = { ford: 0x2f6fdf, chevrolet: 0xf28c1b, toyota: 0xe5172f }
 const EDGE = 0x5d6976
+/** Scenery colours: muted, so the track and the cars stay the brightest things on screen. */
+const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x3a4450 }
 const YELLOW = 0xffd23f
 
 export type CameraMode = 'orbit' | 'follow'
@@ -46,6 +50,8 @@ export class TrackScene {
   private readonly centre: Vec
   private readonly radius: number
   private frame = 0
+  private grid: THREE.GridHelper | null = null
+  private scenery: THREE.Group | null = null
   private last = performance.now()
   private mode: CameraMode = 'orbit'
   private followId: string | null = null
@@ -124,6 +130,50 @@ export class TrackScene {
     this.edges.color.setHex(caution ? YELLOW : EDGE)
   }
 
+  /**
+   * Buildings, water, beaches and parks around the track (tracks/scenery/<CODE>.json). The flat layers don't write
+   * depth and are drawn in a fixed order (parks, beach, water), so the thin gaps between them never flicker; the
+   * track and buildings still draw over them. The grid is hidden: the scenery gives the sense of scale.
+   */
+  setScenery(scenery: SceneryDefinition | null) {
+    if (this.scenery) {
+      this.scene.remove(this.scenery)
+      disposeTree(this.scenery)
+      this.scenery = null
+    }
+    if (this.grid) this.grid.visible = !scenery
+    if (!scenery) return
+    const group = new THREE.Group()
+    const layers: [SceneryArea[], number, number][] = [[scenery.parks, SCENERY.park, 1], [scenery.beach, SCENERY.beach, 2], [scenery.water, SCENERY.water, 3]]
+    for (const [areas, colour, order] of layers) {
+      const shapes = areas.filter((a) => a.outer.length > 2).map((a) => {
+        const shape = new THREE.Shape(a.outer.map(([x, y]) => this.flat(x, y)))
+        for (const h of a.holes) shape.holes.push(new THREE.Path(h.map(([x, y]) => this.flat(x, y))))
+        return shape
+      })
+      if (!shapes.length) continue
+      const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shapes), new THREE.MeshBasicMaterial({ color: colour, depthWrite: false }))
+      mesh.rotation.x = -Math.PI / 2
+      mesh.position.y = -0.4 + order * 0.05
+      mesh.renderOrder = order
+      group.add(mesh)
+    }
+    // Buildings: one extruded prism each, merged into a single mesh (2,000 separate meshes would be slow).
+    const prisms = scenery.buildings.filter((b) => b.ring.length > 2).map((b) => {
+      const g = new THREE.ExtrudeGeometry(new THREE.Shape(b.ring.map(([x, y]) => this.flat(x, y))), { depth: b.h - b.min, bevelEnabled: false })
+      g.rotateX(-Math.PI / 2)
+      g.translate(0, b.min, 0)
+      return g
+    })
+    if (prisms.length) {
+      const merged = mergeGeometries(prisms)
+      prisms.forEach((g) => g.dispose())
+      if (merged) group.add(new THREE.Mesh(merged, new THREE.MeshStandardMaterial({ color: SCENERY.building, roughness: 0.95 })))
+    }
+    this.scenery = group
+    this.scene.add(group)
+  }
+
   /** Moves every car to this frame's placement; cars that aren't placed are hidden. */
   setCars(placements: Placement[], tagged: Set<string>) {
     this.tagged = tagged
@@ -158,13 +208,7 @@ export class TrackScene {
     canvas.removeEventListener('pointermove', this.onPointerMove)
     canvas.removeEventListener('pointerleave', this.onPointerLeave)
     canvas.removeEventListener('dblclick', this.onDoubleClick)
-    this.scene.traverse((o) => {
-      if (o instanceof THREE.Mesh || o instanceof THREE.Line) {
-        o.geometry.dispose()
-        const m = o.material as THREE.Material | THREE.Material[]
-        for (const mat of Array.isArray(m) ? m : [m]) mat.dispose()
-      }
-    })
+    disposeTree(this.scene)
     this.renderer.dispose()
     canvas.remove()
     this.overlay.remove()
@@ -273,6 +317,11 @@ export class TrackScene {
     return (e[i] + (f - Math.floor(f)) * (e[j] - e[i])) * HEIGHT_SCALE
   }
 
+  /** Track metres to a 2D shape point that becomes the world's x / -z after rotating the shape flat (rotateX -90°). */
+  private flat(x: number, y: number) {
+    return new THREE.Vector2(x - this.centre.x, y - this.centre.y)
+  }
+
   private toWorld(p: Vec, height: number) {
     return new THREE.Vector3(p.x - this.centre.x, height, -(p.y - this.centre.y))
   }
@@ -345,6 +394,7 @@ export class TrackScene {
     const grid = new THREE.GridHelper(size, Math.round(size / 200), 0x222a33, 0x1c232b)
     grid.position.y = -0.3
     group.add(grid)
+    this.grid = grid
     return group
   }
 
@@ -395,6 +445,17 @@ export class TrackScene {
     this.cars.set(row.id, entry)
     return entry
   }
+}
+
+/** Frees the GPU memory of every mesh and line under `root`. */
+function disposeTree(root: THREE.Object3D) {
+  root.traverse((o) => {
+    if (o instanceof THREE.Mesh || o instanceof THREE.Line) {
+      o.geometry.dispose()
+      const m = o.material as THREE.Material | THREE.Material[]
+      for (const mat of Array.isArray(m) ? m : [m]) mat.dispose()
+    }
+  })
 }
 
 /** Distance along the lap of the centreline sample closest to p (to the nearest step). */
