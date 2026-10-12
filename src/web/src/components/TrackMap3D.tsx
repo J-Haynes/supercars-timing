@@ -14,7 +14,7 @@ import { ElevationStrip, type StripCar } from './ElevationStrip'
  * Cameras: Orbit turns slowly around the track (drag to turn, scroll or pinch to zoom); Follow chases one car
  * (the leader unless the viewer picks another).
  */
-export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, modeSwitch, onCamera, onHover, onTogglePin, note }: {
+export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, flatBuildings, onFlatBuildings, onFollowCar, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
   live?: TimingUpdate | null
@@ -24,9 +24,12 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   camera: CameraMode
   /** Car number to follow; null = the leader. */
   followCar: string | null
-  /** The 2D/3D switch (MapView), shown first in the toolbar. */
-  modeSwitch: ReactNode
-  onCamera: (camera: CameraMode, followCar: string | null) => void
+  /** The view switch (MapView: 2D, 3D, Orbit, Follow), shown first in the toolbar. */
+  views: ReactNode
+  /** Buildings as flat footprints (tracks with scenery). */
+  flatBuildings: boolean
+  onFlatBuildings: (flat: boolean) => void
+  onFollowCar: (carNumber: string | null) => void
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
   /** Replaces the "learning timing points" overlay, e.g. on an upcoming event's page. */
@@ -54,6 +57,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   // Buildings, water and beaches, for tracks that have them (TrackBuilder --scenery).
   const scenery = useScenery(track.code)
   useEffect(() => { scene.current?.setScenery(scenery) }, [scenery, geometry])
+  useEffect(() => { scene.current?.setFlatBuildings(flatBuildings) }, [flatBuildings, scenery, geometry])
 
   const leader = cars.find((c) => c.position === 1)
   const followed = (followCar && cars.find((c) => c.carNumber === followCar)) || leader
@@ -78,16 +82,16 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   return (
     <div className={`track-map map3d${!awaitingCalibration && !sync.synced ? ' syncing' : ''}`}>
       <div className="map-tools" role="toolbar" aria-label="Map view">
-        {modeSwitch}
-        <button type="button" className={`wide${camera === 'orbit' ? ' active' : ''}`} aria-pressed={camera === 'orbit'}
-          onClick={() => onCamera('orbit', followCar)} title="Turn slowly around the track. Drag to turn, scroll or pinch to zoom.">Orbit</button>
-        <button type="button" className={`wide${camera === 'follow' ? ' active' : ''}`} aria-pressed={camera === 'follow'}
-          onClick={() => onCamera('follow', followCar)} title="Chase one car">Follow</button>
+        {views}
         {camera === 'follow' && (
-          <select value={followCar ?? ''} onChange={(e) => onCamera('follow', e.target.value || null)} aria-label="Car to follow">
+          <select value={followCar ?? ''} onChange={(e) => onFollowCar(e.target.value || null)} aria-label="Car to follow">
             <option value="">Leader</option>
             {byPosition.map((c) => <option key={c.id} value={c.carNumber}>P{c.position} #{c.carNumber} {c.driver}</option>)}
           </select>
+        )}
+        {scenery && scenery.buildings.length > 0 && (
+          <button type="button" className={`wide${flatBuildings ? '' : ' active'}`} aria-pressed={!flatBuildings}
+            onClick={() => onFlatBuildings(!flatBuildings)} title={flatBuildings ? 'Show buildings at their height' : 'Flatten buildings to their footprints'}>Buildings</button>
         )}
       </div>
       <div ref={host} className="m3d-host">
@@ -109,7 +113,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
       <div className="map-caption">
         {track.name} · 3D · positions estimated between timing points
         {track.elevation?.length ? ` · heights ×${HEIGHT_SCALE}` : ' · no height data for this track'}
-        {camera === 'orbit' ? ' · drag to turn, scroll or pinch to zoom' : ` · following ${followed ? `#${followed.carNumber} ${followed.driver}` : 'the leader'}`}
+        {camera !== 'follow' ? ' · drag to turn, scroll or pinch to zoom' : ` · following ${followed ? `#${followed.carNumber} ${followed.driver}` : 'the leader'}`}
         {' · '}double-click a car to pin it · {track.source.attribution}{scenery ? ` · ${scenery.attribution}` : ''}
       </div>
     </div>

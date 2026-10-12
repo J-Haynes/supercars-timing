@@ -142,7 +142,8 @@ main { flex: 1; padding: 0 16px 24px; }
 .track-map, .track-map svg text { user-select: none; -webkit-user-select: none; }
 .track-map svg.zoomed { cursor: grab; }
 .track-map svg.zoomed:active { cursor: grabbing; }
-.map-tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; z-index: 1; }
+.map-tools { position: absolute; top: 10px; right: 10px; left: 10px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; z-index: 1; pointer-events: none; }
+.map-tools > * { pointer-events: auto; }
 .map-tools button {
   min-width: 28px; height: 28px; padding: 0 6px; border-radius: 6px; cursor: pointer;
   background: rgba(18, 22, 27, .85); color: var(--text); border: 1px solid var(--line); font-size: 15px; line-height: 1;
@@ -194,6 +195,10 @@ main { flex: 1; padding: 0 16px 24px; }
 
 /* 3D map (TrackMap3D, map/scene3d.ts): a WebGL canvas with HTML labels on top. */
 .map-tools button.active { border-color: var(--muted); background: #222a33; }
+.map-tools .map-views { display: flex; height: 28px; border-color: var(--line); background: rgba(18, 22, 27, .85); }
+.map-tools .map-views button { flex: none; min-width: 0; height: auto; border: 0; border-radius: 0; background: none; color: var(--muted); padding: 0 9px; font-size: 12px; }
+.map-tools .map-views button + button { border-left: 1px solid var(--line); }
+.map-tools .map-views button.active { background: #222a33; color: var(--text); }
 .map-tools select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; font: inherit; font-size: 12px; max-width: 170px; }
 .m3d-host { position: relative; height: min(68vh, 640px); border-radius: 6px; overflow: hidden; touch-action: none; }
 .m3d-host canvas { display: block; }

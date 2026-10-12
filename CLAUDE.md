@@ -206,8 +206,12 @@ the server in live mode by hand.
   stretch pace. Under a caution, `cautionPace()` uses what cars took through the same stretch under this caution,
   scaled per car, only for stretches started after the caution (settings in `CAUTION_TUNING`, tuned on the replayed
   safety car). "Syncing car positions" greys the map after a page load. Outside races pace is capped at ~1.12×.
-- **3D map:** the default; the "2D"/"3D" button switches (`settings.mapView`, `mapCamera`, `followCar`; renamed from
-  `mapMode` so browsers that had saved '2d' while 2D was the default start in 3D). Event pages use it too. Never place cars in the
+- **Map views:** one switch, 2D | 3D | Orbit | Follow (`MapView.tsx`; `settings.mapView`, `camera3d`, `followCar`).
+  "3D" (a still 3D view you can drag) is the default. Settings were renamed (`mapMode` -> `mapView`, `mapCamera` ->
+  `camera3d`) each time the default changed, because settings are saved whole and old values would win. Tracks with
+  scenery have a Buildings toggle (`flatBuildings`: footprints only). Event pages use it too.
+- **Ended sessions:** `useCarPlacement` puts no cars on track once the flag is Ended (F1's hub sends the last
+  session's state on connecting; it looked like the field racing for ~10 s). The chequered flag still shows cars. Never place cars in the
   3D code: it draws `useCarPlacement`'s placements, so 2D, 3D and the elevation strip always agree. Follow locks
   the camera to the car and eases only its heading (an eased position trailed by hundreds of metres at 10× replay).
 - Live view hides support categories (`isSupercarsSession()`); they're still recorded.

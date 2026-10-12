@@ -27,10 +27,10 @@ const BG = 0x12161b // --panel
 const MAKER_COLOURS: Record<string, number> = { ford: 0x2f6fdf, chevrolet: 0xf28c1b, toyota: 0xe5172f }
 const EDGE = 0x5d6976
 /** Scenery colours: muted, so the track and the cars stay the brightest things on screen. */
-const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x3a4450 }
+const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x3a4450, footprint: 0x4a5461 }
 const YELLOW = 0xffd23f
 
-export type CameraMode = 'orbit' | 'follow'
+export type CameraMode = 'static' | 'orbit' | 'follow'
 
 export class TrackScene {
   readonly renderer: THREE.WebGLRenderer
@@ -52,8 +52,10 @@ export class TrackScene {
   private frame = 0
   private grid: THREE.GridHelper | null = null
   private scenery: THREE.Group | null = null
+  private buildings: THREE.Mesh | null = null
+  private flatBuildings = false
   private last = performance.now()
-  private mode: CameraMode = 'orbit'
+  private mode: CameraMode = 'static'
   private followId: string | null = null
   /** Eased direction of the chase camera (flat, unit length). */
   private heading: THREE.Vector3 | null = null
@@ -101,7 +103,7 @@ export class TrackScene {
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.enableDamping = true
-    this.controls.autoRotate = true
+    this.controls.autoRotate = false // turned on for Orbit (setCamera)
     this.controls.autoRotateSpeed = 0.35 // about one turn every three minutes
     this.controls.maxPolarAngle = Math.PI * 0.47 // stay above the ground
     this.controls.minDistance = 150
@@ -119,11 +121,13 @@ export class TrackScene {
   }
 
   setCamera(mode: CameraMode, followId: string | null) {
-    if (mode === 'orbit' && this.mode !== 'orbit') this.resetOrbit()
+    // Back from Follow: the overview again. Between 3D and Orbit the view stays where it is.
+    if (mode !== 'follow' && this.mode === 'follow') this.resetOrbit()
     if (mode === 'follow' && (this.mode !== 'follow' || followId !== this.followId)) this.heading = null
     this.mode = mode
     this.followId = followId
-    this.controls.enabled = mode === 'orbit'
+    this.controls.enabled = mode !== 'follow'
+    this.controls.autoRotate = mode === 'orbit'
   }
 
   setCaution(caution: boolean) {
@@ -137,6 +141,7 @@ export class TrackScene {
    */
   setScenery(scenery: SceneryDefinition | null) {
     if (this.scenery) {
+      this.buildings = null
       this.scene.remove(this.scenery)
       disposeTree(this.scenery)
       this.scenery = null
@@ -168,10 +173,26 @@ export class TrackScene {
     if (prisms.length) {
       const merged = mergeGeometries(prisms)
       prisms.forEach((g) => g.dispose())
-      if (merged) group.add(new THREE.Mesh(merged, new THREE.MeshStandardMaterial({ color: SCENERY.building, roughness: 0.95 })))
+      if (merged) {
+        this.buildings = new THREE.Mesh(merged, new THREE.MeshStandardMaterial({ color: SCENERY.building, roughness: 0.95 }))
+        group.add(this.buildings)
+        this.setFlatBuildings(this.flatBuildings)
+      }
     }
     this.scenery = group
     this.scene.add(group)
+  }
+
+  /**
+   * Buildings as flat grey footprints (squashed to a few cm, just above the ground layers and under the track) or as
+   * blocks at their height. Flat ones are a lighter grey, as they're seen from above.
+   */
+  setFlatBuildings(flat: boolean) {
+    this.flatBuildings = flat
+    if (!this.buildings) return
+    this.buildings.scale.y = flat ? 0.0005 : 1 // a 130 m tower becomes 6.5 cm
+    this.buildings.position.y = flat ? -0.1 : 0
+    ;(this.buildings.material as THREE.MeshStandardMaterial).color.setHex(flat ? SCENERY.footprint : SCENERY.building)
   }
 
   /** Moves every car to this frame's placement; cars that aren't placed are hidden. */
