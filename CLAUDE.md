@@ -51,7 +51,8 @@ see "Next round" below.
     in `_carryFrom` until each car reappears. A different session starts from scratch.
   - `TimingSnapshot`: the serialisable view sent to the UI (`CarRow`, `SessionInfo`, race control, flag history).
     `LapHistory` (per-car `LapEntry` list) is separate because it's large.
-- `src/SupercarsTiming.Server` (ASP.NET Core minimal API + SignalR):
+- `src/SupercarsTiming.Server` (ASP.NET Core minimal API + SignalR; `Feed/SessionSchedule.cs` decides when to be
+  connected to Natsoft):
   - `Feed/TimingFeedService`: live (records to `Feed:RecordDirectory` = `data/recordings`) or replay mode. On start-up
     in live mode it first replays a session recorded in the last 15 min (`WarmStart`), so a restart mid-race keeps
     driver laps, the pit log, race control and history.
@@ -309,8 +310,12 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
 
 ## Rules
 
-- **One connection to Natsoft.** Never add polling, parallel connections or tighter retry loops; keep the 30 s
-  retry while a meeting isn't live. Our server fans out to our own browsers. See `docs/PLANNING.md` on data use.
+- **One connection to Natsoft, only around sessions.** The server connects from 30 min before each scheduled
+  Supercars session to 30 min after it (`Feed/SessionSchedule.cs`, times from `src/web/src/schedule/supercars.json`,
+  which the event pages read too; events without a full timetable: 07:00-19:00 on event days) and is disconnected
+  otherwise. Inside a window NatsoftClient keeps its 30 s retry while the meeting isn't live. Never add polling,
+  parallel connections or tighter retry loops. **Keep the timetable up to date**: a session missing from it isn't
+  recorded. `Feed:Schedule=Always` restores the old always-connected mode. See `docs/PLANNING.md` on data use.
 - **Never commit recordings or `.har` files** (git-ignored; recordings are Natsoft's data, HAR files contain login tokens).
 - **Personal use only:** don't make the app public (no Tailscale Funnel, no public deploy) without the owner deciding,
   and permission for the data. The tailnet is fine.
@@ -326,6 +331,7 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
 3. Grid positions from the server (replacing hand-entered `startingGrid.ts`); championship standings after each round.
 4. Ideas not built yet: pit windows / stops remaining, follow-a-driver card with notifications, co-driver planner,
    pit stop leaderboard.
-5. **Decided, next to plan:** connect to Natsoft only around scheduled sessions, with session times fetched
-   automatically from the series' websites (`docs/PLANNING.md`, "Using Natsoft's data responsibly").
+5. Connecting only around sessions is built (Oct 2026), from the hand-kept `schedule/supercars.json`. Still to do:
+   fetch the session times automatically from the series' websites (`docs/PLANNING.md`, "Using Natsoft's data
+   responsibly"), so a changed or newly published timetable can't be missed.
 6. Persist sessions (SQL or static per-session archives) only if cross-season queries or deployment need it.

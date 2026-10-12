@@ -1,4 +1,5 @@
 import { isF1 } from './series'
+import schedule from './schedule/supercars.json'
 
 /**
  * Upcoming Repco Supercars Championship events, from https://www.supercars.com/calendar.
@@ -57,29 +58,14 @@ const ELIMINATIONS = { label: 'Adelaide Grand Final: 2026 Finals rules (three ou
 const CUP_BONUS = { label: 'Supercars: Enduro Cup winner, 25 Finals points', url: 'https://www.supercars.com/news/supercars-news-2026-enduro-cup-qualification-finals-bonus-points-explained-bathurst-1000' }
 const SEASON = { label: 'Wikipedia: 2026 Supercars Championship (rounds)', url: 'https://en.wikipedia.org/wiki/2026_Supercars_Championship' }
 
-export const UPCOMING: UpcomingEvent[] = [
+const SUPERCARS_EVENTS: Omit<UpcomingEvent, 'startDate' | 'endDate' | 'utcOffset'>[] = [
   {
-    name: 'Repco Bathurst 1000', venue: 'Mount Panorama Circuit', location: 'Bathurst, NSW',
-    startDate: '2026-10-08', endDate: '2026-10-11', utcOffset: '+11:00', trackCode: 'MOUN',
+    name: 'Repco Bathurst 1000', venue: 'Mount Panorama Circuit', location: 'Bathurst, NSW', trackCode: 'MOUN',
     format: 'Enduro Cup · 161 laps, two drivers per car',
   },
   {
-    name: 'Boost Mobile Gold Coast 500', venue: 'Surfers Paradise Street Circuit', location: 'Surfers Paradise, QLD',
-    startDate: '2026-10-23', endDate: '2026-10-25', utcOffset: '+10:00', trackCode: 'SURF',
+    name: 'Boost Mobile Gold Coast 500', venue: 'Surfers Paradise Street Circuit', location: 'Surfers Paradise, QLD', trackCode: 'SURF',
     format: 'Finals round 1 · two 250 km races',
-    // "Correct as of Wednesday September 16" (Supercars); times can still change.
-    sessionsSource: 'https://www.supercars.com/news/supercars-news-2026-gold-coast-500-track-schedule-race-start-times-tickets-tv-enduro-cup-sessions',
-    sessions: [
-      { name: 'Practice 1', start: '2026-10-23T11:45', end: '2026-10-23T12:10' },
-      { name: 'Practice 2', start: '2026-10-23T13:50', end: '2026-10-23T14:15' },
-      { name: 'Qualifying (Race 31)', start: '2026-10-23T16:05', end: '2026-10-23T16:35' },
-      { name: 'Top Ten Shootout (Race 31)', start: '2026-10-24T12:35', end: '2026-10-24T13:10' },
-      { name: 'Race 31', start: '2026-10-24T15:15', laps: 85 },
-      { name: 'Qualifying 1 (Race 32)', start: '2026-10-25T11:20', end: '2026-10-25T11:32' },
-      { name: 'Qualifying 2 (Race 32)', start: '2026-10-25T11:40', end: '2026-10-25T11:52' },
-      { name: 'Top Ten Shootout (Race 32)', start: '2026-10-25T12:05', end: '2026-10-25T12:40' },
-      { name: 'Race 32', start: '2026-10-25T14:45', laps: 85 },
-    ],
     info: {
       round: 'Round 12 of 14 · Finals round 1 of 3',
       stakes: 'The top 10 in the championship start the Finals. Points reset, with a bonus for the top four going in (150, 120, 96, 78) and 25 for the Sprint and Enduro Cup winners. After the two races the bottom three are eliminated: "only 7 drivers will remain in the title fight".',
@@ -103,18 +89,8 @@ export const UPCOMING: UpcomingEvent[] = [
     },
   },
   {
-    name: 'Penrite Oil Sandown 500', venue: 'Sandown International Motor Raceway', location: 'Melbourne, VIC',
-    startDate: '2026-11-06', endDate: '2026-11-08', utcOffset: '+11:00', trackCode: 'SAND',
+    name: 'Penrite Oil Sandown 500', venue: 'Sandown International Motor Raceway', location: 'Melbourne, VIC', trackCode: 'SAND',
     format: 'Finals round 2 · two 250 km races',
-    // Only the featured sessions are on the event page so far (12 Oct 2026); the full track schedule isn't out.
-    sessionsSource: 'https://www.supercars.com/events/2026-sandown',
-    sessionsNote: 'Only the Shootouts and races are published so far; practice and qualifying times will follow.',
-    sessions: [
-      { name: 'Top Ten Shootout (Race 33)', start: '2026-11-07T12:05' },
-      { name: 'Race 33', start: '2026-11-07T15:30', laps: 81 },
-      { name: 'Top Ten Shootout (Race 34)', start: '2026-11-08T12:05' },
-      { name: 'Race 34', start: '2026-11-08T15:30', laps: 81 },
-    ],
     info: {
       round: 'Round 13 of 14 · Finals round 2 of 3 (semi-final)',
       stakes: 'Seven drivers left after the Gold Coast. Points reset again with the same bonus for the top four (150, 120, 96, 78); after the two races the bottom three are eliminated, leaving four for the Grand Final.',
@@ -137,26 +113,8 @@ export const UPCOMING: UpcomingEvent[] = [
     },
   },
   {
-    name: 'bp Adelaide Grand Final', venue: 'Adelaide Street Circuit', location: 'Adelaide, SA',
-    startDate: '2026-11-26', endDate: '2026-11-29', utcOffset: '+10:30', trackCode: 'ADEL',
+    name: 'bp Adelaide Grand Final', venue: 'Adelaide Street Circuit', location: 'Adelaide, SA', trackCode: 'ADEL',
     format: 'Finals round 3 · Grand Final, three races',
-    // "All times ACDT, correct as of Wednesday July 1" (Supercars).
-    sessionsSource: 'https://www.supercars.com/news/supercars-news-2026-adelaide-grand-final-track-schedule-revealed-times-racing-super2-series-finals-supports',
-    sessions: [
-      { name: 'Practice 1', start: '2026-11-26T15:15', end: '2026-11-26T15:40' },
-      { name: 'Practice 2', start: '2026-11-27T10:00', end: '2026-11-27T10:25' },
-      { name: 'Qualifying 1 (Race 35)', start: '2026-11-27T13:10', end: '2026-11-27T13:22' },
-      { name: 'Qualifying 2 (Race 35)', start: '2026-11-27T13:30', end: '2026-11-27T13:38' },
-      { name: 'Race 35', start: '2026-11-27T16:20', laps: 32 },
-      { name: 'Qualifying 1 (Race 36)', start: '2026-11-28T11:45', end: '2026-11-28T11:57' },
-      { name: 'Qualifying 2 (Race 36)', start: '2026-11-28T12:05', end: '2026-11-28T12:17' },
-      { name: 'Top Ten Shootout (Race 36)', start: '2026-11-28T12:35', end: '2026-11-28T13:10' },
-      { name: 'Race 36', start: '2026-11-28T15:20', laps: 78 },
-      { name: 'Qualifying 1 (Race 37)', start: '2026-11-29T11:45', end: '2026-11-29T11:57' },
-      { name: 'Qualifying 2 (Race 37)', start: '2026-11-29T12:05', end: '2026-11-29T12:17' },
-      { name: 'Top Ten Shootout (Race 37)', start: '2026-11-29T12:35', end: '2026-11-29T13:10' },
-      { name: 'Race 37', start: '2026-11-29T15:15', laps: 78 },
-    ],
     info: {
       round: 'Round 14 of 14 · Finals round 3 of 3 (Grand Final)',
       stakes: '"Four drivers. Three races. One Champion." Points reset again with the bonus for the top four (150, 120, 96, 78); whoever leads after Race 37 is the champion.',
@@ -180,6 +138,29 @@ export const UPCOMING: UpcomingEvent[] = [
     },
   },
 ]
+
+/**
+ * Upcoming Supercars events: the details above, with dates and session times from schedule/supercars.json. That
+ * file is shared with the server, which connects to Natsoft only from 30 minutes before each session.
+ */
+export const UPCOMING: UpcomingEvent[] = SUPERCARS_EVENTS.map((e) => {
+  const timed = (schedule.events as ScheduleEvent[]).find((x) => x.name === e.name)
+  if (!timed) throw new Error(`schedule/supercars.json has no "${e.name}"`)
+  const { startDate, endDate, utcOffset, sessions, sessionsSource, sessionsNote } = timed
+  return { ...e, startDate, endDate, utcOffset, sessions, sessionsSource, sessionsNote }
+})
+
+/** An event in schedule/supercars.json. `complete` false: not every session is timed yet. */
+interface ScheduleEvent {
+  name: string
+  startDate: string
+  endDate: string
+  utcOffset: string
+  sessions?: EventSession[]
+  sessionsSource?: string
+  sessionsNote?: string
+  complete: boolean
+}
 
 /**
  * Remaining 2026 Formula 1 rounds. Session times from the Jolpica F1 API (the community continuation of Ergast),

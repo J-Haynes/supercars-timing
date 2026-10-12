@@ -19,8 +19,13 @@ is cheap, but a browser tab doesn't sit doing that for weeks, so it's the most v
 our traffic. The .NET `ClientWebSocket` also doesn't identify the app.
 
 **Decision (11 Oct 2026):** the owner chose option 1, extended: plan the connection schedule ahead and automate it
-from session times fetched from the racing series' websites (not only the hand-kept `calendar.ts`). Not built yet;
-to be planned in its own session.
+from session times fetched from the racing series' websites (not only the hand-kept `calendar.ts`).
+
+**Built (12 Oct 2026), first half:** the server connects only from 30 minutes before each scheduled Supercars session
+to 30 minutes after it (the owner's choice of 30 min), and is fully disconnected otherwise: no off-weekend handshakes
+at all. Times come from `src/web/src/schedule/supercars.json`, shared with the event pages. Events whose timetable is
+incomplete are covered 07:00-19:00 on event days. Not built yet: fetching the times automatically from the series'
+websites; until then the JSON is kept by hand, and a session missing from it isn't recorded.
 
 **Options considered:**
 1. **Calendar-aware connection:** connect normally from ~1 hour before the first session of an event day

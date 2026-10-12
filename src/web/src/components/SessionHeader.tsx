@@ -93,7 +93,7 @@ export function SessionHeader({ update: liveUpdate, feed, connection, onMenu, hi
         {flag && <span className={`flag ${FLAG_CLASS[flag.toLowerCase()] ?? ''}`}>{FLAG_LABEL[flag.toLowerCase()] ?? flag}</span>}
         {/* Lap races: Natsoft's clock counts laps (<C Y="L" C="161">), not seconds, so the lap counter replaces it. */}
         {session && !laps && (!viewing || viewing.clock) && <div className="clock" title="Time remaining">{clock(session.clockRemaining ?? null)}</div>}
-        <div className="feed"><span className={`dot dot-${status.dot}`} />{status.text}</div>
+        <div className="feed" title={!viewing && feed?.detail ? feed.detail : undefined}><span className={`dot dot-${status.dot}`} />{status.text}</div>
         {laps && (
           <div className="laps-to-go" title="Race distance, from the leader's laps">
             <span className="lap-of">{laps.lap}</span>

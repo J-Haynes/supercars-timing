@@ -202,7 +202,8 @@ function EmptyState({ state, detail, connection, support }: { state?: string; de
   if (connection !== 'connected') message = 'Connecting to the timing server…'
   else if (support) message = `A support category is on track (${support.replace(/^\d{4}\s+/, '').split(' - ')[0]}). Timing will appear here when the next Supercars session starts.`
   else if (isF1 && state === 'live') message = 'Connected to F1 live timing. Waiting for the session data…'
-  else if (state === 'waiting') message = 'No session on track right now. Timing appears automatically when one starts.'
+  // Between sessions the server isn't connected to Natsoft at all, and says when it will be (SessionSchedule).
+  else if (state === 'waiting') message = `No session on track right now. Timing appears automatically when one starts.${detail?.startsWith('Not connected') ? ` ${detail}.` : ''}`
   else if (state === 'error') message = detail ?? 'The feed reported an error.'
   return <div className="empty">{message}</div>
 }

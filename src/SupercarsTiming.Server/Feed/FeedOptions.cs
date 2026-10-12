@@ -13,6 +13,16 @@ public sealed class FeedOptions
     /// <summary>Natsoft meeting ID. Supercars weekends use V8SUPER (support categories included).</summary>
     public string Meeting { get; set; } = "V8SUPER";
 
+    /// <summary>
+    /// Live mode: "Sessions" (default) connects to Natsoft only from 30 min before each scheduled Supercars session
+    /// until 30 min after it (SessionSchedule.cs, times from <see cref="ScheduleFile"/>); "Always" stays connected
+    /// and retries every 30 s, as before Oct 2026.
+    /// </summary>
+    public string Schedule { get; set; } = "Sessions";
+
+    /// <summary>The Supercars timetable (local track times), shared with the event pages. Relative to the repo root.</summary>
+    public string ScheduleFile { get; set; } = "src/web/src/schedule/supercars.json";
+
     /// <summary>Live mode: if set, also save every message here (same format as tools/NatsoftRecorder).</summary>
     public string RecordDirectory { get; set; } = "";
 
