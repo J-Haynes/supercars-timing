@@ -119,12 +119,34 @@ So for Supercars the prediction is a range even with perfect history.
 
 **Where each track's numbers come from (best first):** stops already made in this race (`PT`, live) -> the other
 race of the same weekend (Gold Coast, Sandown, Adelaide: Saturday for Sunday) -> last year's recordings (Bathurst
-2027 can use Race 30; F1 has the archive) -> before any stop: a wide range marked as an estimate. Rules can change
+2027 can use Race 30; F1 has the archive) -> before any stop: a wide range marked as an estimate. For 2026 the
+Finals tracks are covered by 2025's reports (below). Rules can change
 between years (number of stops, fuel drop), the pit-lane part rarely does.
 
-**Open question:** Natsoft's public results site (http://racing.natsoft.com.au/results/, a JavaScript app) may hold
-last year's Gold Coast/Sandown/Adelaide races lap by lap with pit times, which would seed 2026's Finals tracks. It's
-Natsoft's data through another endpoint: not looked at until the owner decides.
+**Last year's Finals tracks, from Natsoft's results site** (looked at by hand with the owner's OK, 12 Oct 2026).
+http://racing.natsoft.com.au/results/ (a JavaScript app: Circuit Racing -> track and year -> View -> "Times") has
+every race's "Sector and Lap Times" report: sectors and lap times per car, in-laps marked "p". Saved as text under
+`data/recordings/natsoft-results/` (Natsoft's data: git-ignored) and measured with `tools/PitLoss/natsoft_report.py`
+(time lost = in-lap + out-lap - 2 x the car's median lap; green-flag stops only). 2025 used the same formats as 2026:
+
+| 2025 race | 1st stop (median, middle half) | 2nd stop | Green-flag stops |
+|---|---|---|---|
+| Gold Coast Race 28 (85 laps) | (most stopped under the lap-12 safety car) | 46.6 s (44.4-48.6) | 19 |
+| Gold Coast Race 29 (85 laps) | 38.8 s (37.7-44.8) | 52.0 s (48.8-55.3) | 46 |
+| Sandown Race 30 (81 laps) | 37.7 s (36.5-39.8) | 47.8 s (46.0-49.1) | 45 |
+| Sandown Race 31 (81 laps) | (safety cars: 3 green-flag stops) | | 3 |
+| Adelaide Race 32 (32 laps) | 25.8 s (24.1-27.4) | | 9 |
+| Adelaide Race 33 (78 laps) | 28.6 s (27.4-31.6) | 43.0 s (40.6-45.0) | 47 |
+| Adelaide Race 34 (78 laps) | 28.2 s (27.2-31.1) | 44.0 s (43.3-46.1) | 44 |
+
+- **Each stop number is consistent; the second costs 10-15 s more** (more fuel). So the model should predict per
+  stop number, not one range: "stop 2 at the Gold Coast: ~48-55 s" is much tighter than "38-55 s".
+- Most cars at the Gold Coast (Race 28) and Sandown (Race 31) stopped under safety cars: what a caution stop costs
+  isn't measured yet (to do: compare with cars that stayed out on the same laps).
+- The results site's track codes (SPSC, SIMR, APC, and MPB2 for Bathurst) aren't the live feed's (`MOUN`), so they
+  don't settle our guessed `SURF`/`SAND`/`ADEL` codes (the map loader falls back to names anyway).
+- F1: `tools/PitLoss/f1_archive.py <year>` downloads PitStopSeries and TimingData for each circuit we have a map for
+  (cached in `data/recordings/f1-archive/`) and prints the table above.
 
 ## Ideas not built yet
 

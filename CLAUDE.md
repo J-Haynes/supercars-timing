@@ -86,7 +86,8 @@ see "Next round" below.
   `F1FeedService` (+ `F1Store`, `F1Hub`, `F1Options`: live/replay, recording, warm start, broadcasting).
 - `src/web/src/series.ts`: which app the page is (`/f1` = F1, else Supercars), its API base and hub, team colours.
 - `deploy/`: the systemd user service and its README (install, logs, Tailscale serve).
-- `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
+- `tools/PitLoss` (time lost per pit stop: `natsoft_report.py` from Natsoft results-site reports, `f1_archive.py` from F1's
+  archive; findings in `docs/PLANNING.md`, "Pit strategy features"), `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
   README has the Gold Coast checklist), `tools/OfficialMap` (corners and pit lane from Supercars' official track map
   PDFs, lined up with our track), `tools/F1TrackBuilder/build_track.py` (F1 track files from an archived
   session's car positions; see its docstring), `tools/F1MapEval/evalmap.py` (scores map placement against real positions).
