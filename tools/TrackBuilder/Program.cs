@@ -26,6 +26,7 @@ if (!opt.TryGetValue("code", out var code) || !(opt.TryGetValue("relation", out 
           --osm <file>           OSM cache (default: tools/TrackBuilder/osm/<CODE>.osm.json; downloaded if missing)
           --georef <CODE>        With --relation: scenery for an existing track file not in lat/lon (F1-61 etc.), fitted
                                  to the OSM circuit; also OSM's "Turn N" corners. The track file isn't changed
+          --landmarks false      With --scenery: no landmark labels (Las Vegas: the owner asked for none)
           --scenery <metres>     Also write scenery for the 3D map (buildings, water, beach, sea from OSM via Overpass)
                                  for this far around the circuit, to src/web/src/tracks/scenery/<CODE>.json
           --official <file>      Corners and pit lane from the official track map (tools/TrackBuilder/official/<CODE>.json,
@@ -185,7 +186,7 @@ else Console.WriteLine("Elevation: none (--elevation none)");
 if (opt.TryGetValue("scenery", out var sceneryMargin))
 {
     var scenery = await Scenery.BuildAsync(samples, projection, double.Parse(sceneryMargin, CultureInfo.InvariantCulture),
-        Path.Combine(root, $"tools/TrackBuilder/osm/{code}.scenery.osm.json"));
+        Path.Combine(root, $"tools/TrackBuilder/osm/{code}.scenery.osm.json"), landmarkLabels: opt.GetValueOrDefault("landmarks") != "false");
     var sceneryPath = Path.Combine(Path.GetDirectoryName(outPath)!, "scenery", $"{code}.json");
     Directory.CreateDirectory(Path.GetDirectoryName(sceneryPath)!);
     await File.WriteAllTextAsync(sceneryPath, JsonSerializer.Serialize(scenery) + "\n");

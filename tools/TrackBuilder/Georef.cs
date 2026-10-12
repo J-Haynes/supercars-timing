@@ -178,7 +178,8 @@ public static class GeorefScenery
         Console.WriteLine($"Corners from OSM: {corners.Count}");
 
         var scenery = await Scenery.BuildAsync(path.Select(fit.Forward).ToList(), projection, double.Parse(opt.GetValueOrDefault("scenery") ?? "800",
-            System.Globalization.CultureInfo.InvariantCulture), Path.Combine(root, $"tools/TrackBuilder/osm/{code}.scenery.osm.json"), fit.Back, corners);
+            System.Globalization.CultureInfo.InvariantCulture), Path.Combine(root, $"tools/TrackBuilder/osm/{code}.scenery.osm.json"), fit.Back, corners,
+            landmarkLabels: opt.GetValueOrDefault("landmarks") != "false");
         var outPath = Path.Combine(root, $"src/web/src/tracks/scenery/{code}.json");
         await File.WriteAllTextAsync(outPath, System.Text.Json.JsonSerializer.Serialize(scenery) + "\n");
         Console.WriteLine($"Wrote {Path.GetRelativePath(root, outPath)} ({new FileInfo(outPath).Length / 1024} KB)");

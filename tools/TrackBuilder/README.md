@@ -152,6 +152,8 @@ dotnet run --project tools/TrackBuilder -- --georef F1-61 --relation 421263 --sc
 for pair in F1-61:421263 F1-9:6537729 F1-65:16251935 F1-14:6781071 F1-152:16696508 F1-150:21297662 F1-70:11378665; do
   dotnet run --project tools/TrackBuilder -- --georef ${pair%%:*} --relation ${pair##*:} --scenery 800
 done
+# Las Vegas without landmark labels (the owner asked for none there):
+dotnet run --project tools/TrackBuilder -- --georef F1-152 --relation 16696508 --scenery 800 --landmarks false
 ```
 
 None of these relations has "Turn N" nodes, so F1 maps have no corner labels yet. Austin, Interlagos and Lusail have
@@ -164,6 +166,7 @@ are observation towers, linked or 50 m+ (not lifeguard towers), and named buildi
 800 m of the track, scored by height, +300 for a linked attraction, +50 for a link (or 150 m+), -1 per 10 m from the
 track, at least 200 m apart; "X Tower 2" counts as X; English names (`name:en`) where OSM has them. Tuned on Singapore
 (bars and playgrounds, then no Marina Bay Sands), Austin (no observation tower) and the Gold Coast (lifeguard towers).
+Spherical buildings (`shape=spherical*`: the Sphere in Las Vegas) are marked `shape: "sphere"` and drawn as spheres.
 It's OSM's data: some tall buildings are named after a tenant ("Samsung", "HSBC" in Singapore).
 
 ## Adding a circuit

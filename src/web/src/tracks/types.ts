@@ -33,7 +33,7 @@ export interface SceneryDefinition {
   /** [minX, minY, maxX, maxY]: everything is clipped to this box around the circuit. */
   box: [number, number, number, number]
   /** Footprint rings with height and base in metres; `assumed` = no height or levels in OSM (drawn 2 storeys). */
-  buildings: { h: number; min: number; ring: [number, number][]; assumed: boolean }[]
+  buildings: { h: number; min: number; ring: [number, number][]; assumed: boolean; shape?: 'sphere' | null }[]
   /** Lakes, rivers and the sea. */
   water: SceneryArea[]
   beach: SceneryArea[]

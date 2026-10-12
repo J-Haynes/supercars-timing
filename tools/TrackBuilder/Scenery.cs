@@ -32,7 +32,7 @@ public static class Scenery
     /// <param name="output">Converts OSM metres to the track file's coordinates (F1 tracks, Georef); default as is.</param>
     /// <param name="corners">Corner labels to include (F1 tracks: OSM's "Turn N" nodes, already in track coordinates).</param>
     public static async Task<object> BuildAsync(IReadOnlyList<Point> lap, Projection projection, double margin, string cachePath,
-        Func<Point, Point>? output = null, IReadOnlyList<object>? corners = null)
+        Func<Point, Point>? output = null, IReadOnlyList<object>? corners = null, bool landmarkLabels = true)
     {
         output ??= p => p;
         var box = new Box(lap.Min(p => p.X) - margin, lap.Min(p => p.Y) - margin, lap.Max(p => p.X) + margin, lap.Max(p => p.Y) + margin);
@@ -124,7 +124,10 @@ public static class Scenery
             if (height is not null) measured++; else if (levels is not null) fromLevels++; else assumed++;
             double minH = Number(tags.GetValueOrDefault("min_height")) ?? (Number(tags.GetValueOrDefault("building:min_level")) is { } ml ? ml * StoreyMetres : 0);
             if (h <= minH) continue;
-            buildings.Add(new { h = Math.Round(h, 1), min = Math.Round(minH, 1), ring = Ring(outer), assumed = height is null && levels is null });
+            // Spheres (Las Vegas's Sphere: shape=spherical_cutted) are drawn as spheres, not extruded footprints.
+            bool sphere = (tags.GetValueOrDefault("shape") ?? tags.GetValueOrDefault("building:shape") ?? "").StartsWith("spher");
+            buildings.Add(new { h = Math.Round(h, 1), min = Math.Round(minH, 1), ring = Ring(outer), assumed = height is null && levels is null,
+                shape = sphere ? "sphere" : null });
             if (tags.GetValueOrDefault("name") is { Length: > 0 } && h >= LandmarkHeight && !IsAttraction(tags))
                 landmarks.Add((EnglishName(tags), Centroid(outer), h, Notable(tags), false));
         }
@@ -152,7 +155,7 @@ public static class Scenery
             .Where(l => l.Distance <= LandmarkReach)
             .OrderByDescending(l => l.Score - l.Distance / 10);
         var shown = new List<(string Name, Point At, double Height)>();
-        foreach (var l in ranked)
+        foreach (var l in ranked.Where(_ => landmarkLabels))
         {
             if (shown.Count == MaxLandmarks) break;
             if (shown.Any(s => s.Name == l.Name || Point.Distance(s.At, l.At) < LandmarkSpacing)) continue;

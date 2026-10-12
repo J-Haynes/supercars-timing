@@ -208,6 +208,7 @@ export class TrackScene {
     }
     // Buildings: one extruded prism each, merged into a single mesh (2,000 separate meshes would be slow).
     const prisms = scenery.buildings.filter((b) => b.ring.length > 2).map((b) => {
+      if (b.shape === 'sphere') return sphereBuilding(b.ring.map(([x, y]) => this.flat(x, y)), b.h)
       const g = new THREE.ExtrudeGeometry(new THREE.Shape(b.ring.map(([x, y]) => this.flat(x, y))), { depth: b.h - b.min, bevelEnabled: false })
       g.rotateX(-Math.PI / 2)
       g.translate(0, b.min, 0)
@@ -615,6 +616,20 @@ export class TrackScene {
     this.cars.set(row.id, entry)
     return entry
   }
+}
+
+/**
+ * A spherical building (Las Vegas's Sphere): a sphere as wide as its footprint, its top at `height`, the rest sunk
+ * into the ground like the real one (157 m across, 112 m tall). Non-indexed to merge with the extruded buildings.
+ */
+function sphereBuilding(ring: THREE.Vector2[], height: number): THREE.BufferGeometry {
+  const cx = ring.reduce((a, p) => a + p.x, 0) / ring.length
+  const cy = ring.reduce((a, p) => a + p.y, 0) / ring.length
+  const radius = ring.reduce((a, p) => a + Math.hypot(p.x - cx, p.y - cy), 0) / ring.length
+  const g = new THREE.SphereGeometry(radius, 48, 32).toNonIndexed()
+  // Shape coordinates (x, y) become world (x, -z), as for the extruded buildings after their rotateX.
+  g.translate(cx, height - radius, -cy)
+  return g
 }
 
 /** A label's screen position, from the transform placeOverlay gave it. */
