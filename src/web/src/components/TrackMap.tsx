@@ -57,7 +57,7 @@ function makeView(model: TrackModel, rotationDeg: number) {
   }
 }
 
-export function TrackMap({ track, update, live, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note, extraTools }: {
+export function TrackMap({ track, update, live, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note, extraTools, showLabels = true }: {
   track: TrackDefinition
   update: TimingUpdate
   /** The live (undelayed) update. With a broadcast delay it's ahead of `update`: cars are placed between the
@@ -77,6 +77,8 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
   note?: string
   /** Shown first in the toolbar (MapView's 2D/3D switch). */
   extraTools?: ReactNode
+  /** Corner names (the Corners button). */
+  showLabels?: boolean
 }) {
   const { model, effective, placements, sync, awaitingCalibration, flagNow } = useCarPlacement(track, update, live)
   const geometry = useMemo(() => new TrackModel(track), [track])          // outline only: stable for the view
@@ -115,7 +117,7 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
           return <circle key={p.id} cx={pt.x} cy={pt.y} r={9} className="timing-point"><title>{p.name}</title></circle>
         })}
         <g style={{ fontSize: 44 / Math.sqrt(zoom) }}>
-          {track.labels.filter((l) => !HIDDEN_LABELS.test(l.name)).map((l) => (
+          {showLabels && track.labels.filter((l) => !HIDDEN_LABELS.test(l.name)).map((l) => (
             <Label key={l.name} view={view} model={model} name={l.name} distance={l.distance} />
           ))}
         </g>

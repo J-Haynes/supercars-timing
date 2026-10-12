@@ -14,7 +14,7 @@ import { ElevationStrip, type StripCar } from './ElevationStrip'
  * Cameras: Orbit turns slowly around the track (drag to turn, scroll or pinch to zoom); Follow chases one car
  * (the leader unless the viewer picks another).
  */
-export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, flatBuildings, onFlatBuildings, onFollowCar, onHover, onTogglePin, note }: {
+export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, cornerLabels, cornersButton, flatBuildings, onFlatBuildings, onFollowCar, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
   live?: TimingUpdate | null
@@ -26,6 +26,9 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   followCar: string | null
   /** The view switch (MapView: 2D, 3D, Orbit, Follow), shown first in the toolbar. */
   views: ReactNode
+  /** Corner names and numbers shown; and the button that switches them (MapView). */
+  cornerLabels: boolean
+  cornersButton: ReactNode
   /** Buildings as flat footprints (tracks with scenery). */
   flatBuildings: boolean
   onFlatBuildings: (flat: boolean) => void
@@ -58,6 +61,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   const scenery = useScenery(track.code)
   useEffect(() => { scene.current?.setScenery(scenery) }, [scenery, geometry])
   useEffect(() => { scene.current?.setFlatBuildings(flatBuildings) }, [flatBuildings, scenery, geometry])
+  useEffect(() => { scene.current?.setCornerLabels(cornerLabels) }, [cornerLabels, geometry])
 
   const leader = cars.find((c) => c.position === 1)
   const followed = (followCar && cars.find((c) => c.carNumber === followCar)) || leader
@@ -89,6 +93,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
             {byPosition.map((c) => <option key={c.id} value={c.carNumber}>P{c.position} #{c.carNumber} {c.driver}</option>)}
           </select>
         )}
+        {(track.labels.length > 0 || (scenery?.corners?.length ?? 0) > 0) && cornersButton}
         {scenery && scenery.buildings.length > 0 && (
           <button type="button" className={`wide${flatBuildings ? '' : ' active'}`} aria-pressed={!flatBuildings}
             onClick={() => onFlatBuildings(!flatBuildings)} title={flatBuildings ? 'Show buildings at their height' : 'Flatten buildings to their footprints'}>Buildings</button>

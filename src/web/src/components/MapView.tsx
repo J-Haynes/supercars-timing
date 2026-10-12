@@ -19,7 +19,7 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
  * orbiting or following a car. Both place cars with the same code (map/useCarPlacement.ts). Remembered in settings.
  */
 export function MapView({ settings, onSettings, ...props }: ComponentProps<typeof TrackMap> & {
-  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings'>
+  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels'>
   onSettings: (change: Partial<Settings>) => void
 }) {
   const view: View = settings.mapView === '2d' ? '2d' : settings.camera3d
@@ -32,11 +32,16 @@ export function MapView({ settings, onSettings, ...props }: ComponentProps<typeo
       ))}
     </div>
   )
-  if (view === '2d') return <TrackMap {...props} extraTools={views} />
+  const corners = (
+    <button type="button" className={`wide${settings.cornerLabels ? ' active' : ''}`} aria-pressed={settings.cornerLabels}
+      onClick={() => onSettings({ cornerLabels: !settings.cornerLabels })} title={settings.cornerLabels ? 'Hide corner names and numbers' : 'Show corner names and numbers'}>Corners</button>
+  )
+  if (view === '2d') return <TrackMap {...props} extraTools={<>{views}{corners}</>} showLabels={settings.cornerLabels} />
   return (
     <Suspense fallback={<div className="track-map"><div className="map-missing">Loading the 3D map…</div></div>}>
       <TrackMap3D track={props.track} update={props.update} live={props.live} hoverId={props.hoverId} highlightIds={props.highlightIds}
         pinned={props.pinned} camera={view} followCar={settings.followCar} views={views}
+        cornerLabels={settings.cornerLabels} cornersButton={corners}
         flatBuildings={settings.flatBuildings} onFlatBuildings={(flatBuildings) => onSettings({ flatBuildings })}
         onFollowCar={(followCar) => onSettings({ followCar })}
         onHover={props.onHover} onTogglePin={props.onTogglePin} note={props.note} />

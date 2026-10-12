@@ -51,7 +51,8 @@ export class TrackScene {
   private readonly rimMaterial = new THREE.MeshBasicMaterial({ color: 0x0b0d10, side: THREE.BackSide, depthTest: false })
   private readonly edges: THREE.LineBasicMaterial
   private readonly edgesXray = new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: XRAY_OPACITY, depthTest: false, depthWrite: false })
-  private readonly labels: { el: HTMLSpanElement; at: THREE.Vector3 }[] = []
+  private readonly labels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean }[] = []
+  private showCorners = true
   private readonly resize: ResizeObserver
   private readonly raycaster = new THREE.Raycaster()
   private readonly centre: Vec
@@ -61,7 +62,7 @@ export class TrackScene {
   private scenery: THREE.Group | null = null
   private buildings: THREE.Mesh | null = null
   /** Landmark and corner labels that came with the scenery (removed when it changes). */
-  private sceneryLabels: { el: HTMLSpanElement; at: THREE.Vector3 }[] = []
+  private sceneryLabels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean }[] = []
   private flatBuildings = false
   private last = performance.now()
   private mode: CameraMode = 'static'
@@ -121,7 +122,7 @@ export class TrackScene {
       el.className = /^T\d/.test(l.name) ? 'm3d-label m3d-corner' : 'm3d-label'
       el.textContent = l.name
       this.overlay.appendChild(el)
-      this.labels.push({ el, at: this.beside(l.distance) })
+      this.labels.push({ el, at: this.beside(l.distance), corner: true })
     }
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
@@ -161,6 +162,11 @@ export class TrackScene {
     else this.keys.clear()
   }
 
+  /** Corner names and numbers on or off (the Corners button); the pit lane and landmarks stay. */
+  setCornerLabels(show: boolean) {
+    this.showCorners = show
+  }
+
   setCaution(caution: boolean) {
     this.edges.color.setHex(caution ? YELLOW : EDGE)
     this.edgesXray.color.setHex(caution ? YELLOW : EDGE)
@@ -183,15 +189,15 @@ export class TrackScene {
     if (this.grid) this.grid.visible = !scenery
     if (!scenery) return
     // Landmarks just above their roofs; corners (when the track file has none of its own) like the track's labels.
-    const label = (text: string, className: string, at: THREE.Vector3) => {
+    const label = (text: string, className: string, at: THREE.Vector3, corner = false) => {
       const el = document.createElement('span')
       el.className = className
       el.textContent = text
       this.overlay.appendChild(el)
-      this.sceneryLabels.push({ el, at })
+      this.sceneryLabels.push({ el, at, corner })
     }
     for (const l of scenery.landmarks ?? []) label(`◆ ${l.name}`, 'm3d-label m3d-landmark', this.toWorld({ x: l.at[0], y: l.at[1] }, (l.h || 20) + 15))
-    if (this.model.def.labels.length === 0) for (const c of scenery.corners ?? []) label(c.name, 'm3d-label m3d-corner', this.beside(c.distance))
+    if (this.model.def.labels.length === 0) for (const c of scenery.corners ?? []) label(c.name, 'm3d-label m3d-corner', this.beside(c.distance), true)
     const group = new THREE.Group()
     const layers: [SceneryArea[], number, number][] = [[scenery.parks, SCENERY.park, 1], [scenery.beach, SCENERY.beach, 2], [scenery.water, SCENERY.water, 3]]
     for (const [areas, colour, order] of layers) {
@@ -386,6 +392,7 @@ export class TrackScene {
     // corners some numbers hide, and come back when zoomed in.
     const taken: { x: number; y: number; w: number }[] = []
     for (const l of [...this.labels, ...this.sceneryLabels]) {
+      if (l.corner && !this.showCorners) { l.el.style.display = 'none'; continue }
       place(l.el, l.at)
       if (l.el.style.display === 'none') continue
       const box = { ...screenOf(l.el), w: l.el.textContent!.length * 6 + 8 }

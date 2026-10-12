@@ -25,6 +25,8 @@ export interface Settings {
   camera3d: 'static' | 'orbit' | 'follow' | 'free'
   /** 3D map: buildings drawn as flat footprints instead of blocks. */
   flatBuildings: boolean
+  /** Corner names and numbers on the maps (the Corners button). */
+  cornerLabels: boolean
   /** Car number the 3D camera follows (null: the leader). */
   followCar: string | null
   /** Detailed-mode tower columns (order and hidden), per session kind. Missing = the default layout. */
@@ -33,7 +35,7 @@ export interface Settings {
 
 // Each series keeps its own settings (column layouts differ).
 const KEY = isF1 ? 'supercars-timing:f1-settings' : 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, camera3d: 'static', flatBuildings: false, followCar: null, focusCard: 'auto', columns: {} }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, followCar: null, focusCard: 'auto', columns: {} }
 
 function load(): Settings {
   try {
