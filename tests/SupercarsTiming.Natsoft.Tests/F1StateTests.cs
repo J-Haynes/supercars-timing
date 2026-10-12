@@ -72,4 +72,23 @@ public class F1StateTests
     [InlineData("LAP 20", 0, 0)]
     public void Reads_gaps(string text, double seconds, int laps) =>
         Assert.Equal((seconds, laps), F1State.ParseGap(text));
+
+    /// <summary>
+    /// Connected isn't live: between sessions F1's hub sends the last session's saved state (flag Ended) and nothing
+    /// more, and the header said LIVE all day (12 Oct 2026). The store reports "waiting" then.
+    /// </summary>
+    [Fact]
+    public void Status_is_waiting_not_live_once_the_session_has_ended()
+    {
+        var store = new F1Store();
+        store.SetStatus(new(SupercarsTiming.Server.Feed.FeedMode.Live, "live", "F1 live timing"));
+        var now = DateTimeOffset.UtcNow;
+        store.Apply(new F1Message(now, "SessionInfo", JsonNode.Parse("""{"Meeting":{"Name":"Singapore Grand Prix"},"Key":11383,"Type":"Race","Name":"Race","GmtOffset":"08:00:00"}""")));
+        store.Apply(new F1Message(now, "SessionStatus", JsonNode.Parse("""{"Status":"Started"}""")));
+        Assert.Equal("live", store.Status.State);
+
+        store.Apply(new F1Message(now, "SessionStatus", JsonNode.Parse("""{"Status":"Finalised"}""")));
+        Assert.Equal("waiting", store.Status.State);
+        Assert.Contains("no session running", store.Status.Detail);
+    }
 }

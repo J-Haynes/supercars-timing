@@ -39,11 +39,37 @@ public sealed class F1Store
     TimingSnapshot _snapshot = TimingSnapshot.Empty;
     bool _dirty;
 
-    public FeedStatus Status { get; private set; } = new(FeedMode.Live, "starting", null);
+    FeedStatus _status = new(FeedMode.Live, "starting", null);
+    DateTime _lastMessageUtc = DateTime.MinValue;
+
+    /// <summary>F1 sends data all through a session (safety cars included); this long without any means none is on.</summary>
+    static readonly TimeSpan Quiet = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// The feed's status for viewers. Connected to F1's hub isn't the same as live: between sessions the hub sends
+    /// its saved state of the last session on connecting (flag Ended) and then nothing. So "live" becomes "waiting"
+    /// ("no session running") once the session has ended or nothing has arrived for five minutes, as the Natsoft
+    /// feed does between sessions; the header then stops saying LIVE.
+    /// </summary>
+    public FeedStatus Status
+    {
+        get
+        {
+            lock (_lock)
+            {
+                if (_status.Mode != FeedMode.Live || _status.State != "live") return _status;
+                // Look without clearing _dirty: the broadcast loop relies on it to know there's a new snapshot to send.
+                var snapshot = _dirty ? _state.Snapshot() : _snapshot;
+                bool ended = string.Equals(snapshot.Session.Flag, "Ended", StringComparison.OrdinalIgnoreCase);
+                bool quiet = DateTime.UtcNow - _lastMessageUtc > Quiet;
+                return ended || quiet ? _status with { State = "waiting", Detail = "Connected to F1 live timing · no session running" } : _status;
+            }
+        }
+    }
 
     public void Apply(F1Message m)
     {
-        lock (_lock) { _state.Apply(m); _dirty = true; }
+        lock (_lock) { _state.Apply(m); _dirty = true; _lastMessageUtc = DateTime.UtcNow; }
     }
 
     public void Reset()
@@ -53,7 +79,7 @@ public sealed class F1Store
 
     public void SetStatus(FeedStatus status)
     {
-        lock (_lock) { Status = status; _dirty = true; }
+        lock (_lock) { _status = status; _dirty = true; }
     }
 
     public LapHistory Laps()
@@ -121,9 +147,15 @@ public sealed class F1FeedService(
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(Math.Max(50, feedOptions.Value.BroadcastIntervalMs)));
         try
         {
+            // Also push when only the status changes (going quiet sends no message, but turns "live" into "waiting").
+            var sentStatus = store.Status;
             while (await timer.WaitForNextTickAsync(ct))
-                if (store.SnapshotIfChanged() is { } snapshot)
-                    await hub.Clients.All.SendAsync(TimingHub.SnapshotMethod, new TimingUpdate(store.Status, snapshot), ct);
+            {
+                var status = store.Status;
+                if (store.SnapshotIfChanged() is not null || status != sentStatus)
+                    await hub.Clients.All.SendAsync(TimingHub.SnapshotMethod, new TimingUpdate(status, store.Snapshot()), ct);
+                sentStatus = status;
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     }
