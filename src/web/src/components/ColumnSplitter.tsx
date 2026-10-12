@@ -3,14 +3,22 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 const MIN_MAP = 380 // px, the map column's narrowest (as in the CSS default)
 const MIN_TOWER = 520 // px left for the tower
 const STEP = 40 // px per arrow key press
+// Remembers that the viewer has used (or dismissed) the divider, so the "Drag to resize" hint shows only until then.
+const HINT_KEY = 'supercars-timing:splitter-hint-seen'
+const hintSeen = () => { try { return localStorage.getItem(HINT_KEY) === '1' } catch { return true } }
+const markHintSeen = () => { try { localStorage.setItem(HINT_KEY, '1') } catch { /* private mode: just hide it */ } }
 
 /**
  * The handle between the tower and the map on wide screens: drag it to make the map column wider or narrower.
+ * Made to look movable: a line that's always there, a grip with dots and ◂ ▸ arrows that stays in view while the page
+ * scrolls, a resize cursor and highlight on hover, and a one-time "Drag to resize" hint.
  * The width is a CSS variable on the layout (`--map-width`, see styles.css), saved in settings when the drag ends.
  * Double-click (or Home) goes back to the automatic width. Hidden on narrower screens, where the columns stack.
  */
 export function ColumnSplitter({ width, onWidth }: { width: number | null; onWidth: (px: number | null) => void }) {
   const [dragging, setDragging] = useState(false)
+  const [hint, setHint] = useState(() => !hintSeen())
+  const dismissHint = () => { if (hint) { setHint(false); markHintSeen() } }
   const latest = useRef(width)
 
   /** Map width for a pointer at clientX: from the pointer to the layout's right edge, within limits. */
@@ -25,6 +33,7 @@ export function ColumnSplitter({ width, onWidth }: { width: number | null; onWid
     if (e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
     setDragging(true)
+    dismissHint()
   }
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging) return
@@ -54,6 +63,18 @@ export function ColumnSplitter({ width, onWidth }: { width: number | null; onWid
       aria-label="Map width: drag, or use the arrow keys. Double-click to reset." tabIndex={0}
       title="Drag to resize the map · double-click to reset"
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-      onDoubleClick={() => onWidth(null)} onKeyDown={onKeyDown} />
+      onDoubleClick={() => onWidth(null)} onKeyDown={(e) => { dismissHint(); onKeyDown(e) }}>
+      <div className="col-grip" aria-hidden>
+        <span className="col-grip-arrow">◂</span>
+        <span className="col-grip-dots" />
+        <span className="col-grip-arrow">▸</span>
+        {hint && (
+          <span className="col-hint" role="note">
+            Drag to resize the map
+            <button type="button" aria-label="Dismiss" onPointerDown={(e) => e.stopPropagation()} onClick={dismissHint}>×</button>
+          </span>
+        )}
+      </div>
+    </div>
   )
 }

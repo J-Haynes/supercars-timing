@@ -109,11 +109,19 @@ main { flex: 1; padding: 0 16px 24px; }
   /* A width the viewer dragged to, kept within limits as the window changes (the tower keeps at least 520 px). */
   .layout.sized, .layout.simple.sized { grid-template-columns: minmax(0, 1fr) 16px clamp(380px, var(--map-width), calc(100% - 536px)); }
   .map-panel { order: 0; }
-  .col-splitter { display: block; position: sticky; top: 0; align-self: stretch; height: 100%; min-height: 100vh; cursor: col-resize; touch-action: none; }
-  .col-splitter::after { content: ''; position: absolute; top: 0; bottom: 0; left: 7px; width: 2px; border-radius: 1px; background: transparent; transition: background .15s; }
-  .col-splitter:hover::after, .col-splitter.dragging::after, .col-splitter:focus-visible::after { background: var(--line); }
-  .col-splitter.dragging::after { background: var(--muted); }
-  .col-splitter:focus-visible { outline: none; }
+  /* The divider (ColumnSplitter): a line that's always visible, and a grip that stays mid-screen while scrolling. */
+  .col-splitter { display: block; position: relative; z-index: 3; align-self: stretch; cursor: col-resize; touch-action: none; outline: none; }
+  .col-splitter::before { content: ''; position: absolute; top: 0; bottom: 0; left: 7px; width: 2px; border-radius: 1px; background: var(--line); transition: background .15s; }
+  .col-grip { position: sticky; top: calc(50vh - 36px); left: 0; width: 22px; margin-left: -3px; height: 72px; margin-top: 120px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px; border: 1px solid #34404c; border-radius: 8px; background: #1a2027;
+    color: var(--muted); font-size: 12px; line-height: 1; box-shadow: 0 2px 8px rgba(0, 0, 0, .35); transition: background .15s, border-color .15s, color .15s; }
+  .col-grip-dots { width: 6px; height: 16px; background: radial-gradient(circle, currentColor 1.2px, transparent 1.6px) 0 0 / 3px 4px; }
+  .col-splitter:hover::before, .col-splitter:focus-visible::before, .col-splitter.dragging::before { background: #3987e5; }
+  .col-splitter:hover .col-grip, .col-splitter:focus-visible .col-grip, .col-splitter.dragging .col-grip { border-color: #3987e5; background: #16263a; color: var(--text); }
+  .col-hint { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); white-space: nowrap; display: flex; align-items: center; gap: 6px;
+    padding: 5px 6px 5px 10px; border-radius: 6px; background: #3987e5; color: #fff; font-size: 12px; cursor: default; box-shadow: 0 4px 14px rgba(0, 0, 0, .4); }
+  .col-hint::before { content: ''; position: absolute; left: -5px; top: 50%; margin-top: -5px; border: 5px solid transparent; border-left: 0; border-right-color: #3987e5; }
+  .col-hint button { background: none; border: 0; color: #fff; font-size: 14px; line-height: 1; cursor: pointer; padding: 0 2px; }
   body:has(.col-splitter.dragging) { cursor: col-resize; user-select: none; }
   /* The left column scrolls with the page until its bottom reaches the bottom of the screen, then stays there while
      the taller right column keeps scrolling (--stick-height comes from useStickToBottom). */
