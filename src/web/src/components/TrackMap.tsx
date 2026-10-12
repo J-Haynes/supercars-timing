@@ -6,6 +6,7 @@ import { TrackModel, type Vec } from '../map/trackModel'
 import { useCarPlacement } from '../map/useCarPlacement'
 import { battles, battleSpans } from '../battles'
 import { ElevationStrip, type StripCar } from './ElevationStrip'
+import { ghostOnTrack, type PitGhost } from '../pit/usePitGhost'
 
 const CAR_RADIUS = 46 // metres, in map units
 const MAX_ZOOM = 8
@@ -58,7 +59,7 @@ function makeView(model: TrackModel, rotationDeg: number) {
   }
 }
 
-export function TrackMap({ track, update, live, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note, extraTools, showLabels = true, showBattles = false }: {
+export function TrackMap({ track, update, live, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note, extraTools, showLabels = true, showBattles = false, pitGhost = null }: {
   track: TrackDefinition
   update: TimingUpdate
   /** The live (undelayed) update. With a broadcast delay it's ahead of `update`: cars are placed between the
@@ -82,6 +83,8 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
   showLabels?: boolean
   /** Highlight battles (races, the Battles button). */
   showBattles?: boolean
+  /** "If it pitted now" for the chosen car (pit/usePitGhost.ts): drawn behind it on the track. */
+  pitGhost?: PitGhost | null
 }) {
   const { model, effective, placements, sync, awaitingCalibration, flagNow } = useCarPlacement(track, update, live)
   const battleList = useMemo(() => (showBattles ? battles(update.timing) : []), [showBattles, update.timing])
@@ -100,6 +103,7 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
   const h = view.fit.h / zoom
   const viewBox = `${view.fit.x + view.fit.w / 2 - w / 2 + pan.x} ${view.fit.y + view.fit.h / 2 - h / 2 + pan.y} ${w} ${h}`
   const s = (d: number) => view.toScreen(model.pointAt(d))
+  const ghost = ghostOnTrack(pitGhost, placements, model)
 
   return (
     <div className={`track-map${!awaitingCalibration && !sync.synced ? ' syncing' : ''}`}>
@@ -138,6 +142,23 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
             </g>
           )
         })}
+        {/* Pit rejoin ghost: the likely range as a band, the median as a hollow ring with the car number. */}
+        {ghost && (() => {
+          const pts: string[] = []
+          for (let d = ghost.from; d <= ghost.to; d += 5) { const p = s(d); pts.push(`${p.x.toFixed(1)} ${p.y.toFixed(1)}`) }
+          const at = s(ghost.mid)
+          const k = 1 / Math.sqrt(zoom)
+          return (
+            <g className="map-ghost">
+              <path d={`M${pts.join('L')}`} />
+              <g transform={`translate(${at.x.toFixed(1)} ${at.y.toFixed(1)}) scale(${k.toFixed(3)})`}>
+                <circle r={CAR_RADIUS} />
+                <text dy="0.36em">{ghost.car.carNumber}</text>
+                <text className="map-ghost-label" y={-CAR_RADIUS - 24}>{ghost.label}</text>
+              </g>
+            </g>
+          )
+        })()}
         {drawn.map((pl) => {
           const { car } = pl
           const p = pl.kind === 'track' ? s(pl.distance) : view.toScreen(pl.point)
@@ -279,6 +300,7 @@ function useZoomPan(fit: { x: number; y: number; w: number; h: number }) {
 }
 
 type View = ReturnType<typeof makeView>
+
 
 function CarDot({ car, p, dim, scale, hovered, focused, pinned, onHover, onTogglePin }: {
   car: CarRow; p: Vec; dim: boolean; scale: number; hovered: boolean; focused: boolean; pinned: boolean

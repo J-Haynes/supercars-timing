@@ -36,6 +36,8 @@ const XRAY_OPACITY = 0.3
 /** Battles: a glowing band over the track under the cars (a colour no team or flag uses). */
 const BATTLE = 0x2fd3ff
 const BATTLE_WIDTH = 46
+/** Pit rejoin ghost (pit/): violet, a colour no team, flag or battle uses. */
+const GHOST = 0xb98cff
 /** Scenery colours: muted, so the track and the cars stay the brightest things on screen. */
 const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x272e37, footprint: 0x313943 }
 const YELLOW = 0xffd23f
@@ -73,6 +75,11 @@ export class TrackScene {
   /** Landmark and corner labels that came with the scenery (removed when it changes). */
   private sceneryLabels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean; landmark?: boolean }[] = []
   private showLandmarks = true
+  /** Pit rejoin ghost: a band over the likely stretch, a dashed ring at the most likely spot, and a label. */
+  private readonly ghostMaterial = new THREE.MeshBasicMaterial({ color: GHOST, transparent: true, opacity: 0.4, depthTest: false, depthWrite: false, side: THREE.DoubleSide })
+  private ghostBand: THREE.Mesh | null = null
+  private readonly ghostRing = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.2, 8, 40), new THREE.MeshBasicMaterial({ color: GHOST, depthTest: false }))
+  private readonly ghostLabel: HTMLSpanElement
   private flatBuildings = false
   private last = performance.now()
   private mode: CameraMode = 'static'
@@ -128,6 +135,13 @@ export class TrackScene {
     this.battleGroup.renderOrder = 9
     this.scene.add(this.battleGroup)
     this.scene.add(this.carGroup)
+    this.ghostRing.renderOrder = 12
+    this.ghostRing.visible = false
+    this.scene.add(this.ghostRing)
+    this.ghostLabel = document.createElement('span')
+    this.ghostLabel.className = 'm3d-label m3d-ghost'
+    this.ghostLabel.style.display = 'none'
+    this.overlay.appendChild(this.ghostLabel)
     for (const l of def.labels.filter((l) => !/line$|^pit straight$/i.test(l.name))) {
       const el = document.createElement('span')
       // Corner numbers (T1, T12...) as small pills so they read over the bright track; names as plain text.
@@ -189,8 +203,8 @@ export class TrackScene {
     this.battleSpans = spans
   }
 
-  /** A flat band along the track from `from` to `to` metres (to may pass the lap length), BATTLE_WIDTH wide. */
-  private band(from: number, to: number) {
+  /** A flat band along the track from `from` to `to` metres (to may pass the lap length), `width` wide. */
+  private band(from: number, to: number, width = BATTLE_WIDTH) {
     const positions: number[] = []
     const index: number[] = []
     const steps = Math.max(2, Math.ceil((to - from) / 5))
@@ -199,7 +213,7 @@ export class TrackScene {
       const p = this.model.pointAt(d)
       const n = this.model.normalAt(d)
       for (const side of [1, -1]) {
-        const q = this.toWorld({ x: p.x + n.x * side * BATTLE_WIDTH / 2, y: p.y + n.y * side * BATTLE_WIDTH / 2 }, this.heightAt(d) + 1)
+        const q = this.toWorld({ x: p.x + n.x * side * width / 2, y: p.y + n.y * side * width / 2 }, this.heightAt(d) + 1)
         positions.push(q.x, q.y, q.z)
       }
       if (k < steps) index.push(k * 2, k * 2 + 1, k * 2 + 2, k * 2 + 2, k * 2 + 1, k * 2 + 3)
@@ -229,6 +243,25 @@ export class TrackScene {
   /** Landmark names (attractions, stadiums, tall buildings) on or off (the Landmarks button). */
   setLandmarks(show: boolean) {
     this.showLandmarks = show
+  }
+
+  /**
+   * The pit rejoin ghost this frame (pit/usePitGhost.ts, ghostOnTrack): `from`..`to` metres is the likely stretch,
+   * `mid` the most likely spot. Null hides it.
+   */
+  setPitGhost(ghost: { from: number; to: number; mid: number; label: string } | null) {
+    if (this.ghostBand) {
+      this.scene.remove(this.ghostBand)
+      this.ghostBand.geometry.dispose()
+      this.ghostBand = null
+    }
+    this.ghostRing.visible = !!ghost
+    if (!ghost) { this.ghostLabel.style.display = 'none'; return }
+    this.ghostBand = new THREE.Mesh(this.band(ghost.from, ghost.to, 30), this.ghostMaterial)
+    this.ghostBand.renderOrder = 9
+    this.scene.add(this.ghostBand)
+    this.ghostRing.position.copy(this.at(ghost.mid, 3))
+    this.ghostLabel.textContent = ghost.label
   }
 
   setCaution(caution: boolean) {
@@ -366,6 +399,11 @@ export class TrackScene {
       if (this.mode === 'free') this.fly(dt)
       this.controls.update(dt)
     }
+    if (this.ghostRing.visible) {
+      // Sized like a car dot, and turned to face the camera so it always reads as a ring.
+      this.ghostRing.scale.setScalar(Math.min(DOT_MAX, Math.max(DOT_MIN, this.ghostRing.position.distanceTo(this.camera.position) / DOT_PER_DISTANCE)))
+      this.ghostRing.quaternion.copy(this.camera.quaternion)
+    }
     for (const c of this.cars.values()) {
       if (c.group.visible) c.group.scale.setScalar(Math.min(DOT_MAX, Math.max(DOT_MIN, c.group.position.distanceTo(this.camera.position) / DOT_PER_DISTANCE)))
     }
@@ -464,6 +502,10 @@ export class TrackScene {
       if (el.style.display !== 'none') taken.push({ ...screenOf(el), w: sp.label.length * 6 + 12 })
     })
     for (let i = this.battleSpans.length; i < this.battleLabels.length; i++) this.battleLabels[i].style.display = 'none'
+    if (this.ghostRing.visible) {
+      place(this.ghostLabel, this.ghostRing.position.clone().add(new THREE.Vector3(0, this.ghostRing.scale.y * 2 + 6, 0)))
+      if (this.ghostLabel.style.display !== 'none') taken.push({ ...screenOf(this.ghostLabel), w: (this.ghostLabel.textContent?.length ?? 0) * 6 + 12 })
+    }
     // F1: "OT" beside each car in Overtake Mode range.
     const overtake = this.battleSpans.flatMap((sp) => sp.overtakeIds)
     overtake.forEach((id, i) => {

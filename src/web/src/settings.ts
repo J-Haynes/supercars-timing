@@ -31,6 +31,8 @@ export interface Settings {
   showBattles: boolean
   /** 3D map: names of landmarks (attractions, stadiums, tall buildings) shown (the Landmarks button). */
   showLandmarks: boolean
+  /** Car number whose "if it pitted now" rejoin is shown on the maps (pit/: an experimental estimate); null = off. */
+  pitGhostCar: string | null
   /** Car number the 3D camera follows (null: the leader). */
   followCar: string | null
   /** Detailed-mode tower columns (order and hidden), per session kind. Missing = the default layout. */
@@ -39,7 +41,7 @@ export interface Settings {
 
 // Each series keeps its own settings (column layouts differ).
 const KEY = isF1 ? 'supercars-timing:f1-settings' : 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, showBattles: true, showLandmarks: true, followCar: null, focusCard: 'auto', columns: {} }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, showBattles: true, showLandmarks: true, pitGhostCar: null, followCar: null, focusCard: 'auto', columns: {} }
 
 function load(): Settings {
   try {

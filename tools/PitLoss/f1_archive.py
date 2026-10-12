@@ -94,7 +94,8 @@ def main(year):
     for key, path in race_folders(year).items():
         lane, stationary, lost = measure(download(key, path))
         print(f'{CIRCUITS[key]:12} pit lane {st.median(lane):5.1f}s  stationary {st.median(stationary):4.1f}s  '
-              f'time lost (green flag, n={len(lost)}) median {st.median(lost):5.1f}s, range {min(lost):.1f}-{max(lost):.1f}s')
+              f'time lost (green flag, n={len(lost)}) median {st.median(lost):5.1f}s, middle half '
+              f'{st.quantiles(lost, n=4)[0]:.1f}-{st.quantiles(lost, n=4)[2]:.1f}s, range {min(lost):.1f}-{max(lost):.1f}s')
 
 
 if __name__ == '__main__':

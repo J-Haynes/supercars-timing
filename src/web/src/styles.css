@@ -170,6 +170,11 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-battle path { fill: none; stroke: #2fd3ff; stroke-opacity: .5; stroke-width: 120; stroke-linecap: round; stroke-linejoin: round; }
 .map-battle text { fill: #2fd3ff; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #0b0d10; stroke-width: 8px; }
 .map-car { cursor: pointer; transition: opacity .3s; }
+/* Pit rejoin ghost (pit/): violet, a colour no team, flag or battle uses; hollow, as it's a "what if". */
+.map-ghost > path { fill: none; stroke: #b98cff; stroke-opacity: .35; stroke-width: 90; stroke-linecap: round; stroke-linejoin: round; }
+.map-ghost circle { fill: rgba(11, 13, 16, .6); stroke: #b98cff; stroke-width: 9; stroke-dasharray: 16 10; }
+.map-ghost text { fill: #d9c4ff; font: 700 40px ui-monospace, monospace; text-anchor: middle; pointer-events: none; }
+.map-ghost text.map-ghost-label { font: 700 36px system-ui, sans-serif; paint-order: stroke; stroke: #0b0d10; stroke-width: 8px; }
 .map-car circle { fill: #5a6573; stroke: #0b0d10; stroke-width: 7; }
 .map-car text { fill: #fff; font: 700 44px ui-monospace, monospace; text-anchor: middle; pointer-events: none; }
 .map-car.mfr-ford circle { fill: var(--ford); }
@@ -226,6 +231,21 @@ main { flex: 1; padding: 0 16px 24px; }
 .track-map.syncing .m3d-host { opacity: .35; filter: grayscale(1); transition: opacity .4s, filter .4s; }
 @media (max-width: 760px) { .m3d-host { height: 56vh; } }
 @media (max-width: 760px) { .elev-strip { height: 72px; } }
+.m3d-label.m3d-ghost { color: #1b0b33; background: #b98cff; border-radius: 4px; padding: 1px 5px; font-weight: 600; font-size: 11px; }
+.map-tools select.pit-ghost-pick.active { border-color: #b98cff; color: #d9c4ff; }
+/* The pit rejoin card under the map (pit/PitGhostPanel.tsx). */
+.pit-ghost-panel { margin-top: 8px; border: 1px solid #4a3a66; border-left: 4px solid #b98cff; border-radius: 8px; background: var(--panel); padding: 8px 12px; font-size: 13px; }
+.pit-ghost-panel header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pit-ghost-panel p { margin: 6px 0 0; color: var(--text); }
+.pit-ghost-panel .pit-ghost-main { font-size: 14px; }
+.pit-ghost-panel .pit-ghost-source, .pit-ghost-panel .pit-ghost-note { color: var(--muted); font-size: 12px; }
+.pit-ghost-swatch { width: 12px; height: 12px; border-radius: 50%; border: 2px dashed #b98cff; }
+.pit-ghost-badge { font: 700 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .06em; color: #d9c4ff; border: 1px solid #6c55a0; border-radius: 4px; padding: 1px 5px; }
+.pit-ghost-badge.experimental { color: #ffd23f; border-color: #7a6520; }
+.pit-ghost-close { margin-left: auto; background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; }
+.pit-ghost-close:hover { color: var(--text); }
+.pit-ghost-clear { color: #6fd18c; font-weight: 600; }
+.pit-ghost-traffic { color: #ffb15c; font-weight: 600; }
 .map-missing { color: var(--muted); padding: 32px 16px; text-align: center; border: 1px dashed var(--line); border-radius: 8px; }
 
 /* Controls bar */

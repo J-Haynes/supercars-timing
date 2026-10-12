@@ -7,6 +7,7 @@ import { useCarPlacement } from '../map/useCarPlacement'
 import { HEIGHT_SCALE, TrackScene, type CameraMode } from '../map/scene3d'
 import { ElevationStrip, type StripCar } from './ElevationStrip'
 import { battles, battleSpans } from '../battles'
+import { ghostOnTrack, type PitGhost } from '../pit/usePitGhost'
 
 /**
  * The 3D map: the same car placements as the 2D map (useCarPlacement), drawn by map/scene3d.ts. Loaded lazily by
@@ -15,7 +16,7 @@ import { battles, battleSpans } from '../battles'
  * Cameras: Orbit turns slowly around the track (drag to turn, scroll or pinch to zoom); Follow chases one car
  * (the leader unless the viewer picks another).
  */
-export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, cornerLabels, cornersButton, showBattles, flatBuildings, onFlatBuildings, showLandmarks, onShowLandmarks, onFollowCar, onHover, onTogglePin, note }: {
+export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, cornerLabels, cornersButton, showBattles, flatBuildings, onFlatBuildings, showLandmarks, onShowLandmarks, ghostPicker, pitGhost, onFollowCar, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
   live?: TimingUpdate | null
@@ -38,6 +39,9 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   /** Landmark names shown (tracks whose scenery has landmarks; the Landmarks button). */
   showLandmarks: boolean
   onShowLandmarks: (show: boolean) => void
+  /** The pit rejoin car picker (MapView), and the ghost to draw (pit/usePitGhost.ts). */
+  ghostPicker?: ReactNode
+  pitGhost: PitGhost | null
   onFollowCar: (carNumber: string | null) => void
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
@@ -89,6 +93,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
     s.setCars(placements, tagged)
     const distanceOf = new Map(placements.flatMap((p) => (p.kind === 'track' ? [[p.car.id, p.distance] as const] : [])))
     s.setBattles(battleSpans(battleList, distanceOf, model.length))
+    s.setPitGhost(ghostOnTrack(pitGhost, placements, model))
   })
 
   const stripCars: StripCar[] = placements.flatMap((pl) => (pl.kind === 'track' ? [{ car: pl.car, distance: pl.distance, dim: pl.dim }] : []))
@@ -113,6 +118,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
           <button type="button" className={`wide${showLandmarks ? ' active' : ''}`} aria-pressed={showLandmarks}
             onClick={() => onShowLandmarks(!showLandmarks)} title={showLandmarks ? 'Hide landmark names' : 'Show landmark names'}>Landmarks</button>
         )}
+        {ghostPicker}
       </div>
       <div ref={host} className="m3d-host">
         {failed && <div className="map-overlay">The 3D map needs WebGL, which this browser has turned off. Switch back to 2D.</div>}

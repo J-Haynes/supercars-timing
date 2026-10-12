@@ -3,6 +3,8 @@ import { TrackMap } from './TrackMap'
 import { isRace } from '../session'
 import { isF1 } from '../series'
 import type { Settings } from '../settings'
+import { usePitGhost } from '../pit/usePitGhost'
+import { PitGhostPanel } from '../pit/PitGhostPanel'
 
 // three.js is large (~0.5 MB): only fetched when a viewer switches to 3D.
 const TrackMap3D = lazy(() => import('./TrackMap3D'))
@@ -21,7 +23,7 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
  * orbiting or following a car. Both place cars with the same code (map/useCarPlacement.ts). Remembered in settings.
  */
 export function MapView({ settings, onSettings, ...props }: ComponentProps<typeof TrackMap> & {
-  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels' | 'showBattles' | 'showLandmarks'>
+  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels' | 'showBattles' | 'showLandmarks' | 'pitGhostCar'>
   onSettings: (change: Partial<Settings>) => void
 }) {
   const view: View = settings.mapView === '2d' ? '2d' : settings.camera3d
@@ -45,16 +47,39 @@ export function MapView({ settings, onSettings, ...props }: ComponentProps<typeo
       title={isF1 ? 'Highlight cars within a second of the car ahead (OT: in Overtake Mode range)' : 'Highlight cars within a second of the car ahead'}>Battles</button>
   )
   const showBattles = settings.showBattles && isRace(props.update.timing.session.type)
-  if (view === '2d') return <TrackMap {...props} extraTools={<>{views}{corners}{battlesButton}</>} showLabels={settings.cornerLabels} showBattles={showBattles} />
+  // Pit rejoin ghost (pit/: an experimental estimate), races only: pick a car to see where it would rejoin.
+  const ghost = usePitGhost(props.update.timing, props.track, settings.pitGhostCar)
+  const raceCars = [...props.update.timing.cars].filter((c) => !c.retired).sort((a, b) => (a.position || 99) - (b.position || 99))
+  const ghostPicker = isRace(props.update.timing.session.type) && raceCars.length > 0 && (
+    <select className={`pit-ghost-pick${settings.pitGhostCar ? ' active' : ''}`} value={settings.pitGhostCar ?? ''}
+      onChange={(e) => onSettings({ pitGhostCar: e.target.value || null })} aria-label="Pit rejoin estimate for a car"
+      title="Experimental estimate: where a car would rejoin if it pitted now">
+      <option value="">Pit rejoin: off</option>
+      {raceCars.map((c) => <option key={c.id} value={c.carNumber}>Pit rejoin: P{c.position} #{c.carNumber} {c.driver}</option>)}
+    </select>
+  )
+  const panel = ghost && <PitGhostPanel ghost={ghost} onClose={() => onSettings({ pitGhostCar: null })} />
+  if (view === '2d') {
+    return (
+      <>
+        <TrackMap {...props} extraTools={<>{views}{corners}{battlesButton}{ghostPicker}</>} showLabels={settings.cornerLabels} showBattles={showBattles} pitGhost={ghost} />
+        {panel}
+      </>
+    )
+  }
   return (
-    <Suspense fallback={<div className="track-map"><div className="map-missing">Loading the 3D map…</div></div>}>
-      <TrackMap3D track={props.track} update={props.update} live={props.live} hoverId={props.hoverId} highlightIds={props.highlightIds}
-        pinned={props.pinned} camera={view} followCar={settings.followCar} views={views}
-        cornerLabels={settings.cornerLabels} cornersButton={<>{corners}{battlesButton}</>} showBattles={showBattles}
-        flatBuildings={settings.flatBuildings} onFlatBuildings={(flatBuildings) => onSettings({ flatBuildings })}
-        showLandmarks={settings.showLandmarks} onShowLandmarks={(showLandmarks) => onSettings({ showLandmarks })}
-        onFollowCar={(followCar) => onSettings({ followCar })}
-        onHover={props.onHover} onTogglePin={props.onTogglePin} note={props.note} />
-    </Suspense>
+    <>
+      <Suspense fallback={<div className="track-map"><div className="map-missing">Loading the 3D map…</div></div>}>
+        <TrackMap3D track={props.track} update={props.update} live={props.live} hoverId={props.hoverId} highlightIds={props.highlightIds}
+          pinned={props.pinned} camera={view} followCar={settings.followCar} views={views}
+          cornerLabels={settings.cornerLabels} cornersButton={<>{corners}{battlesButton}</>} showBattles={showBattles}
+          flatBuildings={settings.flatBuildings} onFlatBuildings={(flatBuildings) => onSettings({ flatBuildings })}
+          showLandmarks={settings.showLandmarks} onShowLandmarks={(showLandmarks) => onSettings({ showLandmarks })}
+          ghostPicker={ghostPicker} pitGhost={ghost}
+          onFollowCar={(followCar) => onSettings({ followCar })}
+          onHover={props.onHover} onTogglePin={props.onTogglePin} note={props.note} />
+      </Suspense>
+      {panel}
+    </>
   )
 }

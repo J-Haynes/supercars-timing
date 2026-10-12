@@ -12,7 +12,7 @@ import { flagKind } from './session'
  */
 
 /** Natsoft time `car` crossed `point` at the start of / during lap `lapNo` (the lap being driven, 1-based). */
-function crossingTime(car: CarRow, order: string[], point: string, lapNo: number): number | null {
+export function crossingTime(car: CarRow, order: string[], point: string, lapNo: number): number | null {
   if (car.lapStartAt <= 0) return null
   const currentLap = car.laps + 1
   const previousLapStart = car.lastLap > 0 ? car.lapStartAt - car.lastLap : 0

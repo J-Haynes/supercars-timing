@@ -73,10 +73,20 @@ The app has a second, separate F1 app at `/f1` on F1's public live timing (`docs
 
 ## Pit strategy features (being considered, 12 Oct 2026)
 
-The owner likes all of these and is still deciding; nothing is built. Ideas, in the suggested order:
+The owner likes all of these. Built so far: 1 (13 Oct 2026, experimental). Ideas, in the suggested order:
 
-1. **"If they pitted now" ghost:** pick a car and a faint dot on the 2D/3D maps shows where it would rejoin
-   ("rejoins P9, 1.2 s behind #26"), as a **range** (see below), with a shorter range under a caution.
+1. **"If they pitted now" ghost** (built: `src/web/src/pit/`, CLAUDE.md "Pit rejoin ghost"): pick a car and a violet
+   ring on the 2D/3D maps shows where it would rejoin, with the likely range as a band and a card under the map.
+   Backtest (`tools/PitLoss/backtest.mts`, prediction from just before pit entry, checked 60 s after the exit):
+   - Bathurst 1000 Race 30, 165 stops: right position 43%, within one 73%; gap to the car ahead off by 3.4 s
+     (median). Given each stop's real cost: 49% / 80% and 1.1 s, so most of the error is the unknown stop cost;
+     the rest is other cars stopping meanwhile (with no other stops: 70% exact). Checked 20 s after the exit, the
+     car was still accelerating out of the pit lane and looked ~2.7 s closer than it was.
+   - Ranges: ±1.5 s around this race's median caught the real cost 38% of the time, ±3 s about half (used).
+   - 2025 Singapore GP (F1 archive replayed on the demo server, snapshots saved every 0.25 s), 23 stops: 57% / 83%;
+     in-sample, as the Singapore prior comes from the same race. Our in-pit times match F1's PitLaneTime (24.1 vs 24.0 s).
+   - Under a caution it pauses: 2025 Gold Coast stops under the safety car cost ~3-9 s (vs ~45 s green), compared
+     with cars that stayed out, but too few and too noisy to predict from.
 2. **"Circle of Doom" view:** the track as a ring spaced by gap (time), not distance, with battles and the chosen
    car's pit window. The name comes from timing tools, not confirmed as a team term: MultiViewer
    (https://www.patreon.com/multiviewer/posts/circle-of-doom-164858438) and OneTiming

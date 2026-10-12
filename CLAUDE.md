@@ -66,6 +66,9 @@ see "Next round" below.
     order, `raceOrder`), `insights.ts`, `penalties.ts`, `championship.ts` + `finals.ts` (points data, cited),
     `startingGrid.ts`, `raceSummary.ts`, `chartData.ts`, `driverStats.ts` (stints, recent pace), `session.ts` (`isRace`, `flagKind`, `raceLaps`,
     `minDriverLaps`, `cautionPeriods`), `calendar.ts` (upcoming events and session times), `towerLayout.ts`.
+  - Pit strategy (`pit/`, experimental estimates): `pitLoss.ts` (what a stop costs: this race's stops, else last
+    year's by track and stop number, cited), `rejoin.ts` (race progress in seconds, where a car would rejoin),
+    `usePitGhost.ts` + `PitGhostPanel.tsx` (the map ghost and its card).
   - Map: `map/trackModel.ts`, `map/carPosition.ts` (placement, out-lap and caution pacing), `map/smoothing.ts`,
     `map/sessionClock.ts` + `useSessionClock.ts`, `map/calibrate.ts`, `map/usePositionSync.ts`.
     `map/useCarPlacement.ts` places every car each frame (clock, calibration, crossing log, pacing, smoothing) for
@@ -87,7 +90,8 @@ see "Next round" below.
 - `src/web/src/series.ts`: which app the page is (`/f1` = F1, else Supercars), its API base and hub, team colours.
 - `deploy/`: the systemd user service and its README (install, logs, Tailscale serve).
 - `tools/PitLoss` (time lost per pit stop: `natsoft_report.py` from Natsoft results-site reports, `f1_archive.py` from F1's
-  archive; findings in `docs/PLANNING.md`, "Pit strategy features"), `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
+  archive; `backtest.mts` scores the pit rejoin estimate on real stops; `demo-server.sh` replays races on :5081;
+  findings in `docs/PLANNING.md`, "Pit strategy features"), `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
   README has the Gold Coast checklist), `tools/OfficialMap` (corners and pit lane from Supercars' official track map
   PDFs, lined up with our track), `tools/F1TrackBuilder/build_track.py` (F1 track files from an archived
   session's car positions; see its docstring), `tools/F1MapEval/evalmap.py` (scores map placement against real positions).
@@ -119,6 +123,8 @@ cd src/web && npm run dev                                 # :5173, proxies /api 
 dotnet run --project src/SupercarsTiming.Server --no-launch-profile -- --urls http://localhost:5081 \
   --Feed:Mode=Replay --Feed:ReplaySpeed=10 --Feed:RecordDirectory= --Feed:ReplayFile=<recording.jsonl>
 TIMING_SERVER=http://localhost:5081 npx vite --port 5174   # preview the frontend against it
+tools/PitLoss/demo-server.sh [F1 archive] [skip min] [speed]  # :5081 replaying Bathurst Race 30 + an F1 race (pit ghost demo)
+cd src/web && npx tsx ../../tools/PitLoss/backtest.mts V8SUPER_20261011_094535-2510 MOUN   # pit rejoin backtest
 # F1 replay from an archive folder (download <Topic>.jsonStream files from livetiming.formula1.com/static/...):
 #   add --F1:Mode=Replay --F1:ReplayArchive=<folder> --F1:ReplaySpeed=2 --F1:ReplaySkipMinutes=79, open /f1
 python3 tools/F1TrackBuilder/build_track.py <qualifying archive folder>   # writes src/web/src/tracks/F1-<key>.json
@@ -227,6 +233,15 @@ the server in live mode by hand.
   session's state on connecting; it looked like the field racing for ~10 s). The chequered flag still shows cars. Never place cars in the
   3D code: it draws `useCarPlacement`'s placements, so 2D, 3D and the elevation strip always agree. Follow locks
   the camera to the car and eases only its heading (an eased position trailed by hundreds of metres at 10× replay).
+- **Pit rejoin ghost** (`pit/`, races only, both series; marked "Estimate" and "Experimental" everywhere): pick a car
+  in the map's "Pit rejoin" menu (`settings.pitGhostCar`); a violet band and ring on both maps show where it would
+  rejoin if it pitted now, and a card under the map gives the position, the cars around it (clear air at 2 s+, an
+  assumption) and where the stop cost came from. Paused under a caution (a stop costs far less; too few measured).
+  Stop cost: this race's green-flag stops once 5 of that stop number are in (Supercars: Natsoft `PT` - 2.7 s,
+  measured at Bathurst; F1: in-pit time - the circuit's offset), else last year's by stop number (`PRIORS`, shifted by
+  how this race differs), else a wide guess. Middle half, at least ±3 s. Backtests (`tools/PitLoss/backtest.mts`):
+  Bathurst 1000, 165 stops: right position 43%, within one 73% (with each stop's real cost: 49% / 80%; the rest is
+  other cars stopping meanwhile); 2025 Singapore GP, 23 stops: 57% / 83% (in-sample: its prior comes from that race).
 - Live view hides support categories (`isSupercarsSession()`); they're still recorded.
 
 ## Results, replay and event pages
@@ -331,7 +346,8 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
    when Supercars publishes their event maps, run `tools/OfficialMap` for official corners and pit lanes.
 2. Back up `data/recordings` (off the laptop; TrueNAS on the tailnet when it's online, or an external drive).
 3. Grid positions from the server (replacing hand-entered `startingGrid.ts`); championship standings after each round.
-4. Ideas not built yet: pit strategy (rejoin ghost, "Circle of Doom", undercut alerts; research and measurements
+4. Pit strategy: the rejoin ghost is built (experimental; tune it on `tools/PitLoss/demo-server.sh` and the backtest).
+   Still ideas ("Circle of Doom" view, undercut/clear-air alerts, cheap stops under caution; research and measurements
    in `docs/PLANNING.md`, "Pit strategy features"), pit windows / stops remaining, follow-a-driver card with notifications, co-driver planner,
    pit stop leaderboard.
 5. Connecting only around sessions is built (Oct 2026), from the hand-kept `schedule/supercars.json`. Still to do:
