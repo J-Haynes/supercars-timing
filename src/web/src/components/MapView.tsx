@@ -6,16 +6,16 @@ import type { Settings } from '../settings'
 const TrackMap3D = lazy(() => import('./TrackMap3D'))
 
 /**
- * The track map in the viewer's chosen mode: the flat map (TrackMap) or the 3D map (TrackMap3D). Both place cars
+ * The track map in the viewer's chosen mode: the 3D map (TrackMap3D, the default) or the flat map (TrackMap). Both place cars
  * with the same code (map/useCarPlacement.ts). The choice and the 3D camera are remembered in settings.
  */
 export function MapView({ settings, onSettings, ...props }: ComponentProps<typeof TrackMap> & {
-  settings: Pick<Settings, 'mapMode' | 'mapCamera' | 'followCar'>
+  settings: Pick<Settings, 'mapView' | 'mapCamera' | 'followCar'>
   onSettings: (change: Partial<Settings>) => void
 }) {
-  const is3d = settings.mapMode === '3d'
+  const is3d = settings.mapView === '3d'
   const modeSwitch = (
-    <button type="button" className="wide" onClick={() => onSettings({ mapMode: is3d ? '2d' : '3d' })}
+    <button type="button" className="wide" onClick={() => onSettings({ mapView: is3d ? '2d' : '3d' })}
       title={is3d ? 'Back to the flat map' : '3D map with the hills (drag to turn)'}>{is3d ? '2D' : '3D'}</button>
   )
   if (!is3d) return <TrackMap {...props} extraTools={modeSwitch} />
@@ -24,7 +24,7 @@ export function MapView({ settings, onSettings, ...props }: ComponentProps<typeo
       <TrackMap3D track={props.track} update={props.update} live={props.live} hoverId={props.hoverId} highlightIds={props.highlightIds}
         pinned={props.pinned} camera={settings.mapCamera} followCar={settings.followCar} modeSwitch={modeSwitch}
         onCamera={(mapCamera, followCar) => onSettings({ mapCamera, followCar })}
-        onHover={props.onHover} onTogglePin={props.onTogglePin} />
+        onHover={props.onHover} onTogglePin={props.onTogglePin} note={props.note} />
     </Suspense>
   )
 }

@@ -7,7 +7,7 @@ import type { Placement } from './useCarPlacement'
 /**
  * The 3D map's scene, written against three.js directly (no React wrapper library): the track as a ribbon at its
  * real height (track file `elevation`, exaggerated), a curtain down to the ground so the hills read, the pit lane,
- * and a small low-poly car for each placement. React (TrackMap3D) creates one per track and calls `setCars` every
+ * and a dot for each car placement (like the 2D map). React (TrackMap3D) creates one per track and calls `setCars` every
  * frame with the same placements the 2D map draws; this class renders on its own animation loop.
  *
  * Coordinates: track metres x east / y north become three.js x / -z, and height becomes y (up).
@@ -16,9 +16,11 @@ import type { Placement } from './useCarPlacement'
 /** Heights are stretched so a hill reads from a distance. Shown in the caption. */
 export const HEIGHT_SCALE = 2
 const TRACK_WIDTH = 16 // metres; a little wider than the real road so it shows from afar
-/** Cars are drawn 6x life size close up, growing with distance (up to 18x) so they still show in the overview. */
-const CAR_SCALE = 6
-const CAR_SCALE_MAX = 18
+/** Car dots: radius in metres, growing with distance from the camera so they still show in the overview. */
+const DOT_MIN = 4
+const DOT_MAX = 32
+/** Metres of camera distance per metre of dot radius (between the limits). */
+const DOT_PER_DISTANCE = 100
 const BG = 0x12161b // --panel
 const MAKER_COLOURS: Record<string, number> = { ford: 0x2f6fdf, chevrolet: 0xf28c1b, toyota: 0xe5172f }
 const EDGE = 0x5d6976
@@ -32,8 +34,11 @@ export class TrackScene {
   private readonly camera = new THREE.PerspectiveCamera(45, 1, 5, 40000)
   private readonly controls: OrbitControls
   private readonly overlay: HTMLDivElement
-  private readonly cars = new Map<string, { group: THREE.Group; body: THREE.MeshStandardMaterial; tag: HTMLSpanElement; seen: boolean }>()
+  private readonly cars = new Map<string, { group: THREE.Group; body: THREE.MeshBasicMaterial; tag: HTMLSpanElement; seen: boolean }>()
   private readonly carGroup = new THREE.Group()
+  private readonly dotGeometry = new THREE.SphereGeometry(1, 20, 14)
+  /** Drawn inside out, slightly bigger than the dot: a dark outline from any angle. */
+  private readonly rimMaterial = new THREE.MeshBasicMaterial({ color: 0x0b0d10, side: THREE.BackSide })
   private readonly edges: THREE.LineBasicMaterial
   private readonly labels: { el: HTMLSpanElement; at: THREE.Vector3 }[] = []
   private readonly resize: ResizeObserver
@@ -175,7 +180,7 @@ export class TrackScene {
     if (this.mode === 'follow') this.updateChase(dt)
     else this.controls.update(dt)
     for (const c of this.cars.values()) {
-      if (c.group.visible) c.group.scale.setScalar(Math.min(CAR_SCALE_MAX, Math.max(CAR_SCALE, c.group.position.distanceTo(this.camera.position) / 60)))
+      if (c.group.visible) c.group.scale.setScalar(Math.min(DOT_MAX, Math.max(DOT_MIN, c.group.position.distanceTo(this.camera.position) / DOT_PER_DISTANCE)))
     }
     this.renderer.render(this.scene, this.camera)
     this.placeOverlay()
@@ -213,7 +218,7 @@ export class TrackScene {
     for (const l of this.labels) place(l.el, l.at)
     for (const [id, c] of this.cars) {
       if (!c.group.visible || !this.tagged.has(id)) { c.tag.style.display = 'none'; continue }
-      place(c.tag, c.group.position.clone().add(new THREE.Vector3(0, 14, 0)))
+      place(c.tag, c.group.position.clone().add(new THREE.Vector3(0, c.group.scale.y * 2.4 + 4, 0)))
     }
   }
 
@@ -362,26 +367,23 @@ export class TrackScene {
     return bar
   }
 
-  /** A low-poly car: body, cabin and a dark wing, life-size x CAR_SCALE, pointing along +z. */
+  /**
+   * A car: a flat-coloured dot with a dark rim, like the 2D map. Unit radius, resting on the track (the group is
+   * scaled to the dot size each frame). The group still turns to face along the track: the Follow camera reads the
+   * car's direction from it.
+   */
   private car(row: CarRow) {
     const existing = this.cars.get(row.id)
     if (existing) return existing
     const colour = row.teamColour ? parseInt(row.teamColour, 16) : MAKER_COLOURS[row.manufacturer.toLowerCase()] ?? 0x5a6573
-    const body = new THREE.MeshStandardMaterial({ color: colour, roughness: 0.5, metalness: 0.1 })
-    const dark = new THREE.MeshStandardMaterial({ color: 0x0b0d10, roughness: 0.8 })
+    const body = new THREE.MeshBasicMaterial({ color: colour })
     const group = new THREE.Group()
-    const parts: [THREE.BoxGeometry, THREE.Material, number, number, number][] = [
-      [new THREE.BoxGeometry(2, 0.7, 4.8), body, 0, 0.5, 0],      // body
-      [new THREE.BoxGeometry(1.6, 0.6, 2.2), body, 0, 1.1, -0.3], // cabin
-      [new THREE.BoxGeometry(1.5, 0.45, 1.9), dark, 0, 1.12, -0.25], // windows
-      [new THREE.BoxGeometry(2, 0.12, 0.5), dark, 0, 1.25, -2.2],  // rear wing
-    ]
-    for (const [geometry, material, x, y, z] of parts) {
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.set(x, y, z)
-      group.add(mesh)
-    }
-    group.scale.setScalar(CAR_SCALE)
+    const dot = new THREE.Mesh(this.dotGeometry, body)
+    dot.position.y = 1
+    const rim = new THREE.Mesh(this.dotGeometry, this.rimMaterial)
+    rim.position.y = 1
+    rim.scale.setScalar(1.18)
+    group.add(rim, dot)
     group.userData = { carId: row.id, carNumber: row.carNumber }
     this.carGroup.add(group)
     const tag = document.createElement('span')

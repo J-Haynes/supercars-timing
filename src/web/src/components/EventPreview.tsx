@@ -3,7 +3,7 @@ import type { TimingUpdate } from '../types'
 import { eventStart, sessionTime, type UpcomingEvent } from '../calendar'
 import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
-import { TrackMap } from './TrackMap'
+import { MapView } from './MapView'
 import { ErrorBoundary } from './ErrorBoundary'
 import { isF1, SERIES_LABEL, SERIES } from '../series'
 
@@ -78,7 +78,7 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
         <aside className="map-panel">
           {track ? (
             <ErrorBoundary fallback={<div className="map-missing">The track map hit an error.</div>}>
-              <TrackMap track={track} update={empty} hoverId={null} focusId={null} pinned={[]}
+              <MapView settings={settings} onSettings={updateSettings} track={track} update={empty} hoverId={null} focusId={null} pinned={[]}
                 rotation={settings.mapRotation[track.code] ?? 0}
                 onRotate={(deg) => updateSettings({ mapRotation: { ...settings.mapRotation, [track.code]: ((deg % 360) + 360) % 360 } })}
                 onHover={() => {}} onTogglePin={() => {}}

@@ -13,7 +13,7 @@ import { ElevationStrip, type StripCar } from './ElevationStrip'
  * Cameras: Orbit turns slowly around the track (drag to turn, scroll or pinch to zoom); Follow chases one car
  * (the leader unless the viewer picks another).
  */
-export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, modeSwitch, onCamera, onHover, onTogglePin }: {
+export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, modeSwitch, onCamera, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
   live?: TimingUpdate | null
@@ -28,6 +28,8 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   onCamera: (camera: CameraMode, followCar: string | null) => void
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
+  /** Replaces the "learning timing points" overlay, e.g. on an upcoming event's page. */
+  note?: string
 }) {
   const { placements, sync, awaitingCalibration, flagNow } = useCarPlacement(track, update, live)
   const cars = update.timing.cars
@@ -97,7 +99,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
         </div>
       )}
       {awaitingCalibration && (
-        <div className="map-overlay">Learning where the timing points are from live pace. Cars appear after a lap or two.</div>
+        <div className={`map-overlay${note ? ' map-note' : ''}`}>{note ?? 'Learning where the timing points are from live pace. Cars appear after a lap or two.'}</div>
       )}
       <div className="map-caption">
         {track.name} · 3D · positions estimated between timing points
