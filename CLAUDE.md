@@ -226,7 +226,9 @@ the server in live mode by hand.
   pause, 1-60×, scrubber with lap ticks and safety car bands; starts 20 s before the first green. The page moves the
   time and polls `/replay?t=` every 250 ms; the server keeps a cursor per viewer.
 - **Upcoming events** (`EventPreview.tsx`, from the menu): session timetable from `calendar.ts` (local track time,
-  provisional, source linked) and the track map with a work-in-progress note for provisional tracks.
+  provisional, source linked), "About the event" (`UpcomingEvent.info`: round, stakes, facts, last year, official
+  map; every value from a listed source) and the track map with a work-in-progress note for provisional tracks.
+  Race distances for the header are in `KNOWN_RACE_LAPS` (`session.ts`; per race where they differ, as at Adelaide).
 
 ## F1
 

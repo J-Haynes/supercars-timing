@@ -21,6 +21,24 @@ export interface UpcomingEvent {
   sessions?: EventSession[]
   /** Where the session times came from. */
   sessionsSource?: string
+  /** Note shown under the timetable (e.g. only the featured sessions are published). */
+  sessionsNote?: string
+  info?: EventInfo
+}
+
+/** What a viewer wants to know about the event before it starts: every value from a source in `sources`. */
+export interface EventInfo {
+  /** e.g. "Round 12 of 14 · Finals round 1 of 3". */
+  round: string
+  /** What the round decides. */
+  stakes: string
+  /** Label/value pairs: circuit, races, lap record, tyres, stops... */
+  facts: { label: string; value: string }[]
+  /** Last year's results at this event (only what a source confirms). */
+  lastYear?: string
+  /** The official event track map, or a note that it isn't out yet. */
+  trackMap?: { label: string; url: string } | { note: string }
+  sources: { label: string; url: string }[]
 }
 
 export interface EventSession {
@@ -31,6 +49,13 @@ export interface EventSession {
   /** Race distance, if it's a race. */
   laps?: number
 }
+
+// Sources shared by the Finals rounds (checked 12 Oct 2026).
+const FORMATS = { label: 'Supercars: 2026 formats and tyres', url: 'https://www.supercars.com/news/2026-supercars-championship-formats-tyres-explained-qualifying-practice-calendar-times-dates' }
+const FINALS_RULES = { label: 'Supercars: 2026 Finals Series format', url: 'https://www.supercars.com/news/supercars-news-2026-finals-series-points-tweaks-explained-format-bonus-elimination-grand-final' }
+const ELIMINATIONS = { label: 'Adelaide Grand Final: 2026 Finals rules (three out per round)', url: 'https://adelaidegrandfinal.com.au/latest-news/2026-finals-rule-changes-explained/' }
+const CUP_BONUS = { label: 'Supercars: Enduro Cup winner, 25 Finals points', url: 'https://www.supercars.com/news/supercars-news-2026-enduro-cup-qualification-finals-bonus-points-explained-bathurst-1000' }
+const SEASON = { label: 'Wikipedia: 2026 Supercars Championship (rounds)', url: 'https://en.wikipedia.org/wiki/2026_Supercars_Championship' }
 
 export const UPCOMING: UpcomingEvent[] = [
   {
@@ -55,16 +80,104 @@ export const UPCOMING: UpcomingEvent[] = [
       { name: 'Top Ten Shootout (Race 32)', start: '2026-10-25T12:05', end: '2026-10-25T12:40' },
       { name: 'Race 32', start: '2026-10-25T14:45', laps: 85 },
     ],
+    info: {
+      round: 'Round 12 of 14 · Finals round 1 of 3',
+      stakes: 'The top 10 in the championship start the Finals. Points reset, with a bonus for the top four going in (150, 120, 96, 78) and 25 for the Sprint and Enduro Cup winners. After the two races the bottom three are eliminated: "only 7 drivers will remain in the title fight".',
+      facts: [
+        { label: 'Circuit', value: 'Surfers Paradise street circuit, 2.96 km, 14 numbered turns' },
+        { label: 'Races', value: '2 × 250 km, 85 laps each (Races 31 and 32)' },
+        { label: 'Tyres', value: 'Saturday Super Soft, Sunday Soft' },
+        { label: 'Pit stops', value: '2 mandatory per race' },
+        { label: 'Lap record', value: '1:10.0480, David Reynolds (2013)' },
+        { label: 'Support', value: 'Porsche Carrera Cup, V8 Superutes, Aussie Racing Cars' },
+        { label: 'On TV', value: 'Seven, 7plus, Foxtel, Kayo' },
+      ],
+      lastYear: '2025: Chaz Mostert won both races (Walkinshaw Andretti United, Ford Mustang), from poles by Ryan Wood and Broc Feeney.',
+      trackMap: { label: 'Official track map (PDF)', url: 'https://assets.ctfassets.net/xd502h20t7lh/6r1B8LCvMh9bvEOWzbDPZ9/3ede3611fcaca36e4790c1f10bb1018c/SC26-GC-Track_Map-5_compressed.pdf' },
+      sources: [
+        { label: 'Supercars: event page (length, laps, lap record, Finals)', url: 'https://www.supercars.com/events/2026-gold-coast' },
+        { label: 'Supercars: official track map (turns, support, TV)', url: 'https://assets.ctfassets.net/xd502h20t7lh/6r1B8LCvMh9bvEOWzbDPZ9/3ede3611fcaca36e4790c1f10bb1018c/SC26-GC-Track_Map-5_compressed.pdf' },
+        FORMATS, FINALS_RULES, ELIMINATIONS, CUP_BONUS, SEASON,
+        { label: 'Wikipedia: 2025 Gold Coast 500', url: 'https://en.wikipedia.org/wiki/2025_Gold_Coast_500' },
+      ],
+    },
   },
   {
     name: 'Penrite Oil Sandown 500', venue: 'Sandown International Motor Raceway', location: 'Melbourne, VIC',
-    startDate: '2026-11-06', endDate: '2026-11-08', utcOffset: '+11:00',
+    startDate: '2026-11-06', endDate: '2026-11-08', utcOffset: '+11:00', trackCode: 'SAND',
     format: 'Finals round 2 · two 250 km races',
+    // Only the featured sessions are on the event page so far (12 Oct 2026); the full track schedule isn't out.
+    sessionsSource: 'https://www.supercars.com/events/2026-sandown',
+    sessionsNote: 'Only the Shootouts and races are published so far; practice and qualifying times will follow.',
+    sessions: [
+      { name: 'Top Ten Shootout (Race 33)', start: '2026-11-07T12:05' },
+      { name: 'Race 33', start: '2026-11-07T15:30', laps: 81 },
+      { name: 'Top Ten Shootout (Race 34)', start: '2026-11-08T12:05' },
+      { name: 'Race 34', start: '2026-11-08T15:30', laps: 81 },
+    ],
+    info: {
+      round: 'Round 13 of 14 · Finals round 2 of 3 (semi-final)',
+      stakes: 'Seven drivers left after the Gold Coast. Points reset again with the same bonus for the top four (150, 120, 96, 78); after the two races the bottom three are eliminated, leaving four for the Grand Final.',
+      facts: [
+        { label: 'Circuit', value: 'Sandown permanent circuit, 3.1 km (National Circuit, 13 turns)' },
+        { label: 'Races', value: '2 × 250 km, 81 laps each (Races 33 and 34)' },
+        { label: 'Tyres', value: 'Saturday Super Soft, Sunday Soft' },
+        { label: 'Pit stops', value: '2 mandatory per race' },
+        { label: 'Lap record', value: '1:07.2078, Will Davison (2022)' },
+      ],
+      lastYear: '2025: Chaz Mostert won Race 1 and Broc Feeney Race 2, both over 81 laps.',
+      trackMap: { note: "Supercars hasn't published the 2026 event map yet (checked 12 Oct). The Gold Coast's came out three weeks before its event." },
+      sources: [
+        { label: 'Supercars: event page (length, lap record, featured sessions)', url: 'https://www.supercars.com/events/2026-sandown' },
+        { label: 'Supercars Travel: 81 laps', url: 'https://travel.supercars.com/2026-sandown' },
+        { label: 'Wikipedia: Sandown Raceway (13 turns)', url: 'https://en.wikipedia.org/wiki/Sandown_Raceway' },
+        FORMATS, FINALS_RULES, ELIMINATIONS, SEASON,
+        { label: 'Autosport: 2025 Sandown 500 results', url: 'https://www.autosport.com/supercars/results/2025/sandown-500-659853/?st=RACE1' },
+      ],
+    },
   },
   {
     name: 'bp Adelaide Grand Final', venue: 'Adelaide Street Circuit', location: 'Adelaide, SA',
-    startDate: '2026-11-26', endDate: '2026-11-29', utcOffset: '+10:30',
-    format: 'Finals round 3',
+    startDate: '2026-11-26', endDate: '2026-11-29', utcOffset: '+10:30', trackCode: 'ADEL',
+    format: 'Finals round 3 · Grand Final, three races',
+    // "All times ACDT, correct as of Wednesday July 1" (Supercars).
+    sessionsSource: 'https://www.supercars.com/news/supercars-news-2026-adelaide-grand-final-track-schedule-revealed-times-racing-super2-series-finals-supports',
+    sessions: [
+      { name: 'Practice 1', start: '2026-11-26T15:15', end: '2026-11-26T15:40' },
+      { name: 'Practice 2', start: '2026-11-27T10:00', end: '2026-11-27T10:25' },
+      { name: 'Qualifying 1 (Race 35)', start: '2026-11-27T13:10', end: '2026-11-27T13:22' },
+      { name: 'Qualifying 2 (Race 35)', start: '2026-11-27T13:30', end: '2026-11-27T13:38' },
+      { name: 'Race 35', start: '2026-11-27T16:20', laps: 32 },
+      { name: 'Qualifying 1 (Race 36)', start: '2026-11-28T11:45', end: '2026-11-28T11:57' },
+      { name: 'Qualifying 2 (Race 36)', start: '2026-11-28T12:05', end: '2026-11-28T12:17' },
+      { name: 'Top Ten Shootout (Race 36)', start: '2026-11-28T12:35', end: '2026-11-28T13:10' },
+      { name: 'Race 36', start: '2026-11-28T15:20', laps: 78 },
+      { name: 'Qualifying 1 (Race 37)', start: '2026-11-29T11:45', end: '2026-11-29T11:57' },
+      { name: 'Qualifying 2 (Race 37)', start: '2026-11-29T12:05', end: '2026-11-29T12:17' },
+      { name: 'Top Ten Shootout (Race 37)', start: '2026-11-29T12:35', end: '2026-11-29T13:10' },
+      { name: 'Race 37', start: '2026-11-29T15:15', laps: 78 },
+    ],
+    info: {
+      round: 'Round 14 of 14 · Finals round 3 of 3 (Grand Final)',
+      stakes: '"Four drivers. Three races. One Champion." Points reset again with the bonus for the top four (150, 120, 96, 78); whoever leads after Race 37 is the champion.',
+      facts: [
+        { label: 'Circuit', value: 'Adelaide Parklands street circuit, 3.219 km, 14 turns; the last year of this layout (a new 4.13 km circuit from 2027)' },
+        { label: 'Races', value: 'Friday 100 km (32 laps), Saturday and Sunday 250 km (78 laps each): Races 35-37' },
+        { label: 'Tyres', value: 'Soft all weekend' },
+        { label: 'Pit stops', value: '1, 2 and 2 mandatory' },
+        { label: 'Lap record', value: '1:18.6763, Chaz Mostert (2022)' },
+      ],
+      lastYear: '2025: Chaz Mostert won the championship here, by 62 points.',
+      trackMap: { note: "Supercars hasn't published the 2026 event map yet (checked 12 Oct)." },
+      sources: [
+        { label: 'Supercars: event page (length, laps, lap record, "Four drivers")', url: 'https://www.supercars.com/events/2026-adelaide' },
+        { label: 'Supercars: track schedule', url: 'https://www.supercars.com/news/supercars-news-2026-adelaide-grand-final-track-schedule-revealed-times-racing-super2-series-finals-supports' },
+        { label: 'Wikipedia: Adelaide Street Circuit (14 turns, 1999-2026)', url: 'https://en.wikipedia.org/wiki/Adelaide_Street_Circuit' },
+        { label: 'SA Government: the 2027 circuit', url: 'https://dit.sa.gov.au/infrastructure/projects/circuit-redevelopment/design/during-events' },
+        FORMATS, FINALS_RULES, ELIMINATIONS, SEASON,
+        { label: 'Supercars: Mostert champion (2025)', url: 'https://www.supercars.com/news/supercars-news-2025-finals-standings-chaz-mostert-champion-adelaide-grand-final-broc-feeney' },
+      ],
+    },
   },
 ]
 

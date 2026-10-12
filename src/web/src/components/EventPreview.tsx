@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { TimingUpdate } from '../types'
-import { eventStart, sessionTime, type UpcomingEvent } from '../calendar'
+import { eventStart, sessionTime, type UpcomingEvent, type EventInfo } from '../calendar'
 import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
 import { MapView } from './MapView'
@@ -73,9 +73,11 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
               </tbody>
             </table>
           )}
+          {event.sessionsNote && <p className="chart-note">{event.sessionsNote}</p>}
           {event.sessionsSource && (
             <p className="chart-note">Times from <a href={event.sessionsSource} target="_blank" rel="noreferrer">{new URL(event.sessionsSource).hostname.replace(/^www\./, '')}</a>; they can change before the weekend.{isF1 && event.trackCode ? ' The map was built from F1\'s recorded car positions at this circuit.' : ''} Live timing appears automatically when a session starts.</p>
           )}
+          {event.info && <EventInfoPanel info={event.info} />}
         </section>
         <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
         <aside className="map-panel">
@@ -95,5 +97,28 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
         </aside>
       </div>
     </div>
+  )
+}
+
+/** Round, what's at stake, track and race facts, last year's results and the official map, each from a cited source. */
+function EventInfoPanel({ info }: { info: EventInfo }) {
+  return (
+    <section className="event-info" aria-label="Event information">
+      <h3>About the event <span className="ladder-live">{info.round}</span></h3>
+      <p className="event-stakes">{info.stakes}</p>
+      <dl className="event-facts">
+        {info.facts.map((f) => (
+          <div key={f.label}><dt>{f.label}</dt><dd>{f.value}</dd></div>
+        ))}
+      </dl>
+      {info.lastYear && <p className="event-last">{info.lastYear}</p>}
+      {info.trackMap && ('url' in info.trackMap
+        ? <p><a href={info.trackMap.url} target="_blank" rel="noreferrer">{info.trackMap.label}</a></p>
+        : <p className="chart-note">{info.trackMap.note}</p>)}
+      <details className="event-sources">
+        <summary>Sources</summary>
+        <ul>{info.sources.map((src) => <li key={src.url}><a href={src.url} target="_blank" rel="noreferrer">{src.label}</a></li>)}</ul>
+      </details>
+    </section>
   )
 }

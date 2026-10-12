@@ -786,3 +786,16 @@ button.upcoming:hover { border-color: var(--muted); }
    the whole page shifted sideways when switching), and keep the status row as tall as its flag badge. */
 html { scrollbar-gutter: stable; }
 .session-status { min-height: 28px; }
+
+/* Event page: about the event (EventPreview.tsx, EventInfoPanel). */
+.event-info { margin-top: 24px; }
+.event-stakes { margin: 6px 0 12px; line-height: 1.5; font-size: 14px; }
+.event-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 12px; font-size: 13px; }
+.event-facts > div { display: contents; }
+.event-facts dt { color: var(--muted); }
+.event-facts dd { margin: 0; }
+.event-last { font-size: 13px; color: var(--text); margin: 0 0 10px; }
+.event-info a { color: #7fb0ff; }
+.event-sources { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.event-sources summary { cursor: pointer; }
+.event-sources ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.6; }

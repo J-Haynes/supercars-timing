@@ -10,11 +10,18 @@ export function isShootout(sessionName: string, sessionType: string): boolean {
   return /shoot\s*-?out|top\s*(10|ten)/i.test(`${sessionName} ${sessionType}`)
 }
 
-/** Race distances Natsoft doesn't send (it sends <E L> = 0 for most races). */
-const KNOWN_RACE_LAPS: { meeting: RegExp; laps: number }[] = [
+/** Race distances Natsoft doesn't send (it sends <E L> = 0 for most races). `race` narrows it to one race by name. */
+const KNOWN_RACE_LAPS: { meeting: RegExp; race?: RegExp; laps: number }[] = [
   { meeting: /bathurst 1000/i, laps: 161 },
   // Both Gold Coast races: "85 laps or 1 lap after" a time limit (Supercars schedule, 16 Sep 2026).
   { meeting: /gold coast/i, laps: 85 },
+  // Sandown, two 250 km races: "500 km race distance and 81 laps" (https://travel.supercars.com/2026-sandown); 81-lap
+  // races in 2025 too. Supercars hadn't published the 2026 track schedule yet (12 Oct 2026): check it when it is.
+  { meeting: /sandown/i, laps: 81 },
+  // Adelaide: Race 35 (Friday, 100 km) 32 laps, Races 36 and 37 (250 km) 78 laps. Supercars track schedule, "correct as
+  // of Wednesday July 1": https://www.supercars.com/news/supercars-news-2026-adelaide-grand-final-track-schedule-revealed-times-racing-super2-series-finals-supports
+  { meeting: /adelaide/i, race: /race 35\b/i, laps: 32 },
+  { meeting: /adelaide/i, race: /race 3[67]\b/i, laps: 78 },
 ]
 
 /** Scheduled laps for a race: Natsoft's value if it sends one, else a known distance; 0 = unknown (e.g. timed). */
@@ -22,7 +29,7 @@ export function raceLaps(session: SessionInfo): number {
   if (!isRace(session.type)) return 0
   if (session.scheduledLaps > 0) return session.scheduledLaps
   if (!isSupercarsSession(session.name)) return 0
-  return KNOWN_RACE_LAPS.find((k) => k.meeting.test(session.meeting))?.laps ?? 0
+  return KNOWN_RACE_LAPS.find((k) => k.meeting.test(session.meeting) && (!k.race || k.race.test(session.name)))?.laps ?? 0
 }
 
 /**
