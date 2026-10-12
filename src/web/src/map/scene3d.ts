@@ -26,9 +26,14 @@ const DOT_MAX = 32
 const DOT_PER_DISTANCE = 100
 const BG = 0x12161b // --panel
 const MAKER_COLOURS: Record<string, number> = { ford: 0x2f6fdf, chevrolet: 0xf28c1b, toyota: 0xe5172f }
-const EDGE = 0x5d6976
+// Track colours: a light surface with near-white edges, like painted track lines, so the circuit stands out from the
+// darker slate buildings (they were the same mid grey, and the track vanished among the Las Vegas casinos).
+const TRACK = 0x5f6b78
+const EDGE = 0xdde3e9
+/** The faint copy of the track drawn over everything, so it shows through buildings. */
+const XRAY_OPACITY = 0.3
 /** Scenery colours: muted, so the track and the cars stay the brightest things on screen. */
-const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x3a4450, footprint: 0x4a5461 }
+const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x272e37, footprint: 0x313943 }
 const YELLOW = 0xffd23f
 
 export type CameraMode = 'static' | 'orbit' | 'follow' | 'free'
@@ -43,8 +48,9 @@ export class TrackScene {
   private readonly carGroup = new THREE.Group()
   private readonly dotGeometry = new THREE.SphereGeometry(1, 20, 14)
   /** Drawn inside out, slightly bigger than the dot: a dark outline from any angle. */
-  private readonly rimMaterial = new THREE.MeshBasicMaterial({ color: 0x0b0d10, side: THREE.BackSide })
+  private readonly rimMaterial = new THREE.MeshBasicMaterial({ color: 0x0b0d10, side: THREE.BackSide, depthTest: false })
   private readonly edges: THREE.LineBasicMaterial
+  private readonly edgesXray = new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: XRAY_OPACITY, depthTest: false, depthWrite: false })
   private readonly labels: { el: HTMLSpanElement; at: THREE.Vector3 }[] = []
   private readonly resize: ResizeObserver
   private readonly raycaster = new THREE.Raycaster()
@@ -91,10 +97,21 @@ export class TrackScene {
     this.scene.add(sun)
 
     this.scene.add(this.ground())
-    this.scene.add(this.ribbon())
+    const ribbon = this.ribbon()
+    this.scene.add(ribbon)
+    // X-ray: the same ribbon drawn last, faintly, ignoring depth, so where buildings hide the track it still shows.
+    const xray = new THREE.Mesh(ribbon.geometry, new THREE.MeshBasicMaterial({ color: EDGE, transparent: true, opacity: XRAY_OPACITY * 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide }))
+    xray.renderOrder = 8
+    this.scene.add(xray)
     if (def.elevation?.length) this.scene.add(this.curtain())
     this.edges = new THREE.LineBasicMaterial({ color: EDGE })
-    for (const side of [1, -1]) this.scene.add(new THREE.LineLoop(this.edgeGeometry(side), this.edges))
+    for (const side of [1, -1]) {
+      const geometry = this.edgeGeometry(side)
+      this.scene.add(new THREE.LineLoop(geometry, this.edges))
+      const ghost = new THREE.LineLoop(geometry, this.edgesXray)
+      ghost.renderOrder = 8
+      this.scene.add(ghost)
+    }
     if (def.pitLane.length > 1) this.scene.add(this.pitLane())
     this.scene.add(this.controlLine())
     this.scene.add(this.carGroup)
@@ -145,6 +162,7 @@ export class TrackScene {
 
   setCaution(caution: boolean) {
     this.edges.color.setHex(caution ? YELLOW : EDGE)
+    this.edgesXray.color.setHex(caution ? YELLOW : EDGE)
   }
 
   /**
@@ -470,7 +488,7 @@ export class TrackScene {
     g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
     g.setIndex(index)
     g.computeVertexNormals()
-    return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x2b333c, roughness: 0.9, side: THREE.DoubleSide }))
+    return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: TRACK, roughness: 0.9, side: THREE.DoubleSide }))
   }
 
   /** A see-through wall from the track down to the ground: shows how high each part of the lap is. */
@@ -575,13 +593,16 @@ export class TrackScene {
     const existing = this.cars.get(row.id)
     if (existing) return existing
     const colour = row.teamColour ? parseInt(row.teamColour, 16) : MAKER_COLOURS[row.manufacturer.toLowerCase()] ?? 0x5a6573
-    const body = new THREE.MeshBasicMaterial({ color: colour })
+    // Dots are drawn over everything (depthTest off, last): a car behind a tower is still where you can see it.
+    const body = new THREE.MeshBasicMaterial({ color: colour, depthTest: false })
     const group = new THREE.Group()
     const dot = new THREE.Mesh(this.dotGeometry, body)
     dot.position.y = 1
     const rim = new THREE.Mesh(this.dotGeometry, this.rimMaterial)
     rim.position.y = 1
     rim.scale.setScalar(1.18)
+    rim.renderOrder = 10
+    dot.renderOrder = 11
     group.add(rim, dot)
     group.userData = { carId: row.id, carNumber: row.carNumber }
     this.carGroup.add(group)
