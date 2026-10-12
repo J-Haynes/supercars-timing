@@ -23,7 +23,7 @@ export function RaceControl({ timing, limit = 12 }: { timing: TimingSnapshot; li
   return (
     <section className="race-control" aria-label="Race control">
       <h2>Race control</h2>
-      {fastest && timing.best.lap && (
+      {fastest && !!timing.best.lap && (
         <div className="fastest-lap">
           Fastest lap: <strong>{lapTime(timing.best.lap)}</strong> {fastest.driver} (#{fastest.carNumber}{fastest.bestLapNo ? `, lap ${fastest.bestLapNo}` : ''})
         </div>

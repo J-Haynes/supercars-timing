@@ -116,7 +116,7 @@ const COLUMNS: Record<string, Column> = {
           {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
           {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
           {/* Races only: in practice and qualifying the fastest lap is simply P1. */}
-          {race && best.lap && Math.abs(car.bestLap - best.lap) < 0.0005 && (
+          {race && !!best.lap && Math.abs(car.bestLap - best.lap) < 0.0005 && (
             <span className="fastest-badge" title={`Fastest lap: ${lapTime(car.bestLap)}`} aria-label="Fastest lap"><StopwatchIcon /></span>
           )}
           {/* Served penalties leave the tower; race control logs them as served. */}
