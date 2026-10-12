@@ -117,10 +117,11 @@ export class TrackScene {
     this.scene.add(this.carGroup)
     for (const l of def.labels.filter((l) => !/line$|^pit straight$/i.test(l.name))) {
       const el = document.createElement('span')
-      el.className = 'm3d-label'
+      // Corner numbers (T1, T12...) as small pills so they read over the bright track; names as plain text.
+      el.className = /^T\d/.test(l.name) ? 'm3d-label m3d-corner' : 'm3d-label'
       el.textContent = l.name
       this.overlay.appendChild(el)
-      this.labels.push({ el, at: this.at(l.distance, 25) })
+      this.labels.push({ el, at: this.beside(l.distance) })
     }
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
@@ -190,7 +191,7 @@ export class TrackScene {
       this.sceneryLabels.push({ el, at })
     }
     for (const l of scenery.landmarks ?? []) label(`◆ ${l.name}`, 'm3d-label m3d-landmark', this.toWorld({ x: l.at[0], y: l.at[1] }, (l.h || 20) + 15))
-    if (this.model.def.labels.length === 0) for (const c of scenery.corners ?? []) label(c.name, 'm3d-label', this.at(c.distance, 25))
+    if (this.model.def.labels.length === 0) for (const c of scenery.corners ?? []) label(c.name, 'm3d-label m3d-corner', this.beside(c.distance))
     const group = new THREE.Group()
     const layers: [SceneryArea[], number, number][] = [[scenery.parks, SCENERY.park, 1], [scenery.beach, SCENERY.beach, 2], [scenery.water, SCENERY.water, 3]]
     for (const [areas, colour, order] of layers) {
@@ -380,16 +381,15 @@ export class TrackScene {
       el.style.display = visible ? '' : 'none'
       if (visible) el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`
     }
-    for (const l of this.labels) place(l.el, l.at)
-    // Landmarks (already best first) skip any spot a better one or a corner label has taken: estimated boxes of
-    // ~6 px a letter by 14 px, so no layout reads every frame.
+    // Labels skip any spot a label before them has taken: the pit lane and corners first (in lap order), then landmarks
+    // (best first). Estimated boxes of ~6 px a letter by 14 px, so no layout reads every frame. In a tight run of
+    // corners some numbers hide, and come back when zoomed in.
     const taken: { x: number; y: number; w: number }[] = []
-    for (const l of this.labels) if (l.el.style.display !== 'none') taken.push({ ...screenOf(l.el), w: l.el.textContent!.length * 6 })
-    for (const l of this.sceneryLabels) {
+    for (const l of [...this.labels, ...this.sceneryLabels]) {
       place(l.el, l.at)
       if (l.el.style.display === 'none') continue
-      const box = { ...screenOf(l.el), w: l.el.textContent!.length * 6 }
-      if (taken.some((t) => Math.abs(t.x - box.x) < (t.w + box.w) / 2 && Math.abs(t.y - box.y) < 14)) l.el.style.display = 'none'
+      const box = { ...screenOf(l.el), w: l.el.textContent!.length * 6 + 8 }
+      if (taken.some((t) => Math.abs(t.x - box.x) < (t.w + box.w) / 2 && Math.abs(t.y - box.y) < 15)) l.el.style.display = 'none'
       else taken.push(box)
     }
     for (const [id, c] of this.cars) {
@@ -447,6 +447,14 @@ export class TrackScene {
     const i = Math.floor(f) % e.length
     const j = (i + 1) % e.length
     return (e[i] + (f - Math.floor(f)) * (e[j] - e[i])) * HEIGHT_SCALE
+  }
+
+  /** Where a corner label goes: 35 m beside the track on its outside (away from the circuit's middle), 10 m up. */
+  private beside(d: number) {
+    const p = this.model.pointAt(d)
+    const n = this.model.normalAt(d)
+    const outward = (p.x - this.centre.x) * n.x + (p.y - this.centre.y) * n.y > 0 ? 1 : -1
+    return this.toWorld({ x: p.x + n.x * 35 * outward, y: p.y + n.y * 35 * outward }, this.heightAt(d) + 10)
   }
 
   /** Track metres to a 2D shape point that becomes the world's x / -z after rotating the shape flat (rotateX -90°). */
