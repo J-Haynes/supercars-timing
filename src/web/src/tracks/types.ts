@@ -16,6 +16,9 @@ export interface TrackDefinition {
   path: [number, number][]
   /** Simulated cumulative seconds at each sample (one extra entry = full lap). */
   simTime: number[]
+  /** Height in metres at each `path` sample, relative to the lap's lowest point (smoothed SRTM). Missing or null
+   * when the track has none (F1 tracks; flat street circuits, where SRTM measures rooftops). */
+  elevation?: number[] | null
   timingPoints: { id: string; name: string; distance: number }[]
   segmentSeconds: { from: string; seconds: number }[]
   labels: { name: string; distance: number }[]

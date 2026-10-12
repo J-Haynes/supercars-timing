@@ -17,6 +17,8 @@ if (!opt.TryGetValue("code", out var code) || !opt.TryGetValue("relation", out v
           --match <text>         Also use this file for Natsoft track names containing this text (e.g. "SURFERS")
           --sessions <text>      Only learn timing from sessions containing this (default: "Supercars")
           --osm <file>           OSM cache (default: tools/TrackBuilder/osm/<CODE>.osm.json; downloaded if missing)
+          --elevation <file>     Height cache (default: tools/TrackBuilder/elevation/<CODE>.json; looked up if missing),
+                                 or "none" for no heights (flat tracks among buildings, where SRTM shows rooftops)
           --control-node <id>    OSM node for the timing control line (default: node named "Finish Line", then "Start Line")
           --control-way <name>   Otherwise: put the control line at the middle of the road with this name
           --lap-time <seconds>   Provisional tracks: typical lap time for the speed profile (default: fit 2.3 g grip)
@@ -30,6 +32,8 @@ var root = FindRepoRoot();
 var relationId = long.Parse(relationText);
 var osmPath = Path.Combine(root, opt.GetValueOrDefault("osm") ?? $"tools/TrackBuilder/osm/{code}.osm.json");
 var outPath = Path.Combine(root, opt.GetValueOrDefault("out") ?? $"src/web/src/tracks/{code}.json");
+var elevationOption = opt.GetValueOrDefault("elevation");
+var elevationPath = elevationOption == "none" ? null : Path.Combine(root, elevationOption ?? $"tools/TrackBuilder/elevation/{code}.json");
 var recordingPath = recording is null ? null : Path.Combine(root, recording);
 const double Step = 5;   // metres between samples
 
@@ -124,7 +128,16 @@ foreach (var n in osm.Nodes.Values.Where(n => n.Name is not null && !labels.Cont
     if (Point.Distance(ring.At(along), P(n.Id)) < 60) AddLabel(n.Name!, along);
 }
 
-// 6. Pit lane polyline
+// 6. Heights along the lap (SRTM via OpenTopoData), relative to the lowest point
+var elevation = elevationPath is null ? null : await Elevation.ForLapAsync(samples, Step, projection, elevationPath);
+if (elevation is not null)
+{
+    var top = Array.IndexOf(elevation, elevation.Max());
+    Console.WriteLine($"Elevation: {elevation.Max():0} m from lowest to highest point (highest at {top * Step:0} m)");
+}
+else Console.WriteLine("Elevation: none (--elevation none)");
+
+// 7. Pit lane polyline
 var pitIds = osm.PitLaneWays.Count > 0 ? OsmCircuit.Chain(osm.PitLaneWays) : [];
 
 static double R(double v) => Math.Round(v, 1);
@@ -139,7 +152,7 @@ var track = new
     controlLineEstimated = controlEstimated,
     source = new
     {
-        attribution = "Track geometry © OpenStreetMap contributors (ODbL)",
+        attribution = "Track geometry © OpenStreetMap contributors (ODbL)" + (elevation is null ? "" : $" · {Elevation.Attribution}"),
         osmRelation = relationId,
         recording = recordingPath is null ? null : Path.GetFileName(recordingPath),
         built = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
@@ -150,6 +163,8 @@ var track = new
     path = samples.Select(p => new[] { R(p.X), R(p.Y) }),
     // Simulated cumulative seconds at each sample (one extra at the end = full lap). Used to slow cars for corners.
     simTime = sim.Time.Select(t => Math.Round(t, 3)),
+    // Height in metres at each sample, relative to the lowest point of the lap (smoothed SRTM; see Elevation.cs).
+    elevation = elevation?.Select(R),
     timingPoints,
     // Representative seconds from each timing point to the next, used when a car has no recent pace.
     segmentSeconds = seg is null

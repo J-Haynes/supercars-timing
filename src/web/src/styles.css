@@ -159,6 +159,28 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-car .pin-ring { fill: none; stroke: var(--yellow); stroke-width: 12; }
 .map-car.pinned { opacity: 1; }
 .map-caption { color: var(--muted); font-size: 11px; padding: 6px 4px 0; }
+
+/* Elevation strip under the map (ElevationStrip.tsx): profile SVG stretched to fit, cars and labels in HTML on top. */
+.elev-strip { position: relative; height: 96px; margin: 8px 4px 0; border-top: 1px solid var(--line); }
+.track-map .elev-strip svg { position: absolute; inset: 0; width: 100%; height: 100%; max-height: none; pointer-events: none; }
+.elev-area { fill: rgba(138, 150, 163, .12); }
+.elev-line { fill: none; stroke: #5d6976; stroke-width: 1.5; }
+.elev-tick { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 3; }
+.elev-strip.caution .elev-area { fill: rgba(255, 210, 63, .12); }
+.elev-strip.caution .elev-line { stroke: var(--yellow); }
+.elev-label { position: absolute; top: 4px; transform: translateX(-50%); font-size: 10px; color: var(--muted); white-space: nowrap; pointer-events: none; }
+.elev-scale { position: absolute; right: 0; top: 4px; font-size: 10px; color: var(--muted); pointer-events: none; }
+.elev-car { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: #5a6573;
+  box-shadow: 0 0 0 1.5px var(--panel); cursor: pointer; transition: opacity .3s; }
+.elev-car.mfr-ford { background: var(--ford); }
+.elev-car.mfr-chevrolet { background: var(--chevrolet); }
+.elev-car.mfr-toyota { background: var(--toyota); }
+.elev-car.dim { opacity: .45; }
+.elev-car.big { width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; box-shadow: 0 0 0 2px #fff; z-index: 1; }
+.elev-car b { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); font: 700 11px ui-monospace, monospace;
+  color: var(--text); background: rgba(11, 13, 16, .85); padding: 0 3px; border-radius: 3px; }
+.track-map.syncing .elev-strip { opacity: .35; filter: grayscale(1); }
+@media (max-width: 760px) { .elev-strip { height: 72px; } }
 .map-missing { color: var(--muted); padding: 32px 16px; text-align: center; border: 1px dashed var(--line); border-radius: 8px; }
 
 /* Controls bar */

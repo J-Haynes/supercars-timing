@@ -10,6 +10,7 @@ import { calibrateTimingPoints } from '../map/calibrate'
 import { usePositionSync } from '../map/usePositionSync'
 import { TAU, TAU_CAUTION, smoothPosition, type Smoothed } from '../map/smoothing'
 import { CrossingLog, knownPosition } from '../map/crossingLog'
+import { ElevationStrip, type StripCar } from './ElevationStrip'
 
 const CAR_RADIUS = 46 // metres, in map units
 const PIT_SPACING = 70
@@ -143,6 +144,8 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
   // in-lap car that's past the last timing point and overdue at the line has gone into the pit lane.
   const shootout = isShootout(timing.session.name, timing.session.type)
   const lastPointId = order[order.length - 1]
+  // Cars on track this frame, for the elevation strip (filled while drawing the map, so both show the same place).
+  const stripCars: StripCar[] = []
 
   const w = view.fit.w / zoom
   const h = view.fit.h / zoom
@@ -191,6 +194,7 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
             const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, caution ? TAU_CAUTION : TAU)
             smoothing.current.set(car.id, sm)
             p = s(sm.shown)
+            stripCars.push({ car, distance: model.wrap(sm.shown), dim: state.stale })
           }
           else if (state.kind === 'pit') p = view.toScreen(track.pitLane.length > 1 ? pitSlot(model, pitIndex++) : pitAreaSlot(model, pitIndex++))
           else return null
@@ -202,6 +206,10 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
           )
         })}
       </svg>
+      {track.elevation && track.elevation.length > 0 && (
+        <ElevationStrip track={track} elevation={track.elevation} cars={stripCars} caution={flagNow === 'caution'}
+          hoverId={hoverId} pinned={pinned} onHover={onHover} />
+      )}
       {!awaitingCalibration && !sync.synced && (
         <div className="map-sync" role="status">
           <span className="map-sync-dot" aria-hidden />

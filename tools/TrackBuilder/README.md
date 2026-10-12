@@ -24,14 +24,14 @@ Gold Coast (no recording yet, so provisional):
 ```bash
 dotnet run --project tools/TrackBuilder -- \
   --code SURF --relation 9325885 --name "Surfers Paradise" --match SURFERS \
-  --control-way "Gold Coast Highway" --lap-time 71
+  --control-way "Gold Coast Highway" --lap-time 71 --elevation none
 ```
 
 Bathurst (from a recording):
 
 ```bash
 dotnet run --project tools/TrackBuilder -- \
-  --code MOUN --relation 6942508 --name "Mount Panorama" \
+  --code MOUN --relation 6942508 --name "Mount Panorama" --match "MOUNT PANORAMA" \
   --recording data/recordings/V8SUPER_20261010_100653.jsonl
 ```
 
@@ -47,6 +47,7 @@ dotnet run --project tools/TrackBuilder -- \
 | `--sessions` | Only learn pace from sessions whose name contains this (default `Supercars`) |
 | `--control-node` | OSM node ID for the control line if there's no `Finish Line`/`Start Line` node |
 | `--osm` | OSM cache file (default `tools/TrackBuilder/osm/<CODE>.osm.json`; downloaded if missing) |
+| `--elevation` | Height cache (default `tools/TrackBuilder/elevation/<CODE>.json`; looked up if missing), or `none` |
 | `--out` | Output file (default `src/web/src/tracks/<CODE>.json`) |
 
 ## Street circuits and provisional tracks
@@ -68,6 +69,24 @@ control line, so check it once real timing is available.
 Each run also updates `src/web/src/tracks/manifest.json` (track code → `--match` name fragments), which lets
 the app find a track by Natsoft's track name when the code isn't known yet.
 
+## Elevation
+
+Each track file gets `elevation`: the height at every sample in metres, relative to the lap's lowest point. The web
+map draws it as a side view of the lap with the cars on it (`ElevationStrip.tsx`).
+
+- Heights come from NASA's SRTM 30 m model through the public [OpenTopoData API](https://www.opentopodata.org/api/)
+  (dataset `srtm30m`, at most 100 points a request and one request a second). One point every 20 m is looked up,
+  then filled in between and smoothed (a 40 m moving average, twice), because single SRTM readings are off by a few
+  metres. Answers are cached in `tools/TrackBuilder/elevation/<CODE>.json` (committed), so rebuilds don't ask again.
+- **Check:** Mount Panorama comes out at 177 m from lowest (Murray's Corner) to highest (between Sulman Park and
+  McPhillamy Park). Wikipedia gives a 174 m vertical difference between the highest and lowest points
+  (https://en.wikipedia.org/wiki/Mount_Panorama_Circuit).
+- **Street circuits:** SRTM measures the surface, rooftops and trees included. At Surfers Paradise it gave 0-23 m
+  of bumps on a flat seaside course, so `SURF` is built with `--elevation none` and the map shows no strip there.
+  Look at the raw cache before trusting heights on any circuit lined with buildings.
+- F1 tracks have no heights yet: they aren't geolocated, so OpenTopoData can't be asked. F1's archived car
+  positions may include a height (`Z`); `tools/F1TrackBuilder` could use that.
+
 ## Adding a circuit
 
 1. Find the circuit relation on openstreetmap.org (search the circuit name, look for a relation of type
@@ -80,7 +99,7 @@ Track geometry © OpenStreetMap contributors, available under the ODbL.
 | Code | Circuit | OSM relation |
 |---|---|---|
 | `MOUN` | Mount Panorama, Bathurst | 6942508 |
-| `SURF` | Surfers Paradise (Gold Coast 500). Provisional; control line estimated mid Gold Coast Highway | 9325885 |
+| `SURF` | Surfers Paradise (Gold Coast 500). Provisional; control line estimated mid Gold Coast Highway; no elevation | 9325885 |
 
 ## Gold Coast weekend checklist (23-25 Oct 2026)
 
@@ -110,7 +129,7 @@ grep -o 'T C=\\u0022[A-Z]*' data/recordings/<P1 file>.jsonl | head -1   # record
 # 2. Rebuild from the recording (replace SURF with the real code if it differs)
 dotnet run --project tools/TrackBuilder -- \
   --code SURF --relation 9325885 --name "Surfers Paradise" --match SURFERS \
-  --control-way "Gold Coast Highway" --recording data/recordings/<P1 file>.jsonl
+  --control-way "Gold Coast Highway" --elevation none --recording data/recordings/<P1 file>.jsonl
 
 # 3. Build the site (the server serves it; no restart needed) and check the map during the next session
 cd src/web && npm run build

@@ -14,6 +14,11 @@ public sealed class Projection(double lat0, double lon0)
     public Point ToMetres(double lat, double lon) => new(
         (lon - lon0) * Math.PI / 180 * EarthRadius * _cosLat,
         (lat - lat0) * Math.PI / 180 * EarthRadius);
+
+    /// <summary>The inverse of <see cref="ToMetres"/>.</summary>
+    public (double Lat, double Lon) ToLatLon(Point p) => (
+        lat0 + p.Y / EarthRadius * 180 / Math.PI,
+        lon0 + p.X / (EarthRadius * _cosLat) * 180 / Math.PI);
 }
 
 /// <summary>A closed loop of points with cumulative distance, starting at distance 0.</summary>
