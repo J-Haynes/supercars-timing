@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
 import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
-import { cautionPeriods, isRace } from '../session'
+import { cautionPeriods, isRace, leaderLap } from '../session'
 import { TimingTower } from './TimingTower'
 import { DriverDialog, type DriverTab } from './DriverDialog'
 import { MapView } from './MapView'
@@ -117,7 +117,9 @@ export function ReplayView({ session, onBack }: { session: RecordedSession; onBa
   }, [laps])
   const cautions = cautionPeriods(timing?.flagHistory)
   const pct = (time: number) => (range ? ((time - range.start) / (range.end - range.start || 1)) * 100 : 0)
-  const leaderLaps = timing ? Math.max(0, ...timing.cars.map((c) => c.laps)) : 0
+  // The lap the leader is on (laps completed + 1), as the live header shows it; nothing before the start.
+  const started = !!timing && (timing.session.greenAt ?? 0) > 0 && timing.now >= (timing.session.greenAt ?? 0)
+  const shownLap = timing && started ? leaderLap(timing).lap : 0
 
   return (
     <section className="replay">
@@ -136,7 +138,7 @@ export function ReplayView({ session, onBack }: { session: RecordedSession; onBa
           {SPEEDS.map((s) => <option key={s} value={s}>{s}×</option>)}
         </select>
         {timing?.session.flag && <span className={`flag flag-${timing.session.flag.toLowerCase()}`}>{timing.session.flag}</span>}
-        <span className="replay-time">{range ? trackTime(t) : '--:--:--'}{leaderLaps ? ` · lap ${leaderLaps}` : ''}{timing?.session.scheduledLaps ? ` / ${timing.session.scheduledLaps}` : ''}</span>
+        <span className="replay-time">{range ? trackTime(t) : '--:--:--'}{shownLap ? ` · lap ${shownLap}` : ''}{timing?.session.scheduledLaps ? ` / ${timing.session.scheduledLaps}` : ''}</span>
         {loading && <span className="replay-loading">loading…</span>}
         <div className="replay-scrubber">
           {cautions.map((c) => (

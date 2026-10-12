@@ -26,6 +26,22 @@ export function raceLaps(session: SessionInfo): number {
 }
 
 /**
+ * The lap the leader is on, as broadcasts count it: laps completed + 1, so "Lap 161 / 161" is the final lap.
+ * Capped at the race distance, and the distance once the leader has finished or the flag is out. 0 = no laps yet
+ * known (before the leader's first crossing of the line, or no cars).
+ */
+export function leaderLap(timing: { session: SessionInfo; cars: { position: number; laps: number }[] }): { lap: number; finished: boolean } {
+  const total = raceLaps(timing.session)
+  const leader = timing.cars.find((c) => c.position === 1) ?? timing.cars[0]
+  const done = leader?.laps ?? 0
+  const flag = timing.session.flag.toLowerCase()
+  const finished = (total > 0 && done >= total) || flag === 'checkered' || flag === 'ended'
+  if (finished) return { lap: total > 0 ? Math.min(done, total) : done, finished }
+  const lap = done + 1
+  return { lap: total > 0 ? Math.min(lap, total) : lap, finished }
+}
+
+/**
  * Minimum laps each driver must complete, at endurance events (0 = no rule). Bathurst 1000: 60 of 161 laps
  * (2026, with the fuel capacity change:
  * https://www.v8sleuth.com.au/supercars-adjusts-fuel-capacity-change-for-enduros-finals/).

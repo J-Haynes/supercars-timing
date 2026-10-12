@@ -8,7 +8,7 @@ const SERIES_LOGO: Record<Series, string> = { v8: supercarsMark, f1: f1Logo }
 import type { FeedStatus, TimingUpdate } from '../types'
 import type { ConnectionState } from '../useTiming'
 import { clock } from '../format'
-import { raceLaps } from '../session'
+import { raceLaps, leaderLap } from '../session'
 
 const FLAG_CLASS: Record<string, string> = {
   green: 'flag-green',
@@ -38,17 +38,15 @@ function statusText(connection: ConnectionState, feed: FeedStatus | undefined) {
   }
 }
 
-/** "Lap 88 / 161" and how many to go, from the leader's completed laps. Null when the distance is unknown. */
+/** "Lap 88 / 161" and how many to go (leaderLap: the lap the leader is on). Null when the distance is unknown. */
 function lapCount(update: TimingUpdate | null) {
   const session = update?.timing.session
   const total = session ? raceLaps(session) : 0
   if (!session || total <= 0) return null
-  const leader = update.timing.cars.find((c) => c.position === 1) ?? update.timing.cars[0]
-  const done = leader?.laps ?? 0
-  const flag = session.flag.toLowerCase()
-  if (done >= total || flag === 'checkered' || flag === 'ended') return { lap: `${Math.min(done, total)} / ${total}`, toGo: 'Finished' }
-  const toGo = total - done
-  return { lap: `Lap ${Math.min(done + 1, total)} / ${total}`, toGo: toGo === 1 ? 'Final lap' : `${toGo} to go` }
+  const { lap, finished } = leaderLap(update.timing)
+  if (finished) return { lap: `${lap} / ${total}`, toGo: 'Finished' }
+  const toGo = total - lap + 1
+  return { lap: `Lap ${lap} / ${total}`, toGo: toGo === 1 ? 'Final lap' : `${toGo} to go` }
 }
 
 /**
