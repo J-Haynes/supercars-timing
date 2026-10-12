@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { RecordedSession } from '../types'
 import { SERIES_UPCOMING, eventEnd, eventStart, type UpcomingEvent } from '../calendar'
-import { trackManifest } from '../tracks'
+import { hasScenery, trackManifest } from '../tracks'
 import { isF1 } from '../series'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
@@ -108,7 +108,10 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
                 <span className="upcoming-bottom">
                   <span className="countdown">{countdown(eventStart(e).getTime() - now)}</span>
                   <span className={`map-status ${map ? (map.provisional ? 'provisional' : 'mapped') : 'none'}`}>
-                    {map ? (map.provisional ? 'Map: provisional' : 'Map: ready') : 'Map: not yet'}
+                    {/* "3D map" when the track has scenery (buildings, water, landmarks) for the full 3D view. */}
+                    {map
+                      ? `${e.trackCode && hasScenery(e.trackCode) ? '3D map' : 'Map'}${map.provisional ? ': provisional' : ': ready'}`
+                      : 'Map: not yet'}
                   </span>
                 </span>
               </button>

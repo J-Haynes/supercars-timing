@@ -41,6 +41,11 @@ export function useTrack(code: string | undefined, name?: string): TrackDefiniti
 // Scenery for the 3D map (buildings, water, beach), by track code. Large, so only loaded by the 3D map.
 const sceneryLoaders = import.meta.glob<{ default: SceneryDefinition }>('./scenery/*.json')
 
+/** Whether a track has scenery (buildings, water, landmarks) for the full 3D map, without loading it. */
+export function hasScenery(code: string): boolean {
+  return `./scenery/${code}.json` in sceneryLoaders
+}
+
 /** Scenery for a track, or null while loading or if the track has none. */
 export function useScenery(code: string): SceneryDefinition | null {
   const [scenery, setScenery] = useState<SceneryDefinition | null>(null)
