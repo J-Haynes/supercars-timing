@@ -1,6 +1,11 @@
 import { teamStyle } from '../series'
-import { useEffect, useState } from 'react'
-import type { CarRow, LapHistory, RecordedSession, TimingSnapshot } from '../types'
+import { useEffect, useState, type CSSProperties } from 'react'
+import type { CarRow, LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
+import { useTrack } from '../tracks'
+import { useSettings } from '../settings'
+import { MapView } from './MapView'
+import { ColumnSplitter } from './ColumnSplitter'
+import { ErrorBoundary } from './ErrorBoundary'
 import { gapText, lapTime, clock } from '../format'
 import { isRace } from '../session'
 import { startPosition } from '../startingGrid'
@@ -25,6 +30,9 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
   const [history, setHistory] = useState<LapHistory | null>(null)
   const [error, setError] = useState(false)
   const [tab, setTab] = useState<Tab>('classification')
+  const { settings, update: updateSettings, togglePinned } = useSettings()
+  const track = useTrack(session.trackCode, session.track)
+  const [hoverId, setHoverId] = useState<string | null>(null)
 
   useEffect(() => {
     setResults(null); setHistory(null); setError(false); setTab('classification')
@@ -59,29 +67,51 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
         </div>
       </div>
 
-      {error && <p className="menu-muted">Couldn't load results for this session.</p>}
-      {!results && !error && <p className="menu-muted">Loading results…</p>}
-      {results && (
-        <>
-          <div className="segmented results-tabs" role="tablist">
-            {tabs.map(([k, name]) => (
-              <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''} onClick={() => setTab(k)}>{name}</button>
-            ))}
-          </div>
-          {tab === 'classification' && <Classification results={results} race={race} />}
-          {tab === 'summary' && <Summary results={results} history={history} />}
-          {tab === 'charts' && (history
-            ? <RaceCharts timing={results} history={history} />
-            : <p className="menu-muted">No lap history for this session (it needs a server with /api/sessions/&#123;id&#125;/laps).</p>)}
-          {tab === 'pits' && <PitLog timing={results} limit={500} />}
-          {tab === 'control' && (results.raceControl?.length || results.session.lapRecord
-            ? <RaceControl timing={results} limit={500} />
-            : <p className="menu-muted">No race control messages in this session.</p>)}
-          {tab === 'championship' && <Ladder timing={results} onHighlight={() => {}} />}
-        </>
-      )}
+      <div className={`layout${settings.mapWidth ? ' sized' : ''}`}
+        style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
+        <div className="results-main">
+        {error && <p className="menu-muted">Couldn't load results for this session.</p>}
+        {!results && !error && <p className="menu-muted">Loading results…</p>}
+        {results && (
+          <>
+            <div className="segmented results-tabs" role="tablist">
+              {tabs.map(([k, name]) => (
+                <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''} onClick={() => setTab(k)}>{name}</button>
+              ))}
+            </div>
+            {tab === 'classification' && <Classification results={results} race={race} />}
+            {tab === 'summary' && <Summary results={results} history={history} />}
+            {tab === 'charts' && (history
+              ? <RaceCharts timing={results} history={history} />
+              : <p className="menu-muted">No lap history for this session (it needs a server with /api/sessions/&#123;id&#125;/laps).</p>)}
+            {tab === 'pits' && <PitLog timing={results} limit={500} />}
+            {tab === 'control' && (results.raceControl?.length || results.session.lapRecord
+              ? <RaceControl timing={results} limit={500} />
+              : <p className="menu-muted">No race control messages in this session.</p>)}
+            {tab === 'championship' && <Ladder timing={results} onHighlight={() => {}} />}
+          </>
+        )}
+        </div>
+        <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
+        <aside className="map-panel">
+          {/* The track, before any replay: the session has ended, so no cars are placed (useCarPlacement). */}
+          {!track ? <div className="map-missing">No map for {session.track} yet.</div> : results && (
+            <ErrorBoundary fallback={<div className="map-missing">The track map hit an error.</div>}>
+              <MapView settings={settings} onSettings={updateSettings} track={track} update={resultsUpdate(results)} hoverId={hoverId}
+                focusId={null} pinned={settings.pinned} rotation={settings.mapRotation[track.code] ?? 0}
+                onRotate={(deg) => updateSettings({ mapRotation: { ...settings.mapRotation, [track.code]: ((deg % 360) + 360) % 360 } })}
+                onHover={setHoverId} onTogglePin={togglePinned} />
+            </ErrorBoundary>
+          )}
+        </aside>
+      </div>
     </section>
   )
+}
+
+/** The results snapshot as a (stopped) timing update for the map. */
+function resultsUpdate(results: TimingSnapshot): TimingUpdate {
+  return { feed: { mode: 'Replay', state: 'ended', detail: null, clockRate: 0 }, timing: results }
 }
 
 /** Final classification with positions gained, laps per driver and badges. */
