@@ -15,7 +15,7 @@ import { battles, battleSpans } from '../battles'
  * Cameras: Orbit turns slowly around the track (drag to turn, scroll or pinch to zoom); Follow chases one car
  * (the leader unless the viewer picks another).
  */
-export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, cornerLabels, cornersButton, showBattles, flatBuildings, onFlatBuildings, onFollowCar, onHover, onTogglePin, note }: {
+export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, cornerLabels, cornersButton, showBattles, flatBuildings, onFlatBuildings, showLandmarks, onShowLandmarks, onFollowCar, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
   live?: TimingUpdate | null
@@ -35,6 +35,9 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   /** Buildings as flat footprints (tracks with scenery). */
   flatBuildings: boolean
   onFlatBuildings: (flat: boolean) => void
+  /** Landmark names shown (tracks whose scenery has landmarks; the Landmarks button). */
+  showLandmarks: boolean
+  onShowLandmarks: (show: boolean) => void
   onFollowCar: (carNumber: string | null) => void
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
@@ -67,6 +70,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   useEffect(() => { scene.current?.setScenery(scenery) }, [scenery, geometry])
   useEffect(() => { scene.current?.setFlatBuildings(flatBuildings) }, [flatBuildings, scenery, geometry])
   useEffect(() => { scene.current?.setCornerLabels(cornerLabels) }, [cornerLabels, geometry])
+  useEffect(() => { scene.current?.setLandmarks(showLandmarks) }, [showLandmarks, geometry])
 
   const leader = cars.find((c) => c.position === 1)
   const followed = (followCar && cars.find((c) => c.carNumber === followCar)) || leader
@@ -104,6 +108,10 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
         {scenery && scenery.buildings.length > 0 && (
           <button type="button" className={`wide${flatBuildings ? '' : ' active'}`} aria-pressed={!flatBuildings}
             onClick={() => onFlatBuildings(!flatBuildings)} title={flatBuildings ? 'Show buildings at their height' : 'Flatten buildings to their footprints'}>Buildings</button>
+        )}
+        {(scenery?.landmarks?.length ?? 0) > 0 && (
+          <button type="button" className={`wide${showLandmarks ? ' active' : ''}`} aria-pressed={showLandmarks}
+            onClick={() => onShowLandmarks(!showLandmarks)} title={showLandmarks ? 'Hide landmark names' : 'Show landmark names'}>Landmarks</button>
         )}
       </div>
       <div ref={host} className="m3d-host">

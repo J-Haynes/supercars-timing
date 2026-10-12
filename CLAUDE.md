@@ -219,6 +219,7 @@ the server in live mode by hand.
   (T-numbers as pills); labels that would overlap an earlier one hide. Spherical buildings (the Sphere) are spheres.
 - **Map views:** one switch, 2D | 3D | Orbit | Follow | Free (Free: click the map, WASD/arrows move, Q/E down/up,
   Shift faster, +/- zoom; keys only while the canvas has focus) (`MapView.tsx`; `settings.mapView`, `camera3d`, `followCar`).
+  Tracks with landmarks have a Landmarks button (`showLandmarks`).
   "3D" (a still 3D view you can drag) is the default. Settings were renamed (`mapMode` -> `mapView`, `mapCamera` ->
   `camera3d`) each time the default changed, because settings are saved whole and old values would win. Tracks with
   scenery have a Buildings toggle (`flatBuildings`: footprints only). Event pages use it too.

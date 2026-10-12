@@ -55,7 +55,7 @@ export class TrackScene {
   private readonly rimMaterial = new THREE.MeshBasicMaterial({ color: 0x0b0d10, side: THREE.BackSide, depthTest: false })
   private readonly edges: THREE.LineBasicMaterial
   private readonly edgesXray = new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: XRAY_OPACITY, depthTest: false, depthWrite: false })
-  private readonly labels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean }[] = []
+  private readonly labels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean; landmark?: boolean }[] = []
   private showCorners = true
   private readonly battleGroup = new THREE.Group()
   private readonly battleMaterial = new THREE.MeshBasicMaterial({ color: BATTLE, transparent: true, opacity: 0.55, depthTest: false, depthWrite: false, side: THREE.DoubleSide })
@@ -71,7 +71,8 @@ export class TrackScene {
   private scenery: THREE.Group | null = null
   private buildings: THREE.Mesh | null = null
   /** Landmark and corner labels that came with the scenery (removed when it changes). */
-  private sceneryLabels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean }[] = []
+  private sceneryLabels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean; landmark?: boolean }[] = []
+  private showLandmarks = true
   private flatBuildings = false
   private last = performance.now()
   private mode: CameraMode = 'static'
@@ -225,6 +226,11 @@ export class TrackScene {
     this.showCorners = show
   }
 
+  /** Landmark names (attractions, stadiums, tall buildings) on or off (the Landmarks button). */
+  setLandmarks(show: boolean) {
+    this.showLandmarks = show
+  }
+
   setCaution(caution: boolean) {
     this.edges.color.setHex(caution ? YELLOW : EDGE)
     this.edgesXray.color.setHex(caution ? YELLOW : EDGE)
@@ -247,14 +253,14 @@ export class TrackScene {
     if (this.grid) this.grid.visible = !scenery
     if (!scenery) return
     // Landmarks just above their roofs; corners (when the track file has none of its own) like the track's labels.
-    const label = (text: string, className: string, at: THREE.Vector3, corner = false) => {
+    const label = (text: string, className: string, at: THREE.Vector3, corner = false, landmark = false) => {
       const el = document.createElement('span')
       el.className = className
       el.textContent = text
       this.overlay.appendChild(el)
-      this.sceneryLabels.push({ el, at, corner })
+      this.sceneryLabels.push({ el, at, corner, landmark })
     }
-    for (const l of scenery.landmarks ?? []) label(`◆ ${l.name}`, 'm3d-label m3d-landmark', this.toWorld({ x: l.at[0], y: l.at[1] }, (l.h || 20) + 15))
+    for (const l of scenery.landmarks ?? []) label(`◆ ${l.name}`, 'm3d-label m3d-landmark', this.toWorld({ x: l.at[0], y: l.at[1] }, (l.h || 20) + 15), false, true)
     if (this.model.def.labels.length === 0) for (const c of scenery.corners ?? []) label(c.name, 'm3d-label m3d-corner', this.beside(c.distance), true)
     const group = new THREE.Group()
     const layers: [SceneryArea[], number, number][] = [[scenery.parks, SCENERY.park, 1], [scenery.beach, SCENERY.beach, 2], [scenery.water, SCENERY.water, 3]]
@@ -470,7 +476,7 @@ export class TrackScene {
     })
     for (let i = overtake.length; i < this.overtakeTags.length; i++) this.overtakeTags[i].style.display = 'none'
     for (const l of [...this.labels, ...this.sceneryLabels]) {
-      if (l.corner && !this.showCorners) { l.el.style.display = 'none'; continue }
+      if ((l.corner && !this.showCorners) || (l.landmark && !this.showLandmarks)) { l.el.style.display = 'none'; continue }
       place(l.el, l.at)
       if (l.el.style.display === 'none') continue
       const box = { ...screenOf(l.el), w: l.el.textContent!.length * 6 + 8 }

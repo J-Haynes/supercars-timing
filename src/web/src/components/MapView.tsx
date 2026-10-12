@@ -21,7 +21,7 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
  * orbiting or following a car. Both place cars with the same code (map/useCarPlacement.ts). Remembered in settings.
  */
 export function MapView({ settings, onSettings, ...props }: ComponentProps<typeof TrackMap> & {
-  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels' | 'showBattles'>
+  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels' | 'showBattles' | 'showLandmarks'>
   onSettings: (change: Partial<Settings>) => void
 }) {
   const view: View = settings.mapView === '2d' ? '2d' : settings.camera3d
@@ -52,6 +52,7 @@ export function MapView({ settings, onSettings, ...props }: ComponentProps<typeo
         pinned={props.pinned} camera={view} followCar={settings.followCar} views={views}
         cornerLabels={settings.cornerLabels} cornersButton={<>{corners}{battlesButton}</>} showBattles={showBattles}
         flatBuildings={settings.flatBuildings} onFlatBuildings={(flatBuildings) => onSettings({ flatBuildings })}
+        showLandmarks={settings.showLandmarks} onShowLandmarks={(showLandmarks) => onSettings({ showLandmarks })}
         onFollowCar={(followCar) => onSettings({ followCar })}
         onHover={props.onHover} onTogglePin={props.onTogglePin} note={props.note} />
     </Suspense>
