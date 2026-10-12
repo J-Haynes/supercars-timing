@@ -35,6 +35,8 @@ interface Ctx {
   /** Minimum laps per driver (0 = no rule) and laps left in the race (0 = unknown). */
   minLaps: number
   lapsLeft: number
+  /** Opens the driver's Focus view (DriverDialog). */
+  onOpen?: (id: string) => void
 }
 
 interface Column {
@@ -100,14 +102,17 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple, race, best, timing, clockRate }) => {
+    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
       return (
         <>
           <DriverMarker car={car} />
-          {car.driver}
+          {onOpen
+            ? <button type="button" className="driver-open" onClick={() => onOpen(car.id)} onDoubleClick={(e) => e.stopPropagation()}
+                title="Driver focus: laps, sectors, stints, pit stops, and compare with another car">{car.driver}</button>
+            : car.driver}
           {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
           {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
           {/* Races only: in practice and qualifying the fastest lap is simply P1. */}
@@ -277,7 +282,7 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen }: {
   timing: TimingSnapshot
   simple: boolean
   /** The viewer's detailed-mode layout per session kind (settings panel). */
@@ -290,6 +295,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   pinned: string[]
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
+  /** Click on a driver's name: open their Focus view. */
+  onOpen?: (id: string) => void
 }) {
   const { best, timingPoints } = timing
   const race = isRace(timing.session.type)
@@ -322,7 +329,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr

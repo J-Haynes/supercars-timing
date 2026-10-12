@@ -63,7 +63,7 @@ see "Next round" below.
   `CarRow`/`TimingSnapshot`/`SessionInfo` change. Key modules:
   - Data/logic: `useTiming.ts` (SignalR), `useDelayedUpdate.ts` (broadcast delay), `liveGaps.ts` (live gaps, road
     order, `raceOrder`), `insights.ts`, `penalties.ts`, `championship.ts` + `finals.ts` (points data, cited),
-    `startingGrid.ts`, `raceSummary.ts`, `chartData.ts`, `session.ts` (`isRace`, `flagKind`, `raceLaps`,
+    `startingGrid.ts`, `raceSummary.ts`, `chartData.ts`, `driverStats.ts` (stints, recent pace), `session.ts` (`isRace`, `flagKind`, `raceLaps`,
     `minDriverLaps`, `cautionPeriods`), `calendar.ts` (upcoming events and session times), `towerLayout.ts`.
   - Map: `map/trackModel.ts`, `map/carPosition.ts` (placement, out-lap and caution pacing), `map/smoothing.ts`,
     `map/sessionClock.ts` + `useSessionClock.ts`, `map/calibrate.ts`, `map/usePositionSync.ts`.
@@ -172,6 +172,11 @@ the server in live mode by hand.
   Never base that median on accepted times (a slow out-lap once locked out every real time); out-laps don't count as
   pace; stretches starting at a snapshot `LP` or a pit crossing aren't timed.
 - **Flags:** always via `flagKind()`. Caution/red: screen border, `SafetyCarBanner`, ticker items, "SC" tags on stops.
+- **Focus / Compare** (`DriverDialog.tsx`): click a driver's name in the tower (live and replay). Focus: key numbers,
+  sectors vs session best, lap times, stints (split at `pitted` laps; checked: stints ending in a stop = `pitStops`
+  for all 26 cars in Race 30), pit stops, driver laps. Compare: gap at the line per lap with the trend since either
+  car's last stop (`battlePoints`/`trendLaps`), side-by-side table, both cars' lap times. Measured data only, no
+  estimates (no fuel or tyre guesses). In replay it only gets laps up to the replay time.
 - **Penalties:** see "Decision" below. Race control panel shows "Penalty served" lines we work out ourselves.
 - **Insights ticker** (`insights.ts` + `InsightsTicker.tsx`): battles, closing trends, pit-adjusted movers, minimum-lap
   risk, running long, fastest lap, lead changes, race control, caution events. News-ticker scrolling (items leave

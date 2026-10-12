@@ -5,6 +5,7 @@ import { useSettings } from './settings'
 import { SessionHeader } from './components/SessionHeader'
 import { Controls } from './components/Controls'
 import { TimingTower } from './components/TimingTower'
+import { DriverDialog, type DriverTab } from './components/DriverDialog'
 import { MapView } from './components/MapView'
 import { TipsPanel } from './components/TipsPanel'
 import { Menu } from './components/Menu'
@@ -35,6 +36,8 @@ export default function App() {
   // Everything below shows the delayed update, so the tower, map and clock stay in sync with the broadcast.
   const { update, buffered } = useDelayedUpdate(latest, settings.delay)
   const [hoverId, setHoverId] = useState<string | null>(null)
+  // Driver focus / compare dialog, opened from a driver's name in the tower.
+  const [driverView, setDriverView] = useState<{ carId: string; compareId: string | null; tab: DriverTab } | null>(null)
   // Cars named by the insight under the mouse, highlighted in the tower and on the map.
   const [highlightIds, setHighlightIds] = useState<string[]>([])
   const towerColumn = useStickToBottom<HTMLDivElement>()
@@ -119,7 +122,12 @@ export default function App() {
                     pinned={settings.pinned}
                     onHover={setHoverId}
                     onTogglePin={togglePinned}
+                    onOpen={(carId) => setDriverView({ carId, compareId: null, tab: 'focus' })}
                   />
+                  {driverView && (
+                    <DriverDialog timing={timing} {...driverView} onClose={() => setDriverView(null)}
+                      onChange={(carId, compareId, tab) => setDriverView({ carId, compareId, tab })} />
+                  )}
                   <TipsPanel
                     open={!settings.tipDismissed}
                     onClose={() => updateSettings({ tipDismissed: true })}

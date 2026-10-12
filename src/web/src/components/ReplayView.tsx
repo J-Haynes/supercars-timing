@@ -4,6 +4,7 @@ import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
 import { cautionPeriods, isRace } from '../session'
 import { TimingTower } from './TimingTower'
+import { DriverDialog, type DriverTab } from './DriverDialog'
 import { MapView } from './MapView'
 import { SafetyCarBanner } from './SafetyCarBanner'
 import { RaceControl } from './RaceControl'
@@ -44,6 +45,7 @@ export function ReplayView({ session, onBack }: { session: RecordedSession; onBa
   const [loading, setLoading] = useState(false)
   const { settings, update: updateSettings, togglePinned } = useSettings()
   const [hoverId, setHoverId] = useState<string | null>(null)
+  const [driverView, setDriverView] = useState<{ carId: string; compareId: string | null; tab: DriverTab } | null>(null)
 
   useEffect(() => {
     // Start 20 s before the first green flag (from the session's results) to skip the pre-race wait, else at the
@@ -151,7 +153,14 @@ export function ReplayView({ session, onBack }: { session: RecordedSession; onBa
           <div className="tower-column">
             {isRace(update.timing.session.type) && <SafetyCarBanner timing={update.timing} />}
             <TimingTower timing={update.timing} simple={settings.simple} columnPrefs={settings.columns} hoverId={hoverId}
-              clockRate={update.feed.clockRate} pinned={settings.pinned} onHover={setHoverId} onTogglePin={togglePinned} />
+              clockRate={update.feed.clockRate} pinned={settings.pinned} onHover={setHoverId} onTogglePin={togglePinned}
+              onOpen={(carId) => setDriverView({ carId, compareId: null, tab: 'focus' })} />
+            {driverView && (
+              // Only the laps completed by the replay time, so nothing from later in the race shows.
+              <DriverDialog timing={update.timing} {...driverView} onClose={() => setDriverView(null)}
+                history={laps && { ...laps, cars: laps.cars.map((c) => ({ ...c, laps: c.laps.filter((l) => l.at <= update.timing.now) })) }}
+                onChange={(carId, compareId, tab) => setDriverView({ carId, compareId, tab })} />
+            )}
           </div>
           <aside className="map-panel">
             {track ? (
