@@ -4,6 +4,7 @@ import { eventStart, sessionTime, type UpcomingEvent, type EventInfo } from '../
 import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
 import { MapView } from './MapView'
+import { browserTimeZone, formatSessionTime, useTimeZoneChoice } from '../timeZone'
 import { ColumnSplitter } from './ColumnSplitter'
 import { ErrorBoundary } from './ErrorBoundary'
 import { isF1, SERIES_LABEL, SERIES } from '../series'
@@ -15,7 +16,6 @@ function until(ms: number): string {
   return d > 0 ? `${d}d ${h % 24}h` : h > 0 ? `${h}h ${m % 60}m` : `${m}m`
 }
 
-const DAY = new Intl.DateTimeFormat('en-AU', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
 
 /**
  * Page for an upcoming event (opened from the menu): details, the Supercars session timetable with countdowns, and the
@@ -36,6 +36,9 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
       timingPoints: [], best: { lap: null, s1: null, s2: null, s3: null, speed: null }, cars: [], segmentReference: [], segmentBest: [], now: 0, messageCount: 0,
     },
   }
+  // Times in the viewer's zone or the track's: one setting for the whole site (timeZone.ts).
+  const [zone, setZone] = useTimeZoneChoice()
+  const mine = browserTimeZone()
   const sessions = event.sessions ?? []
   const next = sessions.find((s) => sessionTime(event, s.end ?? s.start).getTime() > now)
 
@@ -52,7 +55,15 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
       <div className={`layout${settings.mapWidth ? ' sized' : ''}`}
         style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
         <section className="event-sessions">
-          <h3>{SERIES_LABEL[SERIES]} sessions <span className="ladder-live">provisional, local track time (UTC{event.utcOffset})</span></h3>
+          <div className="event-sessions-head">
+            <h3>{SERIES_LABEL[SERIES]} sessions <span className="ladder-live">provisional · {zone === 'mine' ? `your time (${mine.short})` : `track time (UTC${event.utcOffset})`}</span></h3>
+            <div className="segmented small" role="radiogroup" aria-label="Show times in">
+              <button type="button" role="radio" aria-checked={zone === 'mine'} className={zone === 'mine' ? 'active' : ''} onClick={() => setZone('mine')}
+                title={`Your time zone: ${mine.id}`}>Your time</button>
+              <button type="button" role="radio" aria-checked={zone === 'track'} className={zone === 'track' ? 'active' : ''} onClick={() => setZone('track')}
+                title={`At the track: UTC${event.utcOffset}`}>Track time</button>
+            </div>
+          </div>
           {sessions.length === 0 ? (
             <p className="menu-muted">The session times haven't been published yet. The event starts in {until(eventStart(event).getTime() - now) || 'under a day'}.</p>
           ) : (
@@ -61,10 +72,12 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
                 {sessions.map((s) => {
                   const start = sessionTime(event, s.start)
                   const done = sessionTime(event, s.end ?? s.start).getTime() <= now
+                  const from = formatSessionTime(start, zone, event.utcOffset)
+                  const to = s.end ? formatSessionTime(sessionTime(event, s.end), zone, event.utcOffset).time : null
                   return (
                     <tr key={s.name} className={[done ? 'done' : '', s === next ? 'next' : '', s.laps ? 'race' : ''].join(' ')}>
-                      <td className="event-day">{DAY.format(new Date(`${s.start}:00Z`))}</td>
-                      <td className="num">{s.start.slice(11)}{s.end ? `–${s.end.slice(11)}` : ''}</td>
+                      <td className="event-day">{from.day}</td>
+                      <td className="num">{from.time}{to ? `–${to}` : ''}</td>
                       <td>{s.name}{s.laps ? <span className="event-laps"> · {s.laps} laps</span> : ''}</td>
                       <td className="num event-until">{done ? 'Done' : s === next ? `in ${until(start.getTime() - now) || 'under a minute'}` : until(start.getTime() - now)}</td>
                     </tr>

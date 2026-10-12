@@ -807,3 +807,6 @@ html { scrollbar-gutter: stable; }
 .event-sources { font-size: 12px; color: var(--muted); margin-top: 8px; }
 .event-sources summary { cursor: pointer; }
 .event-sources ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.6; }
+
+.event-sessions-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.event-sessions-head h3 { margin: 0; }

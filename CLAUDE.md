@@ -229,6 +229,8 @@ the server in live mode by hand.
 - **Upcoming events** (`EventPreview.tsx`, from the menu): session timetable from `calendar.ts` (local track time,
   provisional, source linked), "About the event" (`UpcomingEvent.info`: round, stakes, facts, last year, official
   map; every value from a listed source) and the track map with a work-in-progress note for provisional tracks.
+  Session times show in the viewer's zone or track time (`timeZone.ts`: one site-wide choice in its own storage key,
+  not per-series settings; default "your time" from the browser).
   Race distances for the header are in `KNOWN_RACE_LAPS` (`session.ts`; per race where they differ, as at Adelaide).
 
 ## F1
