@@ -53,17 +53,24 @@ function lapCount(update: TimingUpdate | null) {
  * `update` is what's on screen (possibly delayed); `feed` is the live connection status.
  * With `hideSession`, a support-category session is on track: show a waiting title instead of its details.
  */
-export function SessionHeader({ update, feed, connection, onMenu, hideSession }: {
+export function SessionHeader({ update: liveUpdate, feed, connection, onMenu, hideSession: hideLive, viewing }: {
   update: TimingUpdate | null
   feed: FeedStatus | undefined
   connection: ConnectionState
   /** Missing in the F1 app (the menu's results and events are Supercars only for now). */
   onMenu?: () => void
   hideSession?: boolean
+  /**
+   * What's on screen when it isn't live timing (a replay, results, an upcoming event): the header shows that instead,
+   * with `status` in place of the feed's (e.g. "Replay · 10×"). `clock`: show its session clock (replays only).
+   */
+  viewing?: { update: TimingUpdate | null; status: string; clock: boolean } | null
 }) {
+  const update = viewing ? viewing.update : liveUpdate
+  const hideSession = viewing ? false : hideLive
   const session = hideSession ? undefined : update?.timing.session
   const flag = session?.flag ?? ''
-  const status = statusText(connection, feed)
+  const status = viewing ? { text: viewing.status, dot: 'replaying' } : statusText(connection, feed)
   const laps = hideSession ? null : lapCount(update)
   // Time since the green flag (race start), while the race is on.
   const greenAt = session?.greenAt ?? 0
@@ -85,7 +92,7 @@ export function SessionHeader({ update, feed, connection, onMenu, hideSession }:
       <div className="session-status">
         {flag && <span className={`flag ${FLAG_CLASS[flag.toLowerCase()] ?? ''}`}>{FLAG_LABEL[flag.toLowerCase()] ?? flag}</span>}
         {/* Lap races: Natsoft's clock counts laps (<C Y="L" C="161">), not seconds, so the lap counter replaces it. */}
-        {session && !laps && <div className="clock" title="Time remaining">{clock(session.clockRemaining ?? null)}</div>}
+        {session && !laps && (!viewing || viewing.clock) && <div className="clock" title="Time remaining">{clock(session.clockRemaining ?? null)}</div>}
         <div className="feed"><span className={`dot dot-${status.dot}`} />{status.text}</div>
         {laps && (
           <div className="laps-to-go" title="Race distance, from the leader's laps">

@@ -35,7 +35,12 @@ const viewerId = (() => {
  * speed and a scrubber (laps and safety cars marked). The server keeps a cursor per viewer (ReplayService); the page
  * moves the replay time itself and asks for the snapshot at that time a few times a second.
  */
-export function ReplayView({ session, onBack }: { session: RecordedSession; onBack: () => void }) {
+export function ReplayView({ session, onBack, onUpdate }: {
+  session: RecordedSession
+  onBack: () => void
+  /** The replay's moment, for the header (App shows the replay there instead of live timing). */
+  onUpdate?: (update: TimingUpdate | null) => void
+}) {
   const id = encodeURIComponent(session.id)
   const [range, setRange] = useState<{ start: number; end: number } | null>(null)
   const [laps, setLaps] = useState<LapHistory | null>(null)
@@ -109,6 +114,11 @@ export function ReplayView({ session, onBack }: { session: RecordedSession; onBa
     feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 },
     timing,
   }
+  // Tell the header what's on screen: only when the snapshot, play state or speed change, not every render.
+  useEffect(() => { onUpdate?.(timing && { feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 }, timing }) },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onUpdate is a fresh closure each render
+    [timing, playing, speed, session.name])
+  useEffect(() => () => onUpdate?.(null), []) // eslint-disable-line react-hooks/exhaustive-deps -- on leaving only
   const track = useTrack(timing?.session.trackCode || session.trackCode || undefined, timing?.session.track || session.track)
 
   // Scrubber marks: every 10th lap of the leader, and safety car periods.

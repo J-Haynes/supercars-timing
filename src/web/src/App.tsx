@@ -28,7 +28,7 @@ import { useStickToBottom } from './useStickToBottom'
 import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './components/MobileTabs'
 import { flagKind, isRace, isShootout, isSupercarsSession } from './session'
 import { SafetyCarBanner } from './components/SafetyCarBanner'
-import type { RecordedSession } from './types'
+import type { RecordedSession, TimingUpdate } from './types'
 import { isF1 } from './series'
 
 export default function App() {
@@ -52,6 +52,8 @@ export default function App() {
   const [preview, setPreview] = useState<UpcomingEvent | null>(null)
   // Replaying the results session (from its results page).
   const [replaying, setReplaying] = useState(false)
+  // The replay's current moment, reported by ReplayView, for the header.
+  const [replayUpdate, setReplayUpdate] = useState<TimingUpdate | null>(null)
 
   const timing = update?.timing
   // Support categories share the feed: only show Supercars Championship sessions.
@@ -68,7 +70,8 @@ export default function App() {
 
   return (
     <div className={`app${frame}`}>
-      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} hideSession={supportSession} />
+      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} hideSession={supportSession}
+        viewing={headerView(preview, results, replaying ? replayUpdate : null)} />
       <Menu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -80,7 +83,7 @@ export default function App() {
       {preview ? (
         <main><EventPreview event={preview} onLive={() => setPreview(null)} /></main>
       ) : results && replaying ? (
-        <main><ReplayView session={results} onBack={() => setReplaying(false)} /></main>
+        <main><ReplayView session={results} onBack={() => setReplaying(false)} onUpdate={setReplayUpdate} /></main>
       ) : results ? (
         <main><ResultsView session={results} onLive={() => setResults(null)} onReplay={() => setReplaying(true)} /></main>
       ) : (
@@ -202,4 +205,28 @@ function EmptyState({ state, detail, connection, support }: { state?: string; de
   else if (state === 'waiting') message = 'No session on track right now. Timing appears automatically when one starts.'
   else if (state === 'error') message = detail ?? 'The feed reported an error.'
   return <div className="empty">{message}</div>
+}
+
+/**
+ * What the header shows when the page isn't live timing: the replay at its current moment, a recorded session's
+ * results, or an upcoming event. null = live timing.
+ */
+function headerView(preview: UpcomingEvent | null, results: RecordedSession | null, replay: TimingUpdate | null) {
+  const stopped = (meeting: string, name: string, track: string, trackCode = ''): TimingUpdate => ({
+    feed: { mode: 'Replay', state: 'ended', detail: null, clockRate: 0 },
+    timing: {
+      session: { meeting, name, type: '', track, trackCode, flag: '', clockRemaining: null, clockElapsed: null, scheduledLaps: 0 },
+      timingPoints: [], best: { lap: null, s1: null, s2: null, s3: null, speed: null }, cars: [], segmentReference: [], segmentBest: [], now: 0, messageCount: 0,
+    },
+  })
+  if (preview) return { update: stopped(preview.name, 'Upcoming event', `${preview.venue} · ${preview.location}`), status: 'Upcoming', clock: false }
+  if (results && replay) {
+    const rate = replay.feed.clockRate
+    return { update: replay, status: rate > 0 ? `Replay · ${rate}×` : 'Replay · paused', clock: true }
+  }
+  if (results) {
+    const [series, ...rest] = results.name.replace(/^\d{4}\s+/, '').split(' - ')
+    return { update: stopped(results.meeting, rest.join(' - ') || series, results.track, results.trackCode), status: 'Results', clock: false }
+  }
+  return null
 }
