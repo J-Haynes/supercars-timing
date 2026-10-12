@@ -29,8 +29,12 @@ public static class Scenery
     /// Builds the scenery for the box around the lap (`margin` metres beyond the circuit). The raw Overpass answer is
     /// cached at <paramref name="cachePath"/> (git-ignored: it's large and easy to fetch again).
     /// </summary>
-    public static async Task<object> BuildAsync(IReadOnlyList<Point> lap, Projection projection, double margin, string cachePath)
+    /// <param name="output">Converts OSM metres to the track file's coordinates (F1 tracks, Georef); default as is.</param>
+    /// <param name="corners">Corner labels to include (F1 tracks: OSM's "Turn N" nodes, already in track coordinates).</param>
+    public static async Task<object> BuildAsync(IReadOnlyList<Point> lap, Projection projection, double margin, string cachePath,
+        Func<Point, Point>? output = null, IReadOnlyList<object>? corners = null)
     {
+        output ??= p => p;
         var box = new Box(lap.Min(p => p.X) - margin, lap.Min(p => p.Y) - margin, lap.Max(p => p.X) + margin, lap.Max(p => p.Y) + margin);
         var (south, west) = projection.ToLatLon(new Point(box.MinX, box.MinY));
         var (north, east) = projection.ToLatLon(new Point(box.MaxX, box.MaxY));
@@ -41,7 +45,8 @@ public static class Scenery
                 [out:json][timeout:90];
                 (way["building"]({bb});way["building:part"]({bb});relation["building"]({bb});
                  way["natural"~"^(water|beach|sand|coastline)$"]({bb});relation["natural"~"^(water|beach)$"]({bb});
-                 way["leisure"="park"]({bb});relation["leisure"="park"]({bb});way["landuse"="grass"]({bb}););
+                 way["leisure"="park"]({bb});relation["leisure"="park"]({bb});way["landuse"="grass"]({bb});
+                 nwr["tourism"~"attraction|theme_park|museum"]["name"]({bb});nwr["man_made"~"^(tower|observation_tower)$"]["name"]({bb});nwr["leisure"="stadium"]["name"]({bb}););
                 out body;>;out skel qt;
                 """;
             Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
@@ -50,6 +55,7 @@ public static class Scenery
 
         using var doc = JsonDocument.Parse(await File.ReadAllTextAsync(cachePath));
         var nodes = new Dictionary<long, Point>();
+        var namedNodes = new List<(Point At, Dictionary<string, string> Tags)>();
         var ways = new Dictionary<long, (List<long> Nodes, Dictionary<string, string> Tags)>();
         var relations = new List<(List<(long Ref, string Role)> Members, Dictionary<string, string> Tags)>();
         foreach (var e in doc.RootElement.GetProperty("elements").EnumerateArray())
@@ -57,7 +63,11 @@ public static class Scenery
             var tags = e.TryGetProperty("tags", out var t) ? t.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString() ?? "") : [];
             switch (e.GetProperty("type").GetString())
             {
-                case "node": nodes[e.GetProperty("id").GetInt64()] = projection.ToMetres(e.GetProperty("lat").GetDouble(), e.GetProperty("lon").GetDouble()); break;
+                case "node":
+                    var at = projection.ToMetres(e.GetProperty("lat").GetDouble(), e.GetProperty("lon").GetDouble());
+                    nodes[e.GetProperty("id").GetInt64()] = at;
+                    if (tags.ContainsKey("name")) namedNodes.Add((at, tags));
+                    break;
                 case "way": ways[e.GetProperty("id").GetInt64()] = (e.GetProperty("nodes").EnumerateArray().Select(n => n.GetInt64()).ToList(), tags); break;
                 case "relation":
                     relations.Add((e.GetProperty("members").EnumerateArray().Where(m => m.GetProperty("type").GetString() == "way")
@@ -85,7 +95,8 @@ public static class Scenery
             : t.GetValueOrDefault("natural") is "beach" or "sand" ? "beach"
             : t.GetValueOrDefault("leisure") == "park" || t.GetValueOrDefault("landuse") == "grass" ? "park" : "";
 
-        static double[][] Ring(List<Point> ring) => ring.Select(p => new[] { Math.Round(p.X, 1), Math.Round(p.Y, 1) }).ToArray();
+        double[][] Ring(List<Point> ring) => ring.Select(output).Select(p => new[] { Math.Round(p.X, 1), Math.Round(p.Y, 1) }).ToArray();
+        double[] At(Point p) { var q = output(p); return [Math.Round(q.X, 1), Math.Round(q.Y, 1)]; }
         object Polygon(List<Point> outer, List<List<Point>> holes) => new
         {
             outer = Ring(box.Clip(outer)),
@@ -93,6 +104,15 @@ public static class Scenery
         };
 
         var buildings = new List<object>();
+        // Landmark candidates: attractions, museums and stadiums with a Wikipedia/Wikidata link, and named buildings
+        // LandmarkHeight or taller (any link). Scored below.
+        var landmarks = new List<(string Name, Point At, double Height, bool Notable, bool Attraction)>();
+        static bool Notable(Dictionary<string, string> t) => t.ContainsKey("wikidata") || t.ContainsKey("wikipedia");
+        foreach (var (tags, outer, _) in areas.Where(a => IsAttraction(a.Tags) && a.Tags.ContainsKey("name") && (Notable(a.Tags) || IsLandmarkTower(a.Tags))))
+            landmarks.Add((EnglishName(tags), Centroid(outer), Number(tags.GetValueOrDefault("height")) ?? 0, true, true));
+        // Nodes: linked attractions, and named towers (COTA's observation tower has no link).
+        foreach (var (at, tags) in namedNodes.Where(n => IsAttraction(n.Tags) && (Notable(n.Tags) || IsLandmarkTower(n.Tags))))
+            landmarks.Add((EnglishName(tags), at, Number(tags.GetValueOrDefault("height")) ?? 0, true, true));
         int measured = 0, fromLevels = 0, assumed = 0;
         foreach (var (tags, outer, _) in areas.Where(a => Kind(a.Tags) == "building"))
         {
@@ -105,6 +125,8 @@ public static class Scenery
             double minH = Number(tags.GetValueOrDefault("min_height")) ?? (Number(tags.GetValueOrDefault("building:min_level")) is { } ml ? ml * StoreyMetres : 0);
             if (h <= minH) continue;
             buildings.Add(new { h = Math.Round(h, 1), min = Math.Round(minH, 1), ring = Ring(outer), assumed = height is null && levels is null });
+            if (tags.GetValueOrDefault("name") is { Length: > 0 } && h >= LandmarkHeight && !IsAttraction(tags))
+                landmarks.Add((EnglishName(tags), Centroid(outer), h, Notable(tags), false));
         }
         Console.WriteLine($"Scenery: {buildings.Count} buildings ({measured} measured height, {fromLevels} from levels, {assumed} assumed {AssumedStoreys} storeys)");
 
@@ -117,16 +139,65 @@ public static class Scenery
         var ocean = coast.SelectMany(line => box.WaterSide(line)).Select(r => new { outer = Ring(r), holes = Array.Empty<double[][]>() }).ToList();
         Console.WriteLine($"Scenery: {water.Count} water, {beach.Count} beach, {parks.Count} park areas, {ocean.Count} sea polygon(s)");
 
+        // Up to MaxLandmarks within LandmarkReach of the track, by score: height, +300 for a linked attraction (the
+        // Singapore Flyer is "0 m" tall in OSM), +50 for any Wikipedia/Wikidata link, -1 per 10 m from the track (what
+        // you see from it matters most). At most one per LandmarkSpacing, so a cluster of towers doesn't take every
+        // slot (and their labels don't pile up); "X Tower 1/2/3" count as X. Ranking attractions first had picked bars
+        // and playgrounds, and a 5 m-per-point penalty left out Marina Bay Sands (473 m from the 2026 Singapore track).
+        double ToTrack(Point p) => lap.Min(q => Point.Distance(p, q));
+        static string BaseName(string n) => System.Text.RegularExpressions.Regex.Replace(n, @"\s+(Tower\s+)?\d+$", "");
+        var ranked = landmarks.Where(l => box.Contains(l.At))
+            .Select(l => (Name: BaseName(l.Name), l.At, l.Height, Distance: ToTrack(l.At),
+                Score: l.Height + (l.Attraction ? 300 : 0) + (l.Notable || l.Height >= 150 ? 50 : 0)))
+            .Where(l => l.Distance <= LandmarkReach)
+            .OrderByDescending(l => l.Score - l.Distance / 10);
+        var shown = new List<(string Name, Point At, double Height)>();
+        foreach (var l in ranked)
+        {
+            if (shown.Count == MaxLandmarks) break;
+            if (shown.Any(s => s.Name == l.Name || Point.Distance(s.At, l.At) < LandmarkSpacing)) continue;
+            shown.Add((l.Name, l.At, l.Height));
+        }
+        Console.WriteLine($"Scenery: {shown.Count} landmarks ({string.Join(", ", shown.Select(l => l.Name))})");
+        var corners2 = new[] { new Point(box.MinX, box.MinY), new Point(box.MaxX, box.MinY), new Point(box.MaxX, box.MaxY), new Point(box.MinX, box.MaxY) }.Select(output).ToList();
+
         return new
         {
             attribution = Attribution,
-            box = new[] { Math.Round(box.MinX), Math.Round(box.MinY), Math.Round(box.MaxX), Math.Round(box.MaxY) },
+            // In the track file's coordinates (for F1 tracks, the bounding box of the turned box).
+            box = new[] { Math.Round(corners2.Min(p => p.X)), Math.Round(corners2.Min(p => p.Y)), Math.Round(corners2.Max(p => p.X)), Math.Round(corners2.Max(p => p.Y)) },
+            landmarks = shown.Select(l => new { name = l.Name, at = At(l.At), h = Math.Round(l.Height) }),
+            corners = corners ?? [],
             buildings,
             water = water.Concat(ocean),
             beach,
             parks,
         };
     }
+
+    const double LandmarkHeight = 60;
+    const int MaxLandmarks = 16;
+    const double LandmarkReach = 800;
+    const double LandmarkSpacing = 200;
+
+    /// <summary>Attraction, theme park, museum, stadium or named tower. Tags can hold lists ("attraction;theme_park").</summary>
+    static bool IsAttraction(Dictionary<string, string> t) =>
+        (t.GetValueOrDefault("tourism") ?? "").Split(';').Any(v => v is "attraction" or "theme_park" or "museum")
+        || t.GetValueOrDefault("leisure") == "stadium" || IsLandmarkTower(t);
+
+    /// <summary>
+    /// A tower worth labelling: an observation tower, one with a Wikipedia/Wikidata link, or 50 m or taller, but not a
+    /// lifeguard tower (the Gold Coast's are tagged as observation towers and filled its list).
+    /// </summary>
+    static bool IsLandmarkTower(Dictionary<string, string> t) =>
+        (t.GetValueOrDefault("man_made") is "tower" or "observation_tower") && t.GetValueOrDefault("emergency") != "lifeguard"
+        && (t.GetValueOrDefault("man_made") == "observation_tower" || t.GetValueOrDefault("tower:type") == "observation"
+            || t.ContainsKey("wikidata") || t.ContainsKey("wikipedia") || (Number(t.GetValueOrDefault("height")) ?? 0) >= 50);
+
+    /// <summary>The English name where OSM has one (Yas Island's Ferrari World is named in Arabic), else the name.</summary>
+    static string EnglishName(Dictionary<string, string> t) => t.GetValueOrDefault("name:en") is { Length: > 0 } en ? en : t["name"];
+
+    static Point Centroid(List<Point> ring) => new(ring.Average(p => p.X), ring.Average(p => p.Y));
 
     static async Task<string> DownloadAsync(string query)
     {
@@ -199,7 +270,7 @@ public static class Scenery
 
     sealed record Box(double MinX, double MinY, double MaxX, double MaxY)
     {
-        bool Contains(Point p) => p.X >= MinX && p.X <= MaxX && p.Y >= MinY && p.Y <= MaxY;
+        public bool Contains(Point p) => p.X >= MinX && p.X <= MaxX && p.Y >= MinY && p.Y <= MaxY;
 
         /// <summary>Sutherland-Hodgman: the part of a polygon inside the box.</summary>
         public List<Point> Clip(List<Point> polygon)

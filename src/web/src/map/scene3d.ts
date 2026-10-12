@@ -54,6 +54,8 @@ export class TrackScene {
   private grid: THREE.GridHelper | null = null
   private scenery: THREE.Group | null = null
   private buildings: THREE.Mesh | null = null
+  /** Landmark and corner labels that came with the scenery (removed when it changes). */
+  private sceneryLabels: { el: HTMLSpanElement; at: THREE.Vector3 }[] = []
   private flatBuildings = false
   private last = performance.now()
   private mode: CameraMode = 'static'
@@ -157,8 +159,20 @@ export class TrackScene {
       disposeTree(this.scenery)
       this.scenery = null
     }
+    for (const l of this.sceneryLabels) l.el.remove()
+    this.sceneryLabels = []
     if (this.grid) this.grid.visible = !scenery
     if (!scenery) return
+    // Landmarks just above their roofs; corners (when the track file has none of its own) like the track's labels.
+    const label = (text: string, className: string, at: THREE.Vector3) => {
+      const el = document.createElement('span')
+      el.className = className
+      el.textContent = text
+      this.overlay.appendChild(el)
+      this.sceneryLabels.push({ el, at })
+    }
+    for (const l of scenery.landmarks ?? []) label(`◆ ${l.name}`, 'm3d-label m3d-landmark', this.toWorld({ x: l.at[0], y: l.at[1] }, (l.h || 20) + 15))
+    if (this.model.def.labels.length === 0) for (const c of scenery.corners ?? []) label(c.name, 'm3d-label', this.at(c.distance, 25))
     const group = new THREE.Group()
     const layers: [SceneryArea[], number, number][] = [[scenery.parks, SCENERY.park, 1], [scenery.beach, SCENERY.beach, 2], [scenery.water, SCENERY.water, 3]]
     for (const [areas, colour, order] of layers) {
@@ -348,6 +362,17 @@ export class TrackScene {
       if (visible) el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`
     }
     for (const l of this.labels) place(l.el, l.at)
+    // Landmarks (already best first) skip any spot a better one or a corner label has taken: estimated boxes of
+    // ~6 px a letter by 14 px, so no layout reads every frame.
+    const taken: { x: number; y: number; w: number }[] = []
+    for (const l of this.labels) if (l.el.style.display !== 'none') taken.push({ ...screenOf(l.el), w: l.el.textContent!.length * 6 })
+    for (const l of this.sceneryLabels) {
+      place(l.el, l.at)
+      if (l.el.style.display === 'none') continue
+      const box = { ...screenOf(l.el), w: l.el.textContent!.length * 6 }
+      if (taken.some((t) => Math.abs(t.x - box.x) < (t.w + box.w) / 2 && Math.abs(t.y - box.y) < 14)) l.el.style.display = 'none'
+      else taken.push(box)
+    }
     for (const [id, c] of this.cars) {
       if (!c.group.visible || !this.tagged.has(id)) { c.tag.style.display = 'none'; continue }
       place(c.tag, c.group.position.clone().add(new THREE.Vector3(0, c.group.scale.y * 2.4 + 4, 0)))
@@ -569,6 +594,12 @@ export class TrackScene {
     this.cars.set(row.id, entry)
     return entry
   }
+}
+
+/** A label's screen position, from the transform placeOverlay gave it. */
+function screenOf(el: HTMLElement): { x: number; y: number } {
+  const m = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(el.style.transform)
+  return m ? { x: Number(m[1]), y: Number(m[2]) } : { x: -1e9, y: -1e9 }
 }
 
 /** Frees the GPU memory of every mesh and line under `root`. */

@@ -76,8 +76,9 @@ see "Next round" below.
     and `ADEL` (Adelaide) are provisional (codes guessed, found by name). TrackBuilder README has how each was built.
     Track files may carry `elevation` (smoothed SRTM heights; `MOUN` only, see TrackBuilder README "Elevation"),
     drawn by `ElevationStrip.tsx` under the map with the cars the map placed that frame.
-    `tracks/scenery/<CODE>.json` (TrackBuilder `--scenery`; `SURF` only): OSM buildings, water, beach, parks and the
-    sea for the 3D map, loaded lazily by `useScenery`.
+    `tracks/scenery/<CODE>.json` (TrackBuilder `--scenery`; Supercars `SURF`, `SAND`, `ADEL`; F1 via `--georef`, which
+    fits the F1 track to its OSM circuit): OSM buildings, water, beach, parks, the sea and landmarks (named attractions,
+    stadiums, buildings 60 m+), plus F1 corner numbers from OSM. Loaded lazily by `useScenery` for the 3D map only.
 - `src/SupercarsTiming.Server/F1` (F1 lives in the server project): `F1Client` (SignalR to
   livetiming.formula1.com), `F1Message` + `F1Recording` (our JSONL recordings and F1's archive folders), `F1State`
   (merges F1's patches, works out mini-sector crossings, laps, pit stops, flags; builds the same `TimingSnapshot`),

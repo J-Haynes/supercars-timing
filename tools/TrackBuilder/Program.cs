@@ -6,6 +6,8 @@ using TrackBuilder;
 // for the web map (src/web/src/tracks/<CODE>.json). See tools/TrackBuilder/README.md.
 
 var opt = ParseArgs(args);
+// F1 (or any track file not in latitude/longitude): scenery only, lined up with the OSM circuit (Georef.cs).
+if (opt.ContainsKey("georef")) return await GeorefScenery.RunAsync(opt, FindRepoRoot());
 if (!opt.TryGetValue("code", out var code) || !(opt.TryGetValue("relation", out var relationText) || opt.ContainsKey("ways")))
 {
     Console.WriteLine("""
@@ -22,6 +24,8 @@ if (!opt.TryGetValue("code", out var code) || !(opt.TryGetValue("relation", out 
           --match <text>         Also use this file for Natsoft track names containing this text (e.g. "SURFERS")
           --sessions <text>      Only learn timing from sessions containing this (default: "Supercars")
           --osm <file>           OSM cache (default: tools/TrackBuilder/osm/<CODE>.osm.json; downloaded if missing)
+          --georef <CODE>        With --relation: scenery for an existing track file not in lat/lon (F1-61 etc.), fitted
+                                 to the OSM circuit; also OSM's "Turn N" corners. The track file isn't changed
           --scenery <metres>     Also write scenery for the 3D map (buildings, water, beach, sea from OSM via Overpass)
                                  for this far around the circuit, to src/web/src/tracks/scenery/<CODE>.json
           --official <file>      Corners and pit lane from the official track map (tools/TrackBuilder/official/<CODE>.json,

@@ -38,6 +38,10 @@ export interface SceneryDefinition {
   water: SceneryArea[]
   beach: SceneryArea[]
   parks: SceneryArea[]
+  /** Named attractions, stadiums and tall named buildings (h = height in m, 0 when not a building). Newer files only. */
+  landmarks?: { name: string; at: [number, number]; h: number }[]
+  /** Corner labels for tracks whose own file has none (F1: OSM's "Turn N" nodes), metres along the lap. */
+  corners?: { name: string; distance: number }[]
 }
 
 export interface SceneryArea {

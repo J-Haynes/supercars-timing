@@ -126,6 +126,46 @@ git-ignored, so delete it to fetch fresh data). The 3D map loads it only when it
 - Checked against the circuit: our Surfers Paradise centreline is 2,985 m; snaplap gives "about 2.96 km"
   (https://www.snaplap.net/surfers-paradise-street-circuit/).
 
+## F1 scenery (`--georef`)
+
+F1 track files (from `tools/F1TrackBuilder`) are in F1's own x/y metres, not latitude/longitude. `--georef <CODE>
+--relation <OSM circuit relation>` lines the track file up with the OSM circuit (rotation, scale, shift, possibly a
+mirror; rotation sweep + iterative closest point against the relation's ways filled in every 5 m), refuses a fit worse
+than 25 m on average, and writes `tracks/scenery/<CODE>.json` in the track file's coordinates, with OSM's "Turn N"
+corners as `corners` (F1 track files have no labels). The track file itself isn't touched.
+
+```bash
+dotnet run --project tools/TrackBuilder -- --georef F1-61 --relation 421263 --scenery 800
+```
+
+| Track | OSM relation | Fit (mean / max) |
+|---|---|---|
+| F1-61 Marina Bay | 421263 | 3.8 m / 14.6 m (scale 0.999, rotated 0.4°: F1 x/y is north-up metres) |
+| F1-9 Austin | 6537729 | 3.0 m / 9.5 m |
+| F1-65 Mexico City | 16251935 (the Grand Prix relation, not the E-Prix one) | 3.0 m / 9.4 m |
+| F1-14 Interlagos | 6781071 | 3.1 m / 10.2 m |
+| F1-152 Las Vegas | 16696508 | 4.3 m / 14.8 m |
+| F1-150 Lusail | 21297662 | 2.7 m / 9.1 m |
+| F1-70 Yas Marina | 11378665 (20123689, "Grand Prix Corkscrew Circuit", is refused: 26 m out) | 3.3 m / 12.8 m |
+
+```bash
+for pair in F1-61:421263 F1-9:6537729 F1-65:16251935 F1-14:6781071 F1-152:16696508 F1-150:21297662 F1-70:11378665; do
+  dotnet run --project tools/TrackBuilder -- --georef ${pair%%:*} --relation ${pair##*:} --scenery 800
+done
+```
+
+None of these relations has "Turn N" nodes, so F1 maps have no corner labels yet. Austin, Interlagos and Lusail have
+no landmarks: nothing near them in OSM is linked to Wikipedia/Wikidata or tall enough. Overpass is often busy: the
+mirrors are tried in turn, and a failed run can simply be repeated.
+
+Scenery for every track also lists **landmarks**, drawn as ◆ labels in the 3D map (better ones win where labels
+overlap). Candidates: attractions, museums, theme parks and stadiums with a Wikipedia/Wikidata link, named towers that
+are observation towers, linked or 50 m+ (not lifeguard towers), and named buildings 60 m or taller. Up to 16 within
+800 m of the track, scored by height, +300 for a linked attraction, +50 for a link (or 150 m+), -1 per 10 m from the
+track, at least 200 m apart; "X Tower 2" counts as X; English names (`name:en`) where OSM has them. Tuned on Singapore
+(bars and playgrounds, then no Marina Bay Sands), Austin (no observation tower) and the Gold Coast (lifeguard towers).
+It's OSM's data: some tall buildings are named after a tenant ("Samsung", "HSBC" in Singapore).
+
 ## Adding a circuit
 
 1. Find the circuit relation on openstreetmap.org (search the circuit name, look for a relation of type
