@@ -81,7 +81,11 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
   // Back of the field first, so pit slots are handed out in a stable order.
   const placements: Placement[] = []
   let pitIndex = 0
-  for (const row of [...mapCars].sort((a, b) => (b.position || 99) - (a.position || 99))) {
+  // Once a session has ended (not just the chequered flag: the cool-down lap still shows) nobody is on track. F1's
+  // hub sends the last session's full state on connecting, days later; each car's last mini-sector then looked like
+  // a crossing made just now, and the map raced the field round for ~10 s.
+  const ended = timing.session.flag.trim().toLowerCase() === 'ended'
+  for (const row of ended ? [] : [...mapCars].sort((a, b) => (b.position || 99) - (a.position || 99))) {
     // With a broadcast delay the live feed may already have a newer crossing than the delayed snapshot (the
     // snapshot only shows it a moment after it happened): estimate on from that one, or the car stepped back.
     const seen = live && !row.inPit ? crossings.current.latest(row.id, now) : undefined
