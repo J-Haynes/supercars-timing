@@ -6,13 +6,18 @@ using TrackBuilder;
 // for the web map (src/web/src/tracks/<CODE>.json). See tools/TrackBuilder/README.md.
 
 var opt = ParseArgs(args);
-if (!opt.TryGetValue("code", out var code) || !opt.TryGetValue("relation", out var relationText))
+if (!opt.TryGetValue("code", out var code) || !(opt.TryGetValue("relation", out var relationText) || opt.ContainsKey("ways")))
 {
     Console.WriteLine("""
         usage: TrackBuilder --code MOUN --relation 6942508 [--recording data/recordings/<file>.jsonl] [options]
+               TrackBuilder --code SAND --ways 1,2,3 [--pit-ways 4,5] --name "Sandown" [options]   (no circuit relation in OSM)
 
           --recording <file>     Learn timing point positions from a recording. Without one, a *provisional*
                                  track is written and the web map places timing points from live pace instead.
+          --ways <ids>           Circuit ways in race order, comma-separated, when OSM has no circuit relation
+          --pit-ways <ids>       With --ways: the pit lane's ways
+          --turn-labels true     Label only numbered corners (OSM nodes named "Turn N" with ref N) as "TN"
+          --reverse true         Run the lap the other way (OSM gave the loop against the race direction)
           --name <text>          Display name (default: OSM relation name)
           --match <text>         Also use this file for Natsoft track names containing this text (e.g. "SURFERS")
           --sessions <text>      Only learn timing from sessions containing this (default: "Supercars")
@@ -21,6 +26,10 @@ if (!opt.TryGetValue("code", out var code) || !opt.TryGetValue("relation", out v
                                  for this far around the circuit, to src/web/src/tracks/scenery/<CODE>.json
           --official <file>      Corners and pit lane from the official track map (tools/TrackBuilder/official/<CODE>.json,
                                  made by tools/OfficialMap): they replace OSM's road-name labels and pit lane
+          --corners <file>       Corner names placed by hand (tools/TrackBuilder/corners/<CODE>.json, same format as
+                                 --official; its "attribution" is credited) when there's no official map yet
+          --control-pit true     Put the control line level with the middle of the pit lane (estimated), when OSM has
+                                 no Finish Line node but does have the pit lane beside the pit straight
           --elevation <file>     Height cache (default: tools/TrackBuilder/elevation/<CODE>.json; looked up if missing),
                                  or "none" for no heights (flat tracks among buildings, where SRTM shows rooftops)
           --control-node <id>    OSM node for the timing control line (default: node named "Finish Line", then "Start Line")
@@ -33,7 +42,7 @@ if (!opt.TryGetValue("code", out var code) || !opt.TryGetValue("relation", out v
 opt.TryGetValue("recording", out var recording);
 
 var root = FindRepoRoot();
-var relationId = long.Parse(relationText);
+var relationId = relationText is null ? 0 : long.Parse(relationText);   // 0: built from --ways
 var osmPath = Path.Combine(root, opt.GetValueOrDefault("osm") ?? $"tools/TrackBuilder/osm/{code}.osm.json");
 var outPath = Path.Combine(root, opt.GetValueOrDefault("out") ?? $"src/web/src/tracks/{code}.json");
 var elevationOption = opt.GetValueOrDefault("elevation");
@@ -46,7 +55,10 @@ if (!File.Exists(osmPath))
 {
     Console.WriteLine($"Downloading OSM relation {relationId}...");
     Directory.CreateDirectory(Path.GetDirectoryName(osmPath)!);
-    await File.WriteAllTextAsync(osmPath, await OsmCircuit.DownloadAsync(relationId));
+    static List<long> Ids(string? list) => (list ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).Select(long.Parse).ToList();
+    await File.WriteAllTextAsync(osmPath, opt.TryGetValue("ways", out var wayList)
+        ? await OsmCircuit.DownloadWaysAsync(Ids(wayList), Ids(opt.GetValueOrDefault("pit-ways")), opt.GetValueOrDefault("name") ?? code)
+        : await OsmCircuit.DownloadAsync(relationId));
 }
 var osm = OsmCircuit.Parse(await File.ReadAllTextAsync(osmPath));
 var allIds = osm.CircuitWays.SelectMany(w => w.Nodes).ToList();
@@ -54,6 +66,7 @@ var projection = new Projection(allIds.Average(id => osm.Nodes[id].Lat), allIds.
 Point P(long id) => projection.ToMetres(osm.Nodes[id].Lat, osm.Nodes[id].Lon);
 var loopIds = osm.BuildLoop(P);
 if (loopIds[0] != loopIds[^1]) throw new InvalidOperationException("Circuit ways don't form a closed loop");
+if (opt.GetValueOrDefault("reverse") == "true") loopIds.Reverse();
 var ring = new Ring(loopIds.Select(P).ToList());
 
 // 2. Start the lap at the timing control line ("M")
@@ -74,6 +87,17 @@ else if (opt.TryGetValue("control-way", out var controlWay))
     ring = ring.RotateTo(start + span / 2);
     controlEstimated = true;
     Console.WriteLine($"Control line estimated at the middle of {controlWay} ({span:0} m of the lap)");
+}
+else if (opt.GetValueOrDefault("control-pit") == "true" && osm.PitLaneWays.Count > 0)
+{
+    // Middle of the pit lane, projected onto the lap: start/finish lines sit on the pit straight beside the pits.
+    var pit = OsmCircuit.Chain(osm.PitLaneWays).Select(P).ToList();
+    var cum = new List<double> { 0 };
+    for (int i = 1; i < pit.Count; i++) cum.Add(cum[^1] + Point.Distance(pit[i - 1], pit[i]));
+    int mid = cum.FindIndex(c => c >= cum[^1] / 2);
+    ring = ring.RotateTo(ring.Project(pit[mid]));
+    controlEstimated = true;
+    Console.WriteLine($"Control line estimated level with the middle of the pit lane ({cum[^1]:0} m long)");
 }
 else { controlEstimated = true; Console.WriteLine("warning: no Finish/Start Line node; control line placed at the first circuit node"); }
 var samples = ring.Resample(Step);
@@ -132,6 +156,18 @@ foreach (var n in osm.Nodes.Values.Where(n => n.Name is not null && !labels.Cont
     if (Point.Distance(ring.At(along), P(n.Id)) < 60) AddLabel(n.Name!, along);
 }
 
+// 5b. Only the numbered corners (where OSM maps them as "Turn N" nodes): drops signs, road names and sponsor names
+if (opt.GetValueOrDefault("turn-labels") == "true")
+{
+    labels.Clear();
+    foreach (var n in osm.Nodes.Values.Where(n => n.Ref is { } r && int.TryParse(r, out _) && n.Name == $"Turn {r}"))
+    {
+        var along = ring.Project(P(n.Id));
+        if (Point.Distance(ring.At(along), P(n.Id)) < 60) AddLabel($"T{n.Ref}", along);
+    }
+    Console.WriteLine($"Turn labels: {labels.Count}");
+}
+
 // 6. Heights along the lap (SRTM via OpenTopoData), relative to the lowest point
 var elevation = elevationPath is null ? null : await Elevation.ForLapAsync(samples, Step, projection, elevationPath);
 if (elevation is not null)
@@ -158,7 +194,7 @@ var pitLane = pitIds.Select(P).ToList();
 
 // 8b. The official track map (optional): numbered corners and the pit lane, already lined up with this track
 var attribution = "Track geometry © OpenStreetMap contributors (ODbL)";
-if (opt.TryGetValue("official", out var officialFile))
+if (opt.TryGetValue("official", out var officialFile) || opt.TryGetValue("corners", out officialFile))
 {
     using var official = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, officialFile)));
     Point LatLon(JsonElement e) => projection.ToMetres(e[0].GetDouble(), e[1].GetDouble());
@@ -167,8 +203,10 @@ if (opt.TryGetValue("official", out var officialFile))
         AddLabel(c.GetProperty("name").GetString()!, ring.Project(LatLon(c.GetProperty("at"))));
     var officialPit = official.RootElement.GetProperty("pitLane").EnumerateArray().Select(LatLon).ToList();
     if (officialPit.Count > 1) pitLane = officialPit;
-    attribution += " · corners and pit lane from the official Supercars track map";
-    Console.WriteLine($"Official map: {labels.Count} corners, pit lane {officialPit.Count} points ({official.RootElement.GetProperty("source").GetString()})");
+    attribution += official.RootElement.TryGetProperty("attribution", out var credit)
+        ? $" · {credit.GetString()}"
+        : " · corners and pit lane from the official Supercars track map";
+    Console.WriteLine($"Corners from {officialFile}: {labels.Count} corners, pit lane {officialPit.Count} points ({official.RootElement.GetProperty("source").GetString()})");
 }
 
 static double R(double v) => Math.Round(v, 1);

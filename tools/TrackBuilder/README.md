@@ -53,6 +53,25 @@ dotnet run --project tools/TrackBuilder -- \
 | `--elevation` | Height cache (default `tools/TrackBuilder/elevation/<CODE>.json`; looked up if missing), or `none` |
 | `--out` | Output file (default `src/web/src/tracks/<CODE>.json`) |
 
+Sandown and Adelaide (built 12 Oct 2026, no recordings, no official event maps yet):
+
+```bash
+dotnet run --project tools/TrackBuilder -- --code SAND --ways 25927060,770953497,770953498 \
+  --pit-ways 25927062,770953500,770953499 --name "Sandown" --match SANDOWN --lap-time 67.2 \
+  --control-node 6950626103 --turn-labels true --elevation none --scenery 900
+dotnet run --project tools/TrackBuilder -- --code ADEL --relation 3121459 --name "Adelaide Parklands" --match ADELAIDE \
+  --lap-time 78.7 --control-pit true --corners tools/TrackBuilder/corners/ADEL.json --elevation none --scenery 900
+```
+
+- `--lap-time` is each circuit's Supercars lap record (supercars.com event pages: 1:07.2078 and 1:18.6763); live
+  calibration places the timing points from real pace anyway.
+- Laps: Sandown 3,154 m (Wikipedia: 3.104 km), Adelaide 3,263 m (3.219 km): both ~1.5% long, where Bathurst and the
+  Gold Coast were within 1%. Check the line and corner positions against the official map when it's published
+  (`tools/OfficialMap`), and against the first session's pace.
+- No elevation: SRTM gave 15-18 m of bumps at both (grandstands, park trees) with no published figure to check
+  against. Wikipedia mentions Adelaide's Wakefield Road going uphill; add heights once there's a source to verify them.
+- Natsoft track codes `SAND` and `ADEL` are guesses; the `--match` names find the files until the real codes are known.
+
 ## Street circuits and provisional tracks
 
 Some circuits are mapped in OSM as a `type=route` relation of public roads rather than a `type=circuit`
@@ -120,6 +139,8 @@ Track geometry © OpenStreetMap contributors, available under the ODbL.
 |---|---|---|
 | `MOUN` | Mount Panorama, Bathurst | 6942508 |
 | `SURF` | Surfers Paradise (Gold Coast 500). Provisional; control line estimated mid Gold Coast Highway; no elevation | 9325885 |
+| `SAND` | Sandown (Sandown 500). Provisional. No circuit relation in OSM: built from ways (`--ways`); the line is OSM's "Supercars Start/Finish Line" node; corners T1-T13 from OSM's turn nodes | ways 25927060, 770953497, 770953498 |
+| `ADEL` | Adelaide Parklands (Grand Final, 2026 layout). Provisional; line estimated level with the middle of the pit lane; corner names from Wikipedia, placed by hand (`corners/ADEL.json`) | 3121459 |
 
 ## Gold Coast weekend checklist (23-25 Oct 2026)
 

@@ -1,11 +1,12 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace TrackBuilder;
 
 /// <summary>Minimal reader for an OSM "circuit" relation fetched from /api/0.6/relation/{id}/full.json.</summary>
 public sealed class OsmCircuit
 {
-    public sealed record Node(long Id, double Lat, double Lon, string? Name);
+    public sealed record Node(long Id, double Lat, double Lon, string? Name, string? Ref = null);
 
     public string Name { get; private init; } = "";
     public Dictionary<long, Node> Nodes { get; } = [];
@@ -26,6 +27,31 @@ public sealed class OsmCircuit
         return await http.GetStringAsync($"https://api.openstreetmap.org/api/0.6/relation/{relationId}/full.json");
     }
 
+    /// <summary>
+    /// For circuits OSM maps as plain raceway ways with no circuit relation (Sandown): downloads the ways and writes the
+    /// same JSON shape as a relation download, with a stand-in relation (id 0) listing them as "circuit" and "pit_lane"
+    /// members, so the rest of TrackBuilder works unchanged.
+    /// </summary>
+    public static async Task<string> DownloadWaysAsync(IReadOnlyList<long> circuitWays, IReadOnlyList<long> pitWays, string name)
+    {
+        using var http = new HttpClient();
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("supercars-timing-trackbuilder/0.1 (personal hobby project)");
+        http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        var elements = new Dictionary<(string, long), JsonNode>();
+        foreach (var id in circuitWays.Concat(pitWays))
+        {
+            var doc = JsonNode.Parse(await http.GetStringAsync($"https://api.openstreetmap.org/api/0.6/way/{id}/full.json"))!;
+            foreach (var e in doc["elements"]!.AsArray())
+                elements[((string)e!["type"]!, (long)e["id"]!)] = e.DeepClone();
+        }
+        var members = new JsonArray();
+        foreach (var id in circuitWays) members.Add(new JsonObject { ["type"] = "way", ["ref"] = id, ["role"] = "circuit" });
+        foreach (var id in pitWays) members.Add(new JsonObject { ["type"] = "way", ["ref"] = id, ["role"] = "pit_lane" });
+        var all = new JsonArray(elements.Values.ToArray());
+        all.Add(new JsonObject { ["type"] = "relation", ["id"] = 0, ["members"] = members, ["tags"] = new JsonObject { ["name"] = name, ["type"] = "circuit" } });
+        return new JsonObject { ["elements"] = all }.ToJsonString();
+    }
+
     public static OsmCircuit Parse(string json)
     {
         using var doc = JsonDocument.Parse(json);
@@ -37,9 +63,10 @@ public sealed class OsmCircuit
         {
             var id = e.GetProperty("id").GetInt64();
             string? name = e.TryGetProperty("tags", out var tags) && tags.TryGetProperty("name", out var n) ? n.GetString() : null;
+            string? reference = tags.ValueKind == JsonValueKind.Object && tags.TryGetProperty("ref", out var r) ? r.GetString() : null;
             switch (e.GetProperty("type").GetString())
             {
-                case "node": nodes[id] = new Node(id, e.GetProperty("lat").GetDouble(), e.GetProperty("lon").GetDouble(), name); break;
+                case "node": nodes[id] = new Node(id, e.GetProperty("lat").GetDouble(), e.GetProperty("lon").GetDouble(), name, reference); break;
                 case "way": ways[id] = (name, e.GetProperty("nodes").EnumerateArray().Select(x => x.GetInt64()).ToList()); break;
                 case "relation": relation = e.Clone(); break;
             }

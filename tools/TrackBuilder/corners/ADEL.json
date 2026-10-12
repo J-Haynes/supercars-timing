@@ -1,0 +1,57 @@
+{
+ "source": "https://en.wikipedia.org/wiki/Adelaide_Street_Circuit",
+ "attribution": "corner names from Wikipedia (Adelaide Street Circuit), placed on our track by hand",
+ "note": "No official 2026 event map yet (checked 12 Oct 2026); replace with tools/OfficialMap output when Supercars publishes it.",
+ "corners": [
+  {
+   "name": "Senna Chicane",
+   "at": [
+    -34.9283407,
+    138.6183502
+   ]
+  },
+  {
+   "name": "Wakefield Road",
+   "at": [
+    -34.9278659,
+    138.6154687
+   ]
+  },
+  {
+   "name": "East Terrace",
+   "at": [
+    -34.9272058,
+    138.6137388
+   ]
+  },
+  {
+   "name": "Bartels Road (Brock Straight)",
+   "at": [
+    -34.9250996,
+    138.6154346
+   ]
+  },
+  {
+   "name": "Britannia Roundabout hairpin",
+   "at": [
+    -34.9275349,
+    138.6224867
+   ]
+  },
+  {
+   "name": "Dequetteville Terrace",
+   "at": [
+    -34.9297859,
+    138.6212746
+   ]
+  },
+  {
+   "name": "Racetrack Hairpin",
+   "at": [
+    -34.9318724,
+    138.622253
+   ]
+  }
+ ],
+ "pitLane": []
+}

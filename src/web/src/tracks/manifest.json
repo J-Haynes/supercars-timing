@@ -47,5 +47,19 @@
     "name": "Austin",
     "match": [],
     "provisional": false
+  },
+  "SAND": {
+    "name": "Sandown",
+    "match": [
+      "SANDOWN"
+    ],
+    "provisional": true
+  },
+  "ADEL": {
+    "name": "Adelaide Parklands",
+    "match": [
+      "ADELAIDE"
+    ],
+    "provisional": true
   }
 }

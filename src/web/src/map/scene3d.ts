@@ -450,7 +450,13 @@ export class TrackScene {
     const group = new THREE.Group()
     group.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x252c34, roughness: 0.9, side: THREE.DoubleSide })))
     for (const e of edges) group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(e), new THREE.LineBasicMaterial({ color: 0x4a5461 })))
-    const mid = at(Math.floor(pit.length / 2))
+    // Label halfway along the pit lane by distance (OSM points are unevenly spaced: bends have many, straights few).
+    const cum = [0]
+    for (let i = 1; i < pit.length; i++) cum.push(cum[i - 1] + Math.hypot(pit[i][0] - pit[i - 1][0], pit[i][1] - pit[i - 1][1]))
+    const half = cum[cum.length - 1] / 2
+    const k = Math.max(1, cum.findIndex((c) => c >= half))
+    const f = (half - cum[k - 1]) / (cum[k] - cum[k - 1] || 1)
+    const mid = { x: pit[k - 1][0] + f * (pit[k][0] - pit[k - 1][0]), y: pit[k - 1][1] + f * (pit[k][1] - pit[k - 1][1]) }
     const el = document.createElement('span')
     el.className = 'm3d-label m3d-pit'
     el.textContent = 'Pit lane'
