@@ -120,6 +120,7 @@ TIMING_SERVER=http://localhost:5081 npx vite --port 5174   # preview the fronten
 # F1 replay from an archive folder (download <Topic>.jsonStream files from livetiming.formula1.com/static/...):
 #   add --F1:Mode=Replay --F1:ReplayArchive=<folder> --F1:ReplaySpeed=2 --F1:ReplaySkipMinutes=79, open /f1
 python3 tools/F1TrackBuilder/build_track.py <qualifying archive folder>   # writes src/web/src/tracks/F1-<key>.json
+python3 tools/F1TrackBuilder/corners.py 61:2026 9:2025 ...   # then T1..Tn from MultiViewer (same coordinates as F1's)
 dotnet run --project tools/TrackBuilder -- --code MOUN --relation 6942508 --name "Mount Panorama" --match "MOUNT PANORAMA" --recording data/recordings/<file>.jsonl
 ```
 
@@ -209,6 +210,11 @@ the server in live mode by hand.
   stretch pace. Under a caution, `cautionPace()` uses what cars took through the same stretch under this caution,
   scaled per car, only for stretches started after the caution (settings in `CAUTION_TUNING`, tuned on the replayed
   safety car). "Syncing car positions" greys the map after a page load. Outside races pace is capped at ~1.12×.
+- **Header:** shows what's on screen: the replay at its moment ("Replay · 10×"), a session's results, an upcoming
+  event (`headerView` in App.tsx; ReplayView reports its moment with `onUpdate`); live timing otherwise.
+- **3D map look:** a light track with near-white edges over dark slate buildings, plus a faint "x-ray" copy of the
+  track and the car dots drawn over everything so buildings never hide them. Corner labels sit 35 m outside the track
+  (T-numbers as pills); labels that would overlap an earlier one hide. Spherical buildings (the Sphere) are spheres.
 - **Map views:** one switch, 2D | 3D | Orbit | Follow | Free (Free: click the map, WASD/arrows move, Q/E down/up,
   Shift faster, +/- zoom; keys only while the canvas has focus) (`MapView.tsx`; `settings.mapView`, `camera3d`, `followCar`).
   "3D" (a still 3D view you can drag) is the default. Settings were renamed (`mapMode` -> `mapView`, `mapCamera` ->
@@ -263,6 +269,11 @@ the server in live mode by hand.
   too. Tuned with `tools/F1MapEval/evalmap.py`, which replays archived races (they include real positions) and scores
   placements against them: measure any map change there first. Findings: the car's own last time through a
   stretch beat smarter pace guesses; knowing the next crossing beats any guess (below).
+- **Corner numbers:** `tools/F1TrackBuilder/corners.py` (MultiViewer's circuit API; checked within 6 m of our tracks,
+  counts match the official turns). Run it after `build_track.py`, which writes the file without labels.
+- **Status:** connected to F1's hub isn't live. `F1Store.Status` says "waiting" (no session running) once the
+  session's flag is Ended or nothing has arrived for 5 minutes; the hub sends the last session's saved state on
+  connecting, which used to show LIVE all day.
 - **Car positions (Position.z) need an F1 TV login:** not used; see `docs/PLANNING.md` before building on it.
 
 ## Next round: Gold Coast 500 (23-25 Oct 2026)
