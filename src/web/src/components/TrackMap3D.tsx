@@ -6,6 +6,7 @@ import { TrackModel } from '../map/trackModel'
 import { useCarPlacement } from '../map/useCarPlacement'
 import { HEIGHT_SCALE, TrackScene, type CameraMode } from '../map/scene3d'
 import { ElevationStrip, type StripCar } from './ElevationStrip'
+import { battles, battleSpans } from '../battles'
 
 /**
  * The 3D map: the same car placements as the 2D map (useCarPlacement), drawn by map/scene3d.ts. Loaded lazily by
@@ -14,7 +15,7 @@ import { ElevationStrip, type StripCar } from './ElevationStrip'
  * Cameras: Orbit turns slowly around the track (drag to turn, scroll or pinch to zoom); Follow chases one car
  * (the leader unless the viewer picks another).
  */
-export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, cornerLabels, cornersButton, flatBuildings, onFlatBuildings, onFollowCar, onHover, onTogglePin, note }: {
+export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, cornerLabels, cornersButton, showBattles, flatBuildings, onFlatBuildings, onFollowCar, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
   live?: TimingUpdate | null
@@ -29,6 +30,8 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   /** Corner names and numbers shown; and the button that switches them (MapView). */
   cornerLabels: boolean
   cornersButton: ReactNode
+  /** Highlight battles (races, the Battles button). */
+  showBattles: boolean
   /** Buildings as flat footprints (tracks with scenery). */
   flatBuildings: boolean
   onFlatBuildings: (flat: boolean) => void
@@ -38,7 +41,9 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   /** Replaces the "learning timing points" overlay, e.g. on an upcoming event's page. */
   note?: string
 }) {
-  const { placements, sync, awaitingCalibration, flagNow } = useCarPlacement(track, update, live)
+  const { placements, sync, awaitingCalibration, flagNow, model } = useCarPlacement(track, update, live)
+  // Battles from the timing (when it changes); placed on the track every frame below, so the bands follow the cars.
+  const battleList = useMemo(() => (showBattles ? battles(update.timing) : []), [showBattles, update.timing])
   const cars = update.timing.cars
   const host = useRef<HTMLDivElement>(null)
   const scene = useRef<TrackScene | null>(null)
@@ -78,6 +83,8 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
     s.togglePin = onTogglePin
     s.setCaution(flagNow === 'caution')
     s.setCars(placements, tagged)
+    const distanceOf = new Map(placements.flatMap((p) => (p.kind === 'track' ? [[p.car.id, p.distance] as const] : [])))
+    s.setBattles(battleSpans(battleList, distanceOf, model.length))
   })
 
   const stripCars: StripCar[] = placements.flatMap((pl) => (pl.kind === 'track' ? [{ car: pl.car, distance: pl.distance, dim: pl.dim }] : []))

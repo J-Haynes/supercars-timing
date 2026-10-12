@@ -4,6 +4,7 @@ import type { CarRow, TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
 import { TrackModel, type Vec } from '../map/trackModel'
 import { useCarPlacement } from '../map/useCarPlacement'
+import { battles, battleSpans } from '../battles'
 import { ElevationStrip, type StripCar } from './ElevationStrip'
 
 const CAR_RADIUS = 46 // metres, in map units
@@ -57,7 +58,7 @@ function makeView(model: TrackModel, rotationDeg: number) {
   }
 }
 
-export function TrackMap({ track, update, live, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note, extraTools, showLabels = true }: {
+export function TrackMap({ track, update, live, hoverId, highlightIds = [], focusId, pinned, rotation, onRotate, onHover, onTogglePin, note, extraTools, showLabels = true, showBattles = false }: {
   track: TrackDefinition
   update: TimingUpdate
   /** The live (undelayed) update. With a broadcast delay it's ahead of `update`: cars are placed between the
@@ -79,8 +80,12 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
   extraTools?: ReactNode
   /** Corner names (the Corners button). */
   showLabels?: boolean
+  /** Highlight battles (races, the Battles button). */
+  showBattles?: boolean
 }) {
   const { model, effective, placements, sync, awaitingCalibration, flagNow } = useCarPlacement(track, update, live)
+  const battleList = useMemo(() => (showBattles ? battles(update.timing) : []), [showBattles, update.timing])
+  const spans = battleSpans(battleList, new Map(placements.flatMap((p) => (p.kind === 'track' ? [[p.car.id, p.distance] as const] : []))), model.length)
   const geometry = useMemo(() => new TrackModel(track), [track])          // outline only: stable for the view
   const view = useMemo(() => makeView(geometry, rotation), [geometry, rotation])
   const { zoom, pan, svgRef, handlers, zoomBy, reset } = useZoomPan(view.fit)
@@ -121,6 +126,18 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
             <Label key={l.name} view={view} model={model} name={l.name} distance={l.distance} />
           ))}
         </g>
+        {/* Battles: a band along the track from the last car to the first, and a label at the front. */}
+        {spans.map((sp) => {
+          const pts: string[] = []
+          for (let d = sp.from; d <= sp.to; d += 5) { const p = s(d); pts.push(`${p.x.toFixed(1)} ${p.y.toFixed(1)}`) }
+          const at = s(sp.front)
+          return (
+            <g key={sp.label} className="map-battle">
+              <path d={`M${pts.join('L')}`} />
+              <text x={at.x} y={at.y - 70} style={{ fontSize: 40 / Math.sqrt(zoom) }}>{sp.label}</text>
+            </g>
+          )
+        })}
         {drawn.map((pl) => {
           const { car } = pl
           const p = pl.kind === 'track' ? s(pl.distance) : view.toScreen(pl.point)

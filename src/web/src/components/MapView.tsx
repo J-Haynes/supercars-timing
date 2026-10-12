@@ -1,5 +1,7 @@
 import { lazy, Suspense, type ComponentProps } from 'react'
 import { TrackMap } from './TrackMap'
+import { isRace } from '../session'
+import { isF1 } from '../series'
 import type { Settings } from '../settings'
 
 // three.js is large (~0.5 MB): only fetched when a viewer switches to 3D.
@@ -19,7 +21,7 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
  * orbiting or following a car. Both place cars with the same code (map/useCarPlacement.ts). Remembered in settings.
  */
 export function MapView({ settings, onSettings, ...props }: ComponentProps<typeof TrackMap> & {
-  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels'>
+  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels' | 'showBattles'>
   onSettings: (change: Partial<Settings>) => void
 }) {
   const view: View = settings.mapView === '2d' ? '2d' : settings.camera3d
@@ -36,12 +38,19 @@ export function MapView({ settings, onSettings, ...props }: ComponentProps<typeo
     <button type="button" className={`wide${settings.cornerLabels ? ' active' : ''}`} aria-pressed={settings.cornerLabels}
       onClick={() => onSettings({ cornerLabels: !settings.cornerLabels })} title={settings.cornerLabels ? 'Hide corner names and numbers' : 'Show corner names and numbers'}>Corners</button>
   )
-  if (view === '2d') return <TrackMap {...props} extraTools={<>{views}{corners}</>} showLabels={settings.cornerLabels} />
+  // Battles button: races only (there are no battles in practice or qualifying).
+  const battlesButton = isRace(props.update.timing.session.type) && (
+    <button type="button" className={`wide${settings.showBattles ? ' active' : ''}`} aria-pressed={settings.showBattles}
+      onClick={() => onSettings({ showBattles: !settings.showBattles })}
+      title={isF1 ? 'Highlight cars within a second of the car ahead (OT: in Overtake Mode range)' : 'Highlight cars within a second of the car ahead'}>Battles</button>
+  )
+  const showBattles = settings.showBattles && isRace(props.update.timing.session.type)
+  if (view === '2d') return <TrackMap {...props} extraTools={<>{views}{corners}{battlesButton}</>} showLabels={settings.cornerLabels} showBattles={showBattles} />
   return (
     <Suspense fallback={<div className="track-map"><div className="map-missing">Loading the 3D map…</div></div>}>
       <TrackMap3D track={props.track} update={props.update} live={props.live} hoverId={props.hoverId} highlightIds={props.highlightIds}
         pinned={props.pinned} camera={view} followCar={settings.followCar} views={views}
-        cornerLabels={settings.cornerLabels} cornersButton={corners}
+        cornerLabels={settings.cornerLabels} cornersButton={<>{corners}{battlesButton}</>} showBattles={showBattles}
         flatBuildings={settings.flatBuildings} onFlatBuildings={(flatBuildings) => onSettings({ flatBuildings })}
         onFollowCar={(followCar) => onSettings({ followCar })}
         onHover={props.onHover} onTogglePin={props.onTogglePin} note={props.note} />

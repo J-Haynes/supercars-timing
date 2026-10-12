@@ -1,4 +1,5 @@
 import type { CarRow, TimingSnapshot } from './types'
+import { battles } from './battles'
 import { liveGap, parkedAtLine, raceOrder } from './liveGaps'
 import { startPosition } from './startingGrid'
 import { cautionPeriods, minDriverLaps, raceLaps } from './session'
@@ -35,7 +36,6 @@ const median = (xs: number[]) => {
 /** Events stay in the ticker this long (Natsoft seconds). */
 const EVENT_SECONDS = 180
 /** Cars this close on the road are battling. */
-const BATTLE_SECONDS = 1.0
 /** Places gained/lost (pit-adjusted) to count as a big mover. */
 const MOVER_PLACES = 5
 
@@ -83,32 +83,17 @@ export function buildInsights(timing: TimingSnapshot, memory: InsightMemory): In
     })
   }
 
-  // Close battles: consecutive cars on the road within a second, same lap. Chains of 3+ are a train.
-  let chain: CarRow[] = []
-  let spread = 0 // sum of the intervals that put the cars in the chain, so the text matches the 1 s test
-  const flush = () => {
-    if (chain.length >= 2) {
-      const first = cars.indexOf(chain[0]) + 1
-      const last = first + chain.length - 1
-      out.push(chain.length === 2
-        ? { id: `battle-${chain.map((c) => c.id).join('-')}`, kind: 'battle', tone: 'yellow', carIds: chain.map((c) => c.id),
-            text: `Battle for P${first}: ${label(chain[1])} ${spread.toFixed(2)}s behind ${label(chain[0])}` }
-        : { id: `battle-${chain.map((c) => c.id).join('-')}`, kind: 'battle', tone: 'yellow', carIds: chain.map((c) => c.id),
-            text: `P${first}–P${last} covered by ${spread.toFixed(1)}s: ${chain.map((c) => surname(c.driver)).join(', ')}` })
-    }
-    chain = []
-    spread = 0
+  // Close battles: consecutive cars on the road within a second, same lap. Chains of 3+ are a train (battles.ts).
+  for (const battle of battles(timing)) {
+    const chain = battle.cars
+    const first = battle.position
+    const last = first + chain.length - 1
+    out.push(chain.length === 2
+      ? { id: `battle-${chain.map((c) => c.id).join('-')}`, kind: 'battle', tone: 'yellow', carIds: chain.map((c) => c.id),
+          text: `Battle for P${first}: ${label(chain[1])} ${battle.spread.toFixed(2)}s behind ${label(chain[0])}` }
+      : { id: `battle-${chain.map((c) => c.id).join('-')}`, kind: 'battle', tone: 'yellow', carIds: chain.map((c) => c.id),
+          text: `P${first}–P${last} covered by ${battle.spread.toFixed(1)}s: ${chain.map((c) => surname(c.driver)).join(', ')}` })
   }
-  for (let i = 1; i < cars.length; i++) {
-    const a = cars[i - 1], b = cars[i]
-    const interval = onTrack(a) && onTrack(b) && b.laps === a.laps ? liveGap(b, a, order) : null
-    if (interval !== null && interval < BATTLE_SECONDS) {
-      if (chain.length === 0) chain.push(a)
-      chain.push(b)
-      spread += interval
-    } else flush()
-  }
-  flush()
 
   // Closing in: the interval to the same car ahead has shrunk at each of the last 3 line crossings.
   for (const c of cars) {

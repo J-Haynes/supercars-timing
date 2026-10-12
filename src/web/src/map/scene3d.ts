@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { SceneryArea, SceneryDefinition } from '../tracks/types'
+import type { BattleSpan } from '../battles'
 import type { CarRow } from '../types'
 import type { TrackModel, Vec } from './trackModel'
 import type { Placement } from './useCarPlacement'
@@ -32,6 +33,9 @@ const TRACK = 0x5f6b78
 const EDGE = 0xdde3e9
 /** The faint copy of the track drawn over everything, so it shows through buildings. */
 const XRAY_OPACITY = 0.3
+/** Battles: a glowing band over the track under the cars (a colour no team or flag uses). */
+const BATTLE = 0x2fd3ff
+const BATTLE_WIDTH = 46
 /** Scenery colours: muted, so the track and the cars stay the brightest things on screen. */
 const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x272e37, footprint: 0x313943 }
 const YELLOW = 0xffd23f
@@ -53,6 +57,11 @@ export class TrackScene {
   private readonly edgesXray = new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: XRAY_OPACITY, depthTest: false, depthWrite: false })
   private readonly labels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean }[] = []
   private showCorners = true
+  private readonly battleGroup = new THREE.Group()
+  private readonly battleMaterial = new THREE.MeshBasicMaterial({ color: BATTLE, transparent: true, opacity: 0.55, depthTest: false, depthWrite: false, side: THREE.DoubleSide })
+  private battleSpans: BattleSpan[] = []
+  private readonly battleLabels: HTMLSpanElement[] = []
+  private readonly overtakeTags: HTMLSpanElement[] = []
   private readonly resize: ResizeObserver
   private readonly raycaster = new THREE.Raycaster()
   private readonly centre: Vec
@@ -115,6 +124,8 @@ export class TrackScene {
     }
     if (def.pitLane.length > 1) this.scene.add(this.pitLane())
     this.scene.add(this.controlLine())
+    this.battleGroup.renderOrder = 9
+    this.scene.add(this.battleGroup)
     this.scene.add(this.carGroup)
     for (const l of def.labels.filter((l) => !/line$|^pit straight$/i.test(l.name))) {
       const el = document.createElement('span')
@@ -160,6 +171,53 @@ export class TrackScene {
     this.controls.autoRotate = mode === 'orbit'
     if (mode === 'free') this.renderer.domElement.focus({ preventScroll: true })
     else this.keys.clear()
+  }
+
+  /**
+   * Battles this frame (battles.ts): a band over each stretch of track, drawn over buildings like the cars, with a
+   * label at the front car and, in F1, an "OT" tag on each car in Overtake Mode range. Empty to clear.
+   */
+  setBattles(spans: BattleSpan[]) {
+    for (const m of this.battleGroup.children) (m as THREE.Mesh).geometry.dispose()
+    this.battleGroup.clear()
+    for (const sp of spans) {
+      const mesh = new THREE.Mesh(this.band(sp.from, sp.to), this.battleMaterial)
+      mesh.renderOrder = 9
+      this.battleGroup.add(mesh)
+    }
+    this.battleSpans = spans
+  }
+
+  /** A flat band along the track from `from` to `to` metres (to may pass the lap length), BATTLE_WIDTH wide. */
+  private band(from: number, to: number) {
+    const positions: number[] = []
+    const index: number[] = []
+    const steps = Math.max(2, Math.ceil((to - from) / 5))
+    for (let k = 0; k <= steps; k++) {
+      const d = from + ((to - from) * k) / steps
+      const p = this.model.pointAt(d)
+      const n = this.model.normalAt(d)
+      for (const side of [1, -1]) {
+        const q = this.toWorld({ x: p.x + n.x * side * BATTLE_WIDTH / 2, y: p.y + n.y * side * BATTLE_WIDTH / 2 }, this.heightAt(d) + 1)
+        positions.push(q.x, q.y, q.z)
+      }
+      if (k < steps) index.push(k * 2, k * 2 + 1, k * 2 + 2, k * 2 + 2, k * 2 + 1, k * 2 + 3)
+    }
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    g.setIndex(index)
+    return g
+  }
+
+  /** The n-th element of a pool of overlay spans, created on demand; the rest are hidden by the caller. */
+  private pooled(pool: HTMLSpanElement[], n: number, className: string) {
+    while (pool.length <= n) {
+      const el = document.createElement('span')
+      el.className = className
+      this.overlay.appendChild(el)
+      pool.push(el)
+    }
+    return pool[n]
   }
 
   /** Corner names and numbers on or off (the Corners button); the pit lane and landmarks stay. */
@@ -391,6 +449,26 @@ export class TrackScene {
     // (best first). Estimated boxes of ~6 px a letter by 14 px, so no layout reads every frame. In a tight run of
     // corners some numbers hide, and come back when zoomed in.
     const taken: { x: number; y: number; w: number }[] = []
+    // Battle labels first: during a race they matter more than corner names.
+    this.battleSpans.forEach((sp, i) => {
+      const el = this.pooled(this.battleLabels, i, 'm3d-label m3d-battle')
+      el.textContent = sp.label
+      // Out to the side, so it covers neither the battling cars nor the band.
+      place(el, this.beside(sp.front, 90))
+      if (el.style.display !== 'none') taken.push({ ...screenOf(el), w: sp.label.length * 6 + 12 })
+    })
+    for (let i = this.battleSpans.length; i < this.battleLabels.length; i++) this.battleLabels[i].style.display = 'none'
+    // F1: "OT" beside each car in Overtake Mode range.
+    const overtake = this.battleSpans.flatMap((sp) => sp.overtakeIds)
+    overtake.forEach((id, i) => {
+      const el = this.pooled(this.overtakeTags, i, 'm3d-ot')
+      el.textContent = 'OT'
+      el.title = 'Within 1 s of the car ahead: in Overtake Mode range (F1 decides it at a detection point)'
+      const car = this.cars.get(id)
+      if (!car?.group.visible) { el.style.display = 'none'; return }
+      place(el, car.group.position.clone().add(new THREE.Vector3(0, car.group.scale.y * 2.4 + 4, 0)))
+    })
+    for (let i = overtake.length; i < this.overtakeTags.length; i++) this.overtakeTags[i].style.display = 'none'
     for (const l of [...this.labels, ...this.sceneryLabels]) {
       if (l.corner && !this.showCorners) { l.el.style.display = 'none'; continue }
       place(l.el, l.at)
@@ -456,12 +534,12 @@ export class TrackScene {
     return (e[i] + (f - Math.floor(f)) * (e[j] - e[i])) * HEIGHT_SCALE
   }
 
-  /** Where a corner label goes: 35 m beside the track on its outside (away from the circuit's middle), 10 m up. */
-  private beside(d: number) {
+  /** Where a corner label goes: `offset` m beside the track on its outside (away from the circuit's middle), 10 m up. */
+  private beside(d: number, offset = 35) {
     const p = this.model.pointAt(d)
     const n = this.model.normalAt(d)
     const outward = (p.x - this.centre.x) * n.x + (p.y - this.centre.y) * n.y > 0 ? 1 : -1
-    return this.toWorld({ x: p.x + n.x * 35 * outward, y: p.y + n.y * 35 * outward }, this.heightAt(d) + 10)
+    return this.toWorld({ x: p.x + n.x * offset * outward, y: p.y + n.y * offset * outward }, this.heightAt(d) + 10)
   }
 
   /** Track metres to a 2D shape point that becomes the world's x / -z after rotating the shape flat (rotateX -90°). */
