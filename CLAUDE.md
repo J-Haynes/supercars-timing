@@ -329,7 +329,8 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
    when Supercars publishes their event maps, run `tools/OfficialMap` for official corners and pit lanes.
 2. Back up `data/recordings` (off the laptop; TrueNAS on the tailnet when it's online, or an external drive).
 3. Grid positions from the server (replacing hand-entered `startingGrid.ts`); championship standings after each round.
-4. Ideas not built yet: pit windows / stops remaining, follow-a-driver card with notifications, co-driver planner,
+4. Ideas not built yet: pit strategy (rejoin ghost, "Circle of Doom", undercut alerts; research and measurements
+   in `docs/PLANNING.md`, "Pit strategy features"), pit windows / stops remaining, follow-a-driver card with notifications, co-driver planner,
    pit stop leaderboard.
 5. Connecting only around sessions is built (Oct 2026), from the hand-kept `schedule/supercars.json`. Still to do:
    fetch the session times automatically from the series' websites (`docs/PLANNING.md`, "Using Natsoft's data

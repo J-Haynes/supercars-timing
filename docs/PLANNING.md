@@ -71,6 +71,61 @@ The app has a second, separate F1 app at `/f1` on F1's public live timing (`docs
   maps for 2027 circuits not raced in 2025/2026 (run `tools/F1TrackBuilder` on an archived session there), team
   radio, weather.
 
+## Pit strategy features (being considered, 12 Oct 2026)
+
+The owner likes all of these and is still deciding; nothing is built. Ideas, in the suggested order:
+
+1. **"If they pitted now" ghost:** pick a car and a faint dot on the 2D/3D maps shows where it would rejoin
+   ("rejoins P9, 1.2 s behind #26"), as a **range** (see below), with a shorter range under a caution.
+2. **"Circle of Doom" view:** the track as a ring spaced by gap (time), not distance, with battles and the chosen
+   car's pit window. The name comes from timing tools, not confirmed as a team term: MultiViewer
+   (https://www.patreon.com/multiviewer/posts/circle-of-doom-164858438) and OneTiming
+   (https://support.paceteq.com/onetiming/circle-of-doom; its window runs from a fuel-only stop to full service).
+3. **Undercut and clear-air alerts** in the ticker: "#17 could undercut #8, rejoins in clear air", "#8 must
+   respond", and afterwards whether it worked. Out-lap gain measured from earlier stops in the same race.
+   Undercut/overcut background: https://www.gpfans.com/en/f1-news/1016512/f1-undercut-overcut-explained/ ,
+   https://www.catapult.com/blog/motorsports-race-strategy-undercut-overcut
+4. **Cheap stop under a caution:** who would lose the fewest places pitting now.
+5. **Stops remaining / pit windows** (below, "Ideas not built yet"). 2026 Finals races have two compulsory stops
+   (https://www.supercars.com/news/supercars-news-2026-tasmania-strategy-three-stop-change-rules-explained-chaz-mostert).
+6. **Race history chart:** each car's gap to the leader's average pace by lap (undercuts show as crossing lines).
+
+All but 6 are predictions: label them as such and keep them out of Focus/Compare (measured data only).
+Before showing 1-4, backtest on Bathurst Race 30: predict each real stop from the stops before it, compare with
+where the car really rejoined.
+
+**What a stop costs is two numbers.** (a) Driving the pit lane instead of the track: fixed per track (until the
+pit lane or its limit changes). (b) Stationary time: F1 ~2.5-3 s, nearly constant; Supercars mostly **refuelling**,
+a team's plan we can't see (a four-tyre change takes ~7-10 s; Gold Coast 2024 needed ~21 s of fuel over two stops,
+https://supercars.com/news/2024-gold-coast-500-strategy-guide-supercars-news-tyres-fuel ; Gold Coast 2025 finale:
+Feeney stationary 22 s vs Mostert 19 s,
+https://www.supercars.com/news/supercars-news-2025-mark-skaife-gold-coast-500-wau-triple-eight-pit-call-gold-coast-500-mostert-feeney).
+So for Supercars the prediction is a range even with perfect history.
+
+**Measured (12 Oct 2026):**
+- **Supercars, Bathurst Race 30:** time lost per stop (in-lap + out-lap minus two typical laps, 155 green-flag
+  stops) = Natsoft's `PT` minus ~2.7 s (half within 1.4-3.6 s). So each stop's cost is known when the car leaves the
+  pits. Payne's drive-through: `PT` 32.6 s, cost 27.3 s (the pit-lane part). Typical stop cost 66 s; stationary
+  roughly `PT` - 32.6 s, 18-100+ s (fuel). The loss lands on the out-lap (the pit lane passes the line).
+- **F1:** the feed's `PitStopSeries` topic has pit-lane time and stationary time per stop, live and in F1's public
+  archive. 2025 races, median time lost per green-flag stop: Singapore 22.9 s, Austin 20.7, Mexico City 22.2,
+  Interlagos 21.7, Las Vegas 22.1, Lusail 25.2, Yas Marina 22.7. Singapore checks out (~22 s after 2025's 60 -> 80 km/h
+  pit limit change, https://www.motorsport.com/f1/live-text/f1-singapore-gp-live-coverage-and-updates-race/1125751/?p=3 ),
+  which also shows last year's figure is only a starting point.
+- **Estimating from the map doesn't work well enough:** pit lanes drawn in our track files are 461 m (SURF) to 744 m
+  (MOUN), but the speed limit varies by event and isn't found for 2026 (40 km/h at the Gold Coast in 2010; Rule
+  D11.4.2 40 km/h at The Bend 2025, https://speedcafe.com/supercars-news-2025-the-bend-500-craig-lowndes-speeding-fine-pit-lane-details-stewards-report/ ;
+  Bathurst's 32.6 s over 744 m suggests ~80 km/h), and where Natsoft's pit-in/out lines sit is unknown.
+
+**Where each track's numbers come from (best first):** stops already made in this race (`PT`, live) -> the other
+race of the same weekend (Gold Coast, Sandown, Adelaide: Saturday for Sunday) -> last year's recordings (Bathurst
+2027 can use Race 30; F1 has the archive) -> before any stop: a wide range marked as an estimate. Rules can change
+between years (number of stops, fuel drop), the pit-lane part rarely does.
+
+**Open question:** Natsoft's public results site (http://racing.natsoft.com.au/results/, a JavaScript app) may hold
+last year's Gold Coast/Sandown/Adelaide races lap by lap with pit times, which would seed 2026's Finals tracks. It's
+Natsoft's data through another endpoint: not looked at until the owner decides.
+
 ## Ideas not built yet
 
 From the Bathurst brainstorm (built: safety car mode, charts, battle graph, finals ladder, phone layout, regression
