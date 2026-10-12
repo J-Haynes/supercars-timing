@@ -113,7 +113,8 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
       <div className="map-caption">
         {track.name} · 3D · positions estimated between timing points
         {track.elevation?.length ? ` · heights ×${HEIGHT_SCALE}` : ' · no height data for this track'}
-        {camera !== 'follow' ? ' · drag to turn, scroll or pinch to zoom' : ` · following ${followed ? `#${followed.carNumber} ${followed.driver}` : 'the leader'}`}
+        {camera === 'free' ? ' · click the map, then WASD or arrows to move, Q/E down/up, Shift faster, +/− or scroll to zoom, drag to look'
+          : camera !== 'follow' ? ' · drag to turn, scroll or pinch to zoom' : ` · following ${followed ? `#${followed.carNumber} ${followed.driver}` : 'the leader'}`}
         {' · '}double-click a car to pin it · {track.source.attribution}{scenery ? ` · ${scenery.attribution}` : ''}
       </div>
     </div>

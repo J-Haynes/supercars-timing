@@ -5,12 +5,13 @@ import type { Settings } from '../settings'
 // three.js is large (~0.5 MB): only fetched when a viewer switches to 3D.
 const TrackMap3D = lazy(() => import('./TrackMap3D'))
 
-type View = '2d' | 'static' | 'orbit' | 'follow'
+type View = '2d' | 'static' | 'orbit' | 'follow' | 'free'
 const VIEWS: { id: View; label: string; hint: string }[] = [
   { id: '2d', label: '2D', hint: 'Flat map: rotate, zoom and pan' },
   { id: 'static', label: '3D', hint: 'The track in 3D, standing still: drag to turn, scroll or pinch to zoom' },
   { id: 'orbit', label: 'Orbit', hint: 'Turns slowly around the track (drag to turn)' },
   { id: 'follow', label: 'Follow', hint: 'Chase one car' },
+  { id: 'free', label: 'Free', hint: 'Fly around: WASD or arrow keys to move, Q/E down and up, Shift for faster, +/− or scroll to zoom, drag to look' },
 ]
 
 /**

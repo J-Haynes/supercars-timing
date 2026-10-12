@@ -22,7 +22,7 @@ export interface Settings {
   mapWidth: number | null
   /** 3D map camera: still (the default "3D" view), turning slowly around the track, or chasing `followCar`. Named
    * camera3d, not the earlier mapCamera, so browsers that saved 'orbit' start on the new default. */
-  camera3d: 'static' | 'orbit' | 'follow'
+  camera3d: 'static' | 'orbit' | 'follow' | 'free'
   /** 3D map: buildings drawn as flat footprints instead of blocks. */
   flatBuildings: boolean
   /** Car number the 3D camera follows (null: the leader). */

@@ -31,7 +31,7 @@ const EDGE = 0x5d6976
 const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x3a4450, footprint: 0x4a5461 }
 const YELLOW = 0xffd23f
 
-export type CameraMode = 'static' | 'orbit' | 'follow'
+export type CameraMode = 'static' | 'orbit' | 'follow' | 'free'
 
 export class TrackScene {
   readonly renderer: THREE.WebGLRenderer
@@ -61,6 +61,8 @@ export class TrackScene {
   /** Eased direction of the chase camera (flat, unit length). */
   private heading: THREE.Vector3 | null = null
   private tagged = new Set<string>()
+  /** Keys held down in Free mode (KeyboardEvent.code). */
+  private readonly keys = new Set<string>()
   hover: (id: string | null) => void = () => {}
   togglePin: (carNumber: string) => void = () => {}
 
@@ -114,6 +116,12 @@ export class TrackScene {
     canvas.addEventListener('pointermove', this.onPointerMove)
     canvas.addEventListener('pointerleave', this.onPointerLeave)
     canvas.addEventListener('dblclick', this.onDoubleClick)
+    // Free mode keys: the canvas takes focus when clicked, so WASD only moves the map while it's the map you're using.
+    canvas.tabIndex = 0
+    canvas.addEventListener('pointerdown', this.onFocus)
+    canvas.addEventListener('keydown', this.onKeyDown)
+    canvas.addEventListener('keyup', this.onKeyUp)
+    canvas.addEventListener('blur', this.onBlur)
     this.resize = new ResizeObserver(() => this.fit())
     this.resize.observe(host)
     this.fit()
@@ -129,6 +137,8 @@ export class TrackScene {
     this.followId = followId
     this.controls.enabled = mode !== 'follow'
     this.controls.autoRotate = mode === 'orbit'
+    if (mode === 'free') this.renderer.domElement.focus({ preventScroll: true })
+    else this.keys.clear()
   }
 
   setCaution(caution: boolean) {
@@ -230,6 +240,10 @@ export class TrackScene {
     canvas.removeEventListener('pointermove', this.onPointerMove)
     canvas.removeEventListener('pointerleave', this.onPointerLeave)
     canvas.removeEventListener('dblclick', this.onDoubleClick)
+    canvas.removeEventListener('pointerdown', this.onFocus)
+    canvas.removeEventListener('keydown', this.onKeyDown)
+    canvas.removeEventListener('keyup', this.onKeyUp)
+    canvas.removeEventListener('blur', this.onBlur)
     disposeTree(this.scene)
     this.renderer.dispose()
     canvas.remove()
@@ -244,7 +258,10 @@ export class TrackScene {
     const dt = Math.min(0.1, (now - this.last) / 1000)
     this.last = now
     if (this.mode === 'follow') this.updateChase(dt)
-    else this.controls.update(dt)
+    else {
+      if (this.mode === 'free') this.fly(dt)
+      this.controls.update(dt)
+    }
     for (const c of this.cars.values()) {
       if (c.group.visible) c.group.scale.setScalar(Math.min(DOT_MAX, Math.max(DOT_MIN, c.group.position.distanceTo(this.camera.position) / DOT_PER_DISTANCE)))
     }
@@ -269,6 +286,55 @@ export class TrackScene {
     this.camera.position.copy(pos).addScaledVector(this.heading, -170).add(new THREE.Vector3(0, 75, 0))
     this.camera.lookAt(pos.clone().addScaledVector(this.heading, 90))
   }
+
+  /**
+   * Free mode: WASD / arrows move across the map relative to the view, Q/E down and up, +/- zoom, Shift for 3x speed.
+   * The camera and the point it looks at move together, so mouse drag (look around) and scroll (zoom) keep working.
+   * Speed scales with the distance to that point: slow close up, quick across the whole circuit.
+   */
+  private fly(dt: number) {
+    if (this.keys.size === 0) return
+    const k = (...codes: string[]) => codes.some((c) => this.keys.has(c))
+    const target = this.controls.target
+    const offset = this.camera.position.clone().sub(target)
+    const forward = offset.clone().negate().setY(0)
+    if (forward.lengthSq() < 1e-6) forward.set(0, 0, -1)
+    forward.normalize()
+    const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0))
+    const speed = Math.max(30, offset.length() * 0.25) * (k('ShiftLeft', 'ShiftRight') ? 3 : 1) * dt
+    const move = new THREE.Vector3()
+    if (k('KeyW', 'ArrowUp')) move.add(forward)
+    if (k('KeyS', 'ArrowDown')) move.sub(forward)
+    if (k('KeyD', 'ArrowRight')) move.add(right)
+    if (k('KeyA', 'ArrowLeft')) move.sub(right)
+    if (k('KeyE')) move.y += 1
+    if (k('KeyQ')) move.y -= 1
+    if (move.lengthSq() > 0) {
+      move.normalize().multiplyScalar(speed)
+      // Keep the camera above the ground.
+      if (this.camera.position.y + move.y < 10) move.y = Math.max(move.y, 10 - this.camera.position.y)
+      this.camera.position.add(move)
+      target.add(move)
+    }
+    // Zoom: move the camera towards or away from the point it looks at (within the scroll-zoom limits).
+    const zoom = k('Equal', 'NumpadAdd') ? 1 : k('Minus', 'NumpadSubtract') ? -1 : 0
+    if (zoom) {
+      const distance = THREE.MathUtils.clamp(offset.length() * Math.exp(-zoom * 1.5 * dt), this.controls.minDistance, this.controls.maxDistance)
+      this.camera.position.copy(target).add(offset.setLength(distance))
+    }
+  }
+
+  private onFocus = () => this.renderer.domElement.focus({ preventScroll: true })
+  private onKeyDown = (e: KeyboardEvent) => {
+    if (this.mode !== 'free' || e.ctrlKey || e.metaKey || e.altKey) return
+    const codes = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+      'ShiftLeft', 'ShiftRight', 'Equal', 'Minus', 'NumpadAdd', 'NumpadSubtract']
+    if (!codes.includes(e.code)) return
+    e.preventDefault() // arrows and space would scroll the page
+    this.keys.add(e.code)
+  }
+  private onKeyUp = (e: KeyboardEvent) => { this.keys.delete(e.code) }
+  private onBlur = () => this.keys.clear()
 
   /** Corner names and car number tags follow their 3D points on screen. */
   private placeOverlay() {

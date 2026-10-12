@@ -208,7 +208,8 @@ the server in live mode by hand.
   stretch pace. Under a caution, `cautionPace()` uses what cars took through the same stretch under this caution,
   scaled per car, only for stretches started after the caution (settings in `CAUTION_TUNING`, tuned on the replayed
   safety car). "Syncing car positions" greys the map after a page load. Outside races pace is capped at ~1.12×.
-- **Map views:** one switch, 2D | 3D | Orbit | Follow (`MapView.tsx`; `settings.mapView`, `camera3d`, `followCar`).
+- **Map views:** one switch, 2D | 3D | Orbit | Follow | Free (Free: click the map, WASD/arrows move, Q/E down/up,
+  Shift faster, +/- zoom; keys only while the canvas has focus) (`MapView.tsx`; `settings.mapView`, `camera3d`, `followCar`).
   "3D" (a still 3D view you can drag) is the default. Settings were renamed (`mapMode` -> `mapView`, `mapCamera` ->
   `camera3d`) each time the default changed, because settings are saved whole and old values would win. Tracks with
   scenery have a Buildings toggle (`flatBuildings`: footprints only). Event pages use it too.
