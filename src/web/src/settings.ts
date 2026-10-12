@@ -15,13 +15,19 @@ export interface Settings {
   focusCard: 'auto' | 'on' | 'off'
   /** Map rotation in degrees, per Natsoft track code. */
   mapRotation: Record<string, number>
+  /** Flat map or the 3D map (TrackMap3D). */
+  mapMode: '2d' | '3d'
+  /** 3D map camera: turn slowly around the track, or chase `followCar`. */
+  mapCamera: 'orbit' | 'follow'
+  /** Car number the 3D camera follows (null: the leader). */
+  followCar: string | null
   /** Detailed-mode tower columns (order and hidden), per session kind. Missing = the default layout. */
   columns: Partial<Record<SessionKind, ColumnPrefs>>
 }
 
 // Each series keeps its own settings (column layouts differ).
 const KEY = isF1 ? 'supercars-timing:f1-settings' : 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, focusCard: 'auto', columns: {} }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapMode: '2d', mapCamera: 'orbit', followCar: null, focusCard: 'auto', columns: {} }
 
 function load(): Settings {
   try {

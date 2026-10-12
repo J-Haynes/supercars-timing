@@ -1,0 +1,408 @@
+import * as THREE from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import type { CarRow } from '../types'
+import type { TrackModel, Vec } from './trackModel'
+import type { Placement } from './useCarPlacement'
+
+/**
+ * The 3D map's scene, written against three.js directly (no React wrapper library): the track as a ribbon at its
+ * real height (track file `elevation`, exaggerated), a curtain down to the ground so the hills read, the pit lane,
+ * and a small low-poly car for each placement. React (TrackMap3D) creates one per track and calls `setCars` every
+ * frame with the same placements the 2D map draws; this class renders on its own animation loop.
+ *
+ * Coordinates: track metres x east / y north become three.js x / -z, and height becomes y (up).
+ */
+
+/** Heights are stretched so a hill reads from a distance. Shown in the caption. */
+export const HEIGHT_SCALE = 2
+const TRACK_WIDTH = 16 // metres; a little wider than the real road so it shows from afar
+/** Cars are drawn 6x life size close up, growing with distance (up to 18x) so they still show in the overview. */
+const CAR_SCALE = 6
+const CAR_SCALE_MAX = 18
+const BG = 0x12161b // --panel
+const MAKER_COLOURS: Record<string, number> = { ford: 0x2f6fdf, chevrolet: 0xf28c1b, toyota: 0xe5172f }
+const EDGE = 0x5d6976
+const YELLOW = 0xffd23f
+
+export type CameraMode = 'orbit' | 'follow'
+
+export class TrackScene {
+  readonly renderer: THREE.WebGLRenderer
+  private readonly scene = new THREE.Scene()
+  private readonly camera = new THREE.PerspectiveCamera(45, 1, 5, 40000)
+  private readonly controls: OrbitControls
+  private readonly overlay: HTMLDivElement
+  private readonly cars = new Map<string, { group: THREE.Group; body: THREE.MeshStandardMaterial; tag: HTMLSpanElement; seen: boolean }>()
+  private readonly carGroup = new THREE.Group()
+  private readonly edges: THREE.LineBasicMaterial
+  private readonly labels: { el: HTMLSpanElement; at: THREE.Vector3 }[] = []
+  private readonly resize: ResizeObserver
+  private readonly raycaster = new THREE.Raycaster()
+  private readonly centre: Vec
+  private readonly radius: number
+  private frame = 0
+  private last = performance.now()
+  private mode: CameraMode = 'orbit'
+  private followId: string | null = null
+  /** Eased direction of the chase camera (flat, unit length). */
+  private heading: THREE.Vector3 | null = null
+  private tagged = new Set<string>()
+  hover: (id: string | null) => void = () => {}
+  togglePin: (carNumber: string) => void = () => {}
+
+  constructor(private readonly host: HTMLElement, private readonly model: TrackModel) {
+    const def = model.def
+    const xs = def.path.map((p) => p[0])
+    const ys = def.path.map((p) => p[1])
+    this.centre = { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 }
+    this.radius = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) / 2
+
+    // Throws when WebGL isn't available; TrackMap3D shows a message instead.
+    this.renderer = new THREE.WebGLRenderer({ antialias: true })
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    host.appendChild(this.renderer.domElement)
+    this.overlay = document.createElement('div')
+    this.overlay.className = 'm3d-overlay'
+    host.appendChild(this.overlay)
+
+    this.scene.background = new THREE.Color(BG)
+    this.scene.fog = new THREE.Fog(BG, this.radius * 4, this.radius * 10)
+    this.scene.add(new THREE.HemisphereLight(0xdde6f0, 0x1a2027, 1.6))
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4)
+    sun.position.set(-1, 2, 1)
+    this.scene.add(sun)
+
+    this.scene.add(this.ground())
+    this.scene.add(this.ribbon())
+    if (def.elevation?.length) this.scene.add(this.curtain())
+    this.edges = new THREE.LineBasicMaterial({ color: EDGE })
+    for (const side of [1, -1]) this.scene.add(new THREE.LineLoop(this.edgeGeometry(side), this.edges))
+    if (def.pitLane.length > 1) this.scene.add(this.pitLane())
+    this.scene.add(this.controlLine())
+    this.scene.add(this.carGroup)
+    for (const l of def.labels.filter((l) => !/line$|^pit straight$/i.test(l.name))) {
+      const el = document.createElement('span')
+      el.className = 'm3d-label'
+      el.textContent = l.name
+      this.overlay.appendChild(el)
+      this.labels.push({ el, at: this.at(l.distance, 25) })
+    }
+
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement)
+    this.controls.enableDamping = true
+    this.controls.autoRotate = true
+    this.controls.autoRotateSpeed = 0.35 // about one turn every three minutes
+    this.controls.maxPolarAngle = Math.PI * 0.47 // stay above the ground
+    this.controls.minDistance = 150
+    this.controls.maxDistance = this.radius * 8
+
+    const canvas = this.renderer.domElement
+    canvas.addEventListener('pointermove', this.onPointerMove)
+    canvas.addEventListener('pointerleave', this.onPointerLeave)
+    canvas.addEventListener('dblclick', this.onDoubleClick)
+    this.resize = new ResizeObserver(() => this.fit())
+    this.resize.observe(host)
+    this.fit()
+    this.resetOrbit()
+    this.frame = requestAnimationFrame(this.tick)
+  }
+
+  setCamera(mode: CameraMode, followId: string | null) {
+    if (mode === 'orbit' && this.mode !== 'orbit') this.resetOrbit()
+    if (mode === 'follow' && (this.mode !== 'follow' || followId !== this.followId)) this.heading = null
+    this.mode = mode
+    this.followId = followId
+    this.controls.enabled = mode === 'orbit'
+  }
+
+  setCaution(caution: boolean) {
+    this.edges.color.setHex(caution ? YELLOW : EDGE)
+  }
+
+  /** Moves every car to this frame's placement; cars that aren't placed are hidden. */
+  setCars(placements: Placement[], tagged: Set<string>) {
+    this.tagged = tagged
+    for (const c of this.cars.values()) c.seen = false
+    for (const pl of placements) {
+      const c = this.car(pl.car)
+      c.seen = true
+      c.group.visible = true
+      if (c.body.transparent !== pl.dim) {
+        c.body.transparent = pl.dim
+        c.body.opacity = pl.dim ? 0.45 : 1
+        c.body.needsUpdate = true
+      }
+      if (pl.kind === 'track') {
+        c.group.position.copy(this.at(pl.distance, 1.5))
+        c.group.lookAt(this.at(pl.distance + 6, 1.5))
+      } else {
+        // Pit lane: at the height of the nearest bit of track, facing along the pit straight.
+        const d = this.model.wrap(nearestDistance(this.model, pl.point))
+        c.group.position.copy(this.toWorld(pl.point, this.heightAt(d) + 1.5))
+        c.group.lookAt(this.toWorld(this.model.pointAt(d + 50), this.heightAt(d) + 1.5))
+      }
+    }
+    for (const c of this.cars.values()) if (!c.seen) { c.group.visible = false; c.tag.style.display = 'none' }
+  }
+
+  dispose() {
+    cancelAnimationFrame(this.frame)
+    this.resize.disconnect()
+    this.controls.dispose()
+    const canvas = this.renderer.domElement
+    canvas.removeEventListener('pointermove', this.onPointerMove)
+    canvas.removeEventListener('pointerleave', this.onPointerLeave)
+    canvas.removeEventListener('dblclick', this.onDoubleClick)
+    this.scene.traverse((o) => {
+      if (o instanceof THREE.Mesh || o instanceof THREE.Line) {
+        o.geometry.dispose()
+        const m = o.material as THREE.Material | THREE.Material[]
+        for (const mat of Array.isArray(m) ? m : [m]) mat.dispose()
+      }
+    })
+    this.renderer.dispose()
+    canvas.remove()
+    this.overlay.remove()
+  }
+
+  // --- Animation loop -------------------------------------------------------------------------------------------
+
+  private tick = () => {
+    this.frame = requestAnimationFrame(this.tick)
+    const now = performance.now()
+    const dt = Math.min(0.1, (now - this.last) / 1000)
+    this.last = now
+    if (this.mode === 'follow') this.updateChase(dt)
+    else this.controls.update(dt)
+    for (const c of this.cars.values()) {
+      if (c.group.visible) c.group.scale.setScalar(Math.min(CAR_SCALE_MAX, Math.max(CAR_SCALE, c.group.position.distanceTo(this.camera.position) / 60)))
+    }
+    this.renderer.render(this.scene, this.camera)
+    this.placeOverlay()
+  }
+
+  /**
+   * Chase camera: behind and above the followed car. The camera stays locked to the car's position (at 10x replay
+   * speed an eased position trailed it by hundreds of metres); only its heading is eased, so the view swings round
+   * corners smoothly instead of snapping at each step of the path.
+   */
+  private updateChase(dt: number) {
+    const car = this.followId ? this.cars.get(this.followId) : undefined
+    if (!car?.group.visible) return
+    const pos = car.group.position
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(car.group.quaternion)
+    forward.y = 0
+    forward.normalize()
+    if (!this.heading) this.heading = forward.clone()
+    this.heading.lerp(forward, 1 - Math.exp(-dt / 0.6)).normalize()
+    this.camera.position.copy(pos).addScaledVector(this.heading, -170).add(new THREE.Vector3(0, 75, 0))
+    this.camera.lookAt(pos.clone().addScaledVector(this.heading, 90))
+  }
+
+  /** Corner names and car number tags follow their 3D points on screen. */
+  private placeOverlay() {
+    const w = this.host.clientWidth
+    const h = this.host.clientHeight
+    const v = new THREE.Vector3()
+    const place = (el: HTMLElement, at: THREE.Vector3) => {
+      v.copy(at).project(this.camera)
+      const visible = v.z < 1 && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1
+      el.style.display = visible ? '' : 'none'
+      if (visible) el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`
+    }
+    for (const l of this.labels) place(l.el, l.at)
+    for (const [id, c] of this.cars) {
+      if (!c.group.visible || !this.tagged.has(id)) { c.tag.style.display = 'none'; continue }
+      place(c.tag, c.group.position.clone().add(new THREE.Vector3(0, 14, 0)))
+    }
+  }
+
+  // --- Pointer: hover and double-click to pin, like the 2D map ---------------------------------------------------
+
+  private carAt(e: PointerEvent | MouseEvent): string | null {
+    const r = this.renderer.domElement.getBoundingClientRect()
+    this.raycaster.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), this.camera)
+    const hit = this.raycaster.intersectObjects(this.carGroup.children.filter((g) => g.visible), true)[0]
+    let o: THREE.Object3D | null = hit?.object ?? null
+    while (o && !o.userData.carId) o = o.parent
+    return (o?.userData.carId as string | undefined) ?? null
+  }
+
+  private onPointerMove = (e: PointerEvent) => { if (e.pointerType === 'mouse') this.hover(this.carAt(e)) }
+  private onPointerLeave = () => this.hover(null)
+  private onDoubleClick = (e: MouseEvent) => {
+    const id = this.carAt(e)
+    const number = id ? (this.carGroup.children.find((g) => g.userData.carId === id)?.userData.carNumber as string) : null
+    if (number) this.togglePin(number)
+  }
+
+  // --- Building the scene --------------------------------------------------------------------------------------
+
+  private fit() {
+    const w = this.host.clientWidth
+    const h = this.host.clientHeight
+    if (!w || !h) return
+    this.renderer.setSize(w, h)
+    this.camera.aspect = w / h
+    this.camera.updateProjectionMatrix()
+  }
+
+  /** Overview: far enough back that the whole track fits the panel, whatever its shape, looking down at ~40°. */
+  private resetOrbit() {
+    const vfov = (this.camera.fov * Math.PI) / 180
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.camera.aspect)
+    const distance = (this.radius * 0.95) / Math.sin(Math.min(vfov, hfov) / 2)
+    const top = Math.max(0, ...(this.model.def.elevation ?? [0])) * HEIGHT_SCALE
+    this.controls.target.set(0, top / 3, 0)
+    this.camera.position.set(0, top / 3, 0).add(new THREE.Vector3(0.45, 0.65, 0.6).normalize().multiplyScalar(distance))
+    this.controls.update()
+  }
+
+  /** Height (m, already scaled) of the track at distance d. 0 without elevation data. */
+  private heightAt(d: number): number {
+    const e = this.model.def.elevation
+    if (!e?.length) return 0
+    const f = this.model.wrap(d) / this.model.def.step
+    const i = Math.floor(f) % e.length
+    const j = (i + 1) % e.length
+    return (e[i] + (f - Math.floor(f)) * (e[j] - e[i])) * HEIGHT_SCALE
+  }
+
+  private toWorld(p: Vec, height: number) {
+    return new THREE.Vector3(p.x - this.centre.x, height, -(p.y - this.centre.y))
+  }
+
+  /** World position on the centreline at distance d, `lift` metres above the track. */
+  private at(d: number, lift = 0) {
+    return this.toWorld(this.model.pointAt(d), this.heightAt(d) + lift)
+  }
+
+  /** Samples along the lap with the left (+1) or right (-1) edge offset. */
+  private edgePoint(k: number, side: number, lift = 0.4) {
+    const d = k * this.model.def.step
+    const p = this.model.pointAt(d)
+    const n = this.model.normalAt(d)
+    return this.toWorld({ x: p.x + n.x * side * TRACK_WIDTH / 2, y: p.y + n.y * side * TRACK_WIDTH / 2 }, this.heightAt(d) + lift)
+  }
+
+  private edgeGeometry(side: number) {
+    return new THREE.BufferGeometry().setFromPoints(this.model.def.path.map((_, k) => this.edgePoint(k, side, 0.6)))
+  }
+
+  private ribbon() {
+    const n = this.model.def.path.length
+    const positions: number[] = []
+    const index: number[] = []
+    for (let k = 0; k < n; k++) {
+      for (const side of [1, -1]) { const p = this.edgePoint(k, side); positions.push(p.x, p.y, p.z) }
+      const a = k * 2
+      const b = ((k + 1) % n) * 2
+      index.push(a, a + 1, b, b, a + 1, b + 1)
+    }
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    g.setIndex(index)
+    g.computeVertexNormals()
+    return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x2b333c, roughness: 0.9, side: THREE.DoubleSide }))
+  }
+
+  /** A see-through wall from the track down to the ground: shows how high each part of the lap is. */
+  private curtain() {
+    const n = this.model.def.path.length
+    const positions: number[] = []
+    const colours: number[] = []
+    const index: number[] = []
+    const top = new THREE.Color(0x3a4653)
+    const bottom = new THREE.Color(BG)
+    for (let k = 0; k < n; k++) {
+      const p = this.at(k * this.model.def.step)
+      positions.push(p.x, p.y, p.z, p.x, 0, p.z)
+      colours.push(top.r, top.g, top.b, bottom.r, bottom.g, bottom.b)
+      const a = k * 2
+      const b = ((k + 1) % n) * 2
+      index.push(a, a + 1, b, b, a + 1, b + 1)
+    }
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    g.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3))
+    g.setIndex(index)
+    return new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false }))
+  }
+
+  private ground() {
+    const size = this.radius * 8
+    const group = new THREE.Group()
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ color: 0x151a20 }))
+    plane.rotation.x = -Math.PI / 2
+    plane.position.y = -0.5
+    group.add(plane)
+    // 200 m grid: gives a sense of scale and depth.
+    const grid = new THREE.GridHelper(size, Math.round(size / 200), 0x222a33, 0x1c232b)
+    grid.position.y = -0.3
+    group.add(grid)
+    return group
+  }
+
+  private pitLane() {
+    const pts = this.model.def.pitLane.map(([x, y]) => {
+      const d = nearestDistance(this.model, { x, y })
+      return this.toWorld({ x, y }, this.heightAt(d) + 0.5)
+    })
+    return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: 0x8a96a3, dashSize: 8, gapSize: 6 }))
+      .computeLineDistances()
+  }
+
+  private controlLine() {
+    const a = this.edgePoint(0, 1, 0.8)
+    const b = this.edgePoint(0, -1, 0.8)
+    const mid = a.clone().add(b).multiplyScalar(0.5)
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(a.distanceTo(b), 1, 3), new THREE.MeshBasicMaterial({ color: 0xffffff }))
+    bar.position.copy(mid)
+    bar.lookAt(this.at(5, 0.8)) // the box's x (its length) now runs across the track
+    return bar
+  }
+
+  /** A low-poly car: body, cabin and a dark wing, life-size x CAR_SCALE, pointing along +z. */
+  private car(row: CarRow) {
+    const existing = this.cars.get(row.id)
+    if (existing) return existing
+    const colour = row.teamColour ? parseInt(row.teamColour, 16) : MAKER_COLOURS[row.manufacturer.toLowerCase()] ?? 0x5a6573
+    const body = new THREE.MeshStandardMaterial({ color: colour, roughness: 0.5, metalness: 0.1 })
+    const dark = new THREE.MeshStandardMaterial({ color: 0x0b0d10, roughness: 0.8 })
+    const group = new THREE.Group()
+    const parts: [THREE.BoxGeometry, THREE.Material, number, number, number][] = [
+      [new THREE.BoxGeometry(2, 0.7, 4.8), body, 0, 0.5, 0],      // body
+      [new THREE.BoxGeometry(1.6, 0.6, 2.2), body, 0, 1.1, -0.3], // cabin
+      [new THREE.BoxGeometry(1.5, 0.45, 1.9), dark, 0, 1.12, -0.25], // windows
+      [new THREE.BoxGeometry(2, 0.12, 0.5), dark, 0, 1.25, -2.2],  // rear wing
+    ]
+    for (const [geometry, material, x, y, z] of parts) {
+      const mesh = new THREE.Mesh(geometry, material)
+      mesh.position.set(x, y, z)
+      group.add(mesh)
+    }
+    group.scale.setScalar(CAR_SCALE)
+    group.userData = { carId: row.id, carNumber: row.carNumber }
+    this.carGroup.add(group)
+    const tag = document.createElement('span')
+    tag.className = 'm3d-tag'
+    tag.textContent = row.carNumber
+    tag.style.borderColor = `#${colour.toString(16).padStart(6, '0')}`
+    this.overlay.appendChild(tag)
+    const entry = { group, body, tag, seen: true }
+    this.cars.set(row.id, entry)
+    return entry
+  }
+}
+
+/** Distance along the lap of the centreline sample closest to p (to the nearest step). */
+function nearestDistance(model: TrackModel, p: Vec): number {
+  const path = model.def.path
+  let best = 0
+  let bestD = Infinity
+  for (let k = 0; k < path.length; k++) {
+    const d = (path[k][0] - p.x) ** 2 + (path[k][1] - p.y) ** 2
+    if (d < bestD) { bestD = d; best = k }
+  }
+  return best * model.def.step
+}

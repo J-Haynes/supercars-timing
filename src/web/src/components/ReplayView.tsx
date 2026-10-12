@@ -4,7 +4,7 @@ import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
 import { cautionPeriods, isRace } from '../session'
 import { TimingTower } from './TimingTower'
-import { TrackMap } from './TrackMap'
+import { MapView } from './MapView'
 import { SafetyCarBanner } from './SafetyCarBanner'
 import { RaceControl } from './RaceControl'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -156,7 +156,7 @@ export function ReplayView({ session, onBack }: { session: RecordedSession; onBa
           <aside className="map-panel">
             {track ? (
               <ErrorBoundary fallback={<div className="map-missing">The track map hit an error.</div>}>
-                <TrackMap track={track} update={update} hoverId={hoverId} focusId={null} pinned={settings.pinned}
+                <MapView settings={settings} onSettings={updateSettings} track={track} update={update} hoverId={hoverId} focusId={null} pinned={settings.pinned}
                   rotation={settings.mapRotation[track.code] ?? 0}
                   onRotate={(deg) => updateSettings({ mapRotation: { ...settings.mapRotation, [track.code]: ((deg % 360) + 360) % 360 } })}
                   onHover={setHoverId} onTogglePin={togglePinned} />

@@ -180,6 +180,19 @@ main { flex: 1; padding: 0 16px 24px; }
 .elev-car b { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); font: 700 11px ui-monospace, monospace;
   color: var(--text); background: rgba(11, 13, 16, .85); padding: 0 3px; border-radius: 3px; }
 .track-map.syncing .elev-strip { opacity: .35; filter: grayscale(1); }
+
+/* 3D map (TrackMap3D, map/scene3d.ts): a WebGL canvas with HTML labels on top. */
+.map-tools button.active { border-color: var(--muted); background: #222a33; }
+.map-tools select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; font: inherit; font-size: 12px; max-width: 170px; }
+.m3d-host { position: relative; height: min(68vh, 640px); border-radius: 6px; overflow: hidden; touch-action: none; }
+.m3d-host canvas { display: block; }
+.m3d-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.m3d-label, .m3d-tag { position: absolute; left: 0; top: 0; white-space: nowrap; will-change: transform; }
+.m3d-label { font-size: 11px; color: var(--muted); margin: -7px 0 0 0; translate: -50% 0; text-shadow: 0 0 3px var(--bg); }
+.m3d-tag { font: 700 11px ui-monospace, monospace; color: var(--text); background: rgba(11, 13, 16, .85); border-left: 3px solid var(--muted);
+  padding: 1px 4px; border-radius: 3px; translate: -50% -100%; }
+.track-map.syncing .m3d-host { opacity: .35; filter: grayscale(1); transition: opacity .4s, filter .4s; }
+@media (max-width: 760px) { .m3d-host { height: 56vh; } }
 @media (max-width: 760px) { .elev-strip { height: 72px; } }
 .map-missing { color: var(--muted); padding: 32px 16px; text-align: center; border: 1px dashed var(--line); border-radius: 8px; }
 

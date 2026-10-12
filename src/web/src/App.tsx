@@ -5,7 +5,7 @@ import { useSettings } from './settings'
 import { SessionHeader } from './components/SessionHeader'
 import { Controls } from './components/Controls'
 import { TimingTower } from './components/TimingTower'
-import { TrackMap } from './components/TrackMap'
+import { MapView } from './components/MapView'
 import { TipsPanel } from './components/TipsPanel'
 import { Menu } from './components/Menu'
 import { ResultsView } from './components/ResultsView'
@@ -130,7 +130,7 @@ export default function App() {
                     <div className="panel-map">
                     {track ? (
                       <ErrorBoundary fallback={<div className="map-missing">The track map hit an error. Check the browser console.</div>}>
-                        <TrackMap
+                        <MapView settings={settings} onSettings={updateSettings}
                           track={track}
                           update={update}
                           live={latest}
