@@ -18,6 +18,7 @@ import type { Placement } from './useCarPlacement'
 /** Heights are stretched so a hill reads from a distance. Shown in the caption. */
 export const HEIGHT_SCALE = 2
 const TRACK_WIDTH = 16 // metres; a little wider than the real road so it shows from afar
+const PIT_WIDTH = 9
 /** Car dots: radius in metres, growing with distance from the camera so they still show in the overview. */
 const DOT_MIN = 4
 const DOT_MAX = 32
@@ -419,13 +420,43 @@ export class TrackScene {
     return group
   }
 
+  /** The pit lane: a narrower road beside the track, edged like it, with a "Pit lane" label at its middle. */
   private pitLane() {
-    const pts = this.model.def.pitLane.map(([x, y]) => {
-      const d = nearestDistance(this.model, { x, y })
-      return this.toWorld({ x, y }, this.heightAt(d) + 0.5)
+    const pit = this.model.def.pitLane
+    const at = (i: number) => {
+      const [x, y] = pit[Math.max(0, Math.min(pit.length - 1, i))]
+      return { x, y }
+    }
+    const height = (p: Vec) => this.heightAt(nearestDistance(this.model, p)) + 0.3
+    const positions: number[] = []
+    const index: number[] = []
+    const edges: [THREE.Vector3[], THREE.Vector3[]] = [[], []]
+    pit.forEach((_, i) => {
+      // Direction from the neighbouring points; the edges sit half the pit lane's width either side.
+      const a = at(i - 1), b = at(i + 1), p = at(i)
+      const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
+      const n = { x: -(b.y - a.y) / len, y: (b.x - a.x) / len }
+      ;[1, -1].forEach((side, k) => {
+        const q = this.toWorld({ x: p.x + n.x * side * PIT_WIDTH / 2, y: p.y + n.y * side * PIT_WIDTH / 2 }, height(p))
+        positions.push(q.x, q.y, q.z)
+        edges[k].push(q.clone().setY(q.y + 0.2))
+      })
+      if (i < pit.length - 1) index.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 2, i * 2 + 1, i * 2 + 3)
     })
-    return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: 0x8a96a3, dashSize: 8, gapSize: 6 }))
-      .computeLineDistances()
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    g.setIndex(index)
+    g.computeVertexNormals()
+    const group = new THREE.Group()
+    group.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x252c34, roughness: 0.9, side: THREE.DoubleSide })))
+    for (const e of edges) group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(e), new THREE.LineBasicMaterial({ color: 0x4a5461 })))
+    const mid = at(Math.floor(pit.length / 2))
+    const el = document.createElement('span')
+    el.className = 'm3d-label m3d-pit'
+    el.textContent = 'Pit lane'
+    this.overlay.appendChild(el)
+    this.labels.push({ el, at: this.toWorld(mid, height(mid) + 20) })
+    return group
   }
 
   private controlLine() {

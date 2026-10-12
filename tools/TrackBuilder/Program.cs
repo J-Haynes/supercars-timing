@@ -19,6 +19,8 @@ if (!opt.TryGetValue("code", out var code) || !opt.TryGetValue("relation", out v
           --osm <file>           OSM cache (default: tools/TrackBuilder/osm/<CODE>.osm.json; downloaded if missing)
           --scenery <metres>     Also write scenery for the 3D map (buildings, water, beach, sea from OSM via Overpass)
                                  for this far around the circuit, to src/web/src/tracks/scenery/<CODE>.json
+          --official <file>      Corners and pit lane from the official track map (tools/TrackBuilder/official/<CODE>.json,
+                                 made by tools/OfficialMap): they replace OSM's road-name labels and pit lane
           --elevation <file>     Height cache (default: tools/TrackBuilder/elevation/<CODE>.json; looked up if missing),
                                  or "none" for no heights (flat tracks among buildings, where SRTM shows rooftops)
           --control-node <id>    OSM node for the timing control line (default: node named "Finish Line", then "Start Line")
@@ -152,6 +154,22 @@ if (opt.TryGetValue("scenery", out var sceneryMargin))
 
 // 8. Pit lane polyline
 var pitIds = osm.PitLaneWays.Count > 0 ? OsmCircuit.Chain(osm.PitLaneWays) : [];
+var pitLane = pitIds.Select(P).ToList();
+
+// 8b. The official track map (optional): numbered corners and the pit lane, already lined up with this track
+var attribution = "Track geometry © OpenStreetMap contributors (ODbL)";
+if (opt.TryGetValue("official", out var officialFile))
+{
+    using var official = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, officialFile)));
+    Point LatLon(JsonElement e) => projection.ToMetres(e[0].GetDouble(), e[1].GetDouble());
+    labels.Clear();
+    foreach (var c in official.RootElement.GetProperty("corners").EnumerateArray())
+        AddLabel(c.GetProperty("name").GetString()!, ring.Project(LatLon(c.GetProperty("at"))));
+    var officialPit = official.RootElement.GetProperty("pitLane").EnumerateArray().Select(LatLon).ToList();
+    if (officialPit.Count > 1) pitLane = officialPit;
+    attribution += " · corners and pit lane from the official Supercars track map";
+    Console.WriteLine($"Official map: {labels.Count} corners, pit lane {officialPit.Count} points ({official.RootElement.GetProperty("source").GetString()})");
+}
 
 static double R(double v) => Math.Round(v, 1);
 var track = new
@@ -165,11 +183,13 @@ var track = new
     controlLineEstimated = controlEstimated,
     source = new
     {
-        attribution = "Track geometry © OpenStreetMap contributors (ODbL)" + (elevation is null ? "" : $" · {Elevation.Attribution}"),
+        attribution = attribution + (elevation is null ? "" : $" · {Elevation.Attribution}"),
         osmRelation = relationId,
         recording = recordingPath is null ? null : Path.GetFileName(recordingPath),
         built = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
     },
+    // Latitude/longitude of (0, 0): path coordinates are metres east/north of it (equirectangular, Geometry.cs).
+    origin = new[] { Math.Round(projection.Origin.Lat, 7), Math.Round(projection.Origin.Lon, 7) },
     length = R(ring.Length),
     step = Step,
     // Resampled centreline in metres (x east, y north), starting at the control line in race direction.
@@ -184,7 +204,7 @@ var track = new
         ? Enumerable.Empty<object>()
         : seg.PointOrder.Select((id, i) => (object)new { from = id, seconds = Math.Round(seg.Seconds[i], 3) }),
     labels = labels.Values.OrderBy(l => l.Distance).Select(l => new { name = l.Name, distance = R(l.Distance) }),
-    pitLane = pitIds.Select(id => { var p = P(id); return new[] { R(p.X), R(p.Y) }; }),
+    pitLane = pitLane.Select(p => new[] { R(p.X), R(p.Y) }),
 };
 
 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);

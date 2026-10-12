@@ -84,7 +84,8 @@ see "Next round" below.
 - `src/web/src/series.ts`: which app the page is (`/f1` = F1, else Supercars), its API base and hub, team colours.
 - `deploy/`: the systemd user service and its README (install, logs, Tailscale serve).
 - `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
-  README has the Gold Coast checklist), `tools/F1TrackBuilder/build_track.py` (F1 track files from an archived
+  README has the Gold Coast checklist), `tools/OfficialMap` (corners and pit lane from Supercars' official track map
+  PDFs, lined up with our track), `tools/F1TrackBuilder/build_track.py` (F1 track files from an archived
   session's car positions; see its docstring), `tools/F1MapEval/evalmap.py` (scores map placement against real positions).
 - `tests/SupercarsTiming.Natsoft.Tests`: xUnit, including `RecordingRegressionTests` on real recordings.
 - `docs/PROTOCOL.md` (the feed, field by field: **update it whenever you learn something**), `docs/PROTOCOL-F1.md`
@@ -263,7 +264,8 @@ the server in live mode by hand.
 - **Before the weekend:** set `FINALS_ROUNDS[0].cupWinners.enduro` in `finals.ts` (Enduro Cup winner, +25) and check the
   Bathurst result our Finals seeding uses against the official one (post-race penalties aren't in the feed). Add a
   `startingGrid.ts` entry for each race once the grid is known (or send grid positions from the server).
-- **After Practice 1:** rebuild the `SURF` map from the recording (keep `--elevation none --scenery 900`) (checklist in `tools/TrackBuilder/README.md`;
+- **After Practice 1:** rebuild the `SURF` map from the recording (keep `--elevation none --scenery 900 --official ...`;
+  command in the TrackBuilder README) (checklist in `tools/TrackBuilder/README.md`;
   Natsoft's track code there is still a guess). Check that the Gold Coast feed behaves like Bathurst (flags, `<E L>`).
 - `championship.ts` only knows the Bathurst 1000; the Finals ladder takes over at Finals rounds.
 

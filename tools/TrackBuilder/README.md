@@ -24,7 +24,8 @@ Gold Coast (no recording yet, so provisional):
 ```bash
 dotnet run --project tools/TrackBuilder -- \
   --code SURF --relation 9325885 --name "Surfers Paradise" --match SURFERS \
-  --control-way "Gold Coast Highway" --lap-time 71 --elevation none --scenery 900
+  --control-way "Gold Coast Highway" --lap-time 71 --elevation none --scenery 900 \
+  --official tools/TrackBuilder/official/SURF.json
 ```
 
 Bathurst (from a recording):
@@ -47,6 +48,7 @@ dotnet run --project tools/TrackBuilder -- \
 | `--sessions` | Only learn pace from sessions whose name contains this (default `Supercars`) |
 | `--control-node` | OSM node ID for the control line if there's no `Finish Line`/`Start Line` node |
 | `--osm` | OSM cache file (default `tools/TrackBuilder/osm/<CODE>.osm.json`; downloaded if missing) |
+| `--official` | Corners and pit lane from the official track map (`tools/TrackBuilder/official/<CODE>.json`, see `tools/OfficialMap`) |
 | `--scenery` | Metres around the circuit to fetch scenery for the 3D map (e.g. `900`); see "Scenery" |
 | `--elevation` | Height cache (default `tools/TrackBuilder/elevation/<CODE>.json`; looked up if missing), or `none` |
 | `--out` | Output file (default `src/web/src/tracks/<CODE>.json`) |
@@ -147,7 +149,8 @@ grep -o 'T C=\\u0022[A-Z]*' data/recordings/<P1 file>.jsonl | head -1   # record
 # 2. Rebuild from the recording (replace SURF with the real code if it differs)
 dotnet run --project tools/TrackBuilder -- \
   --code SURF --relation 9325885 --name "Surfers Paradise" --match SURFERS \
-  --control-way "Gold Coast Highway" --elevation none --scenery 900 --recording data/recordings/<P1 file>.jsonl
+  --control-way "Gold Coast Highway" --elevation none --scenery 900 \
+  --official tools/TrackBuilder/official/SURF.json --recording data/recordings/<P1 file>.jsonl
 
 # 3. Build the site (the server serves it; no restart needed) and check the map during the next session
 cd src/web && npm run build

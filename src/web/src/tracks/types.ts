@@ -9,6 +9,8 @@ export interface TrackDefinition {
   /** The control line position is a guess (no Finish Line in the map data). */
   controlLineEstimated?: boolean
   source: { attribution: string; osmRelation: number; recording: string | null; built: string }
+  /** Latitude/longitude of (0, 0) in `path` (metres east/north of it). Missing in F1 tracks (F1's own x/y). */
+  origin?: [number, number]
   length: number
   /** Metres between samples in `path` and `simTime`. */
   step: number

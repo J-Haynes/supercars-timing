@@ -9,6 +9,8 @@ public readonly record struct Point(double X, double Y)
 public sealed class Projection(double lat0, double lon0)
 {
     const double EarthRadius = 6_371_000;
+    /// <summary>The latitude/longitude at (0, 0), written to the track file so other tools can convert back.</summary>
+    public (double Lat, double Lon) Origin => (lat0, lon0);
     readonly double _cosLat = Math.Cos(lat0 * Math.PI / 180);
 
     public Point ToMetres(double lat, double lon) => new(
