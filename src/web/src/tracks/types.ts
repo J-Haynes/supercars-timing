@@ -33,7 +33,7 @@ export interface SceneryDefinition {
   /** [minX, minY, maxX, maxY]: everything is clipped to this box around the circuit. */
   box: [number, number, number, number]
   /** Footprint rings with height and base in metres; `assumed` = no height or levels in OSM (drawn 2 storeys). */
-  buildings: { h: number; min: number; ring: [number, number][]; assumed: boolean; shape?: 'sphere' | null }[]
+  buildings: { h: number; min: number; ring: [number, number][]; assumed: boolean; shape?: 'sphere' | null; kind?: 'grandstand' | null }[]
   /** Lakes, rivers and the sea. */
   water: SceneryArea[]
   beach: SceneryArea[]
@@ -42,6 +42,15 @@ export interface SceneryDefinition {
   landmarks?: { name: string; at: [number, number]; h: number }[]
   /** Corner labels for tracks whose own file has none (F1: OSM's "Turn N" nodes), metres along the lap. */
   corners?: { name: string; distance: number }[]
+  /** Woods and scrub (drawn as ground colour; their trees are in `trees`). Newer files only. */
+  woods?: SceneryArea[]
+  /** Trees [x, y, height in m]: mapped ones, along tree rows, and filled into woods (TrackBuilder Scenery.Trees). */
+  trees?: [number, number, number][]
+  /** Coloured shapes on the ground (Bathurst's hillside sign); `colour` is OSM's, a CSS colour name or hex. */
+  markings?: (SceneryArea & { colour: string })[]
+  /** The ground's heights on a grid (hilly tracks: TrackBuilder --terrain), relative to the lap's lowest point like
+   * the track file's `elevation`: h[row * cols + col] at (origin x + col * spacing, origin y + row * spacing). */
+  terrain?: { origin: [number, number]; spacing: number; cols: number; rows: number; h: number[] } | null
 }
 
 export interface SceneryArea {

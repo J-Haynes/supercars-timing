@@ -32,6 +32,31 @@ public static class Elevation
         var lookupIdx = Enumerable.Range(0, n).Where(k => k % every == 0).ToList();
         var places = lookupIdx.Select(k => projection.ToLatLon(samples[k])).ToList();
 
+        var looked = await LookupAsync(places, cachePath);
+
+        // Fill every sample by linear interpolation between looked-up points (wrapping at the line).
+        var raw = new double[n];
+        for (int a = 0; a < lookupIdx.Count; a++)
+        {
+            int ka = lookupIdx[a];
+            int kb = a + 1 < lookupIdx.Count ? lookupIdx[a + 1] : n + lookupIdx[0];
+            double ha = looked[a];
+            double hb = looked[(a + 1) % places.Count];
+            for (int k = ka; k < kb; k++) raw[k % n] = ha + (hb - ha) * (k - ka) / (kb - ka);
+        }
+
+        int w = Math.Max(1, (int)Math.Round(SmoothHalfWidth / step));
+        var smooth = MovingAverage(MovingAverage(raw, w), w);
+        var min = smooth.Min();
+        return smooth.Select(h => h - min).ToArray();
+    }
+
+    /// <summary>
+    /// SRTM height in metres (above sea level) at each place, from the cache at <paramref name="cachePath"/> or the
+    /// public API (in batches of 100, one request a second), adding new answers to the cache.
+    /// </summary>
+    public static async Task<double[]> LookupAsync(IReadOnlyList<(double Lat, double Lon)> places, string cachePath)
+    {
         var cache = File.Exists(cachePath)
             ? JsonSerializer.Deserialize<Dictionary<string, double>>(await File.ReadAllTextAsync(cachePath)) ?? []
             : [];
@@ -58,22 +83,7 @@ public static class Elevation
             Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
             await File.WriteAllTextAsync(cachePath, JsonSerializer.Serialize(new SortedDictionary<string, double>(cache)) + "\n");
         }
-
-        // Fill every sample by linear interpolation between looked-up points (wrapping at the line).
-        var raw = new double[n];
-        for (int a = 0; a < lookupIdx.Count; a++)
-        {
-            int ka = lookupIdx[a];
-            int kb = a + 1 < lookupIdx.Count ? lookupIdx[a + 1] : n + lookupIdx[0];
-            double ha = cache[Key(places[a])];
-            double hb = cache[Key(places[(a + 1) % places.Count])];
-            for (int k = ka; k < kb; k++) raw[k % n] = ha + (hb - ha) * (k - ka) / (kb - ka);
-        }
-
-        int w = Math.Max(1, (int)Math.Round(SmoothHalfWidth / step));
-        var smooth = MovingAverage(MovingAverage(raw, w), w);
-        var min = smooth.Min();
-        return smooth.Select(h => h - min).ToArray();
+        return places.Select(p => cache[Key(p)]).ToArray();
     }
 
     /// <summary>Lat,lon to 5 decimals (~1 m): the API's location format and the cache key.</summary>

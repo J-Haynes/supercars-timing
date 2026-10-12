@@ -28,12 +28,13 @@ dotnet run --project tools/TrackBuilder -- \
   --official tools/TrackBuilder/official/SURF.json
 ```
 
-Bathurst (from a recording):
+Bathurst (from a recording; scenery on the hill, see "Terrain" below):
 
 ```bash
 dotnet run --project tools/TrackBuilder -- \
   --code MOUN --relation 6942508 --name "Mount Panorama" --match "MOUNT PANORAMA" \
-  --recording data/recordings/V8SUPER_20261010_100653.jsonl
+  --recording data/recordings/V8SUPER_20261010_100653.jsonl \
+  --scenery 500 --terrain true --landmarks-add way/306191909,way/80890306,relation/11770469
 ```
 
 | Option | |
@@ -122,7 +123,24 @@ git-ignored, so delete it to fetch fresh data). The 3D map loads it only when it
 - **Heights:** OSM `height`, else `building:levels` × 3.2 m, else an assumed 2 storeys (`assumed: true`). At Surfers
   Paradise (Oct 2026): 2,052 buildings, 43 with a height, 1,069 with levels, 940 assumed (mostly canal-side houses).
   The council's open "building height" layer (data.gov.au) is a planning limit, not a measured height, so it isn't used.
-- Scenery assumes a flat track (buildings stand at height 0). Add ground heights before using it with `elevation`.
+- **Trees:** each mapped tree (`natural=tree`), one every 9 m along tree rows, and woods/forest/scrub areas filled on a
+  16 m grid with a fixed jitter (so a rebuild draws the same trees). OSM maps where woods are, not each tree in them,
+  so filled trees show the wood, not real trees; their height is assumed (12 m, scrub 4 m) unless OSM has one.
+- **Grandstands** (`building=grandstand`) are drawn lighter; without a height they're assumed 9 m tall.
+- **Markings:** coloured shapes laid on the ground (an attraction or named area with a `colour` tag): Bathurst's
+  hillside sign, mapped letter by letter as white painted stone (relation 11770469: 13 letters, MOUNT PANORAMA).
+- **`--landmarks-add`:** labels chosen OSM elements whatever their score (Bathurst: the Rydges hotel, the National
+  Motor Racing Museum and the sign, none of which have a Wikipedia link). Hotels get "hotel" added to their name.
+- Without `--terrain`, scenery assumes a flat track (buildings stand at height 0).
+
+### Terrain (`--terrain true`, hilly tracks)
+
+The ground as a height grid every 40 m over the scenery box, from the same SRTM lookup as the lap's heights (cached
+in `tools/TrackBuilder/elevation/<CODE>.terrain.json`, committed; Bathurst: 4,860 points, about a minute). It's
+shifted to the track file's zero by the median difference along the lap (Bathurst: the middle half within ±0.3 m),
+and held just under the road within 12 m of the centreline, blending back to SRTM over 50 m. The 3D map draws it as a
+mesh (heights ×2 like the track) with parks, woods, sand, water and markings painted onto it, and stands buildings
+(on the lowest ground under them) and trees on it.
 - Checked against the circuit: our Surfers Paradise centreline is 2,985 m; snaplap gives "about 2.96 km"
   (https://www.snaplap.net/surfers-paradise-street-circuit/).
 

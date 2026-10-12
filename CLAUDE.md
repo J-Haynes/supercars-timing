@@ -80,9 +80,11 @@ see "Next round" below.
     and `ADEL` (Adelaide) are provisional (codes guessed, found by name). TrackBuilder README has how each was built.
     Track files may carry `elevation` (smoothed SRTM heights; `MOUN` only, see TrackBuilder README "Elevation"),
     drawn by `ElevationStrip.tsx` under the map with the cars the map placed that frame.
-    `tracks/scenery/<CODE>.json` (TrackBuilder `--scenery`; Supercars `SURF`, `SAND`, `ADEL`; F1 via `--georef`, which
+    `tracks/scenery/<CODE>.json` (TrackBuilder `--scenery`; Supercars `MOUN`, `SURF`, `SAND`, `ADEL`; F1 via `--georef`, which
     fits the F1 track to its OSM circuit): OSM buildings, water, beach, parks, the sea and landmarks (named attractions,
-    stadiums, buildings 60 m+), plus F1 corner numbers from OSM. Loaded lazily by `useScenery` for the 3D map only.
+    stadiums, buildings 60 m+, or named with `--landmarks-add`), trees (mapped, tree rows, filled woods), ground
+    markings (Bathurst's hillside sign), plus F1 corner numbers from OSM. `MOUN` also has `terrain` (a ground height
+    grid, `--terrain`): the 3D map draws the hill with the scenery standing on it. Loaded lazily by `useScenery`.
 - `src/SupercarsTiming.Server/F1` (F1 lives in the server project): `F1Client` (SignalR to
   livetiming.formula1.com), `F1Message` + `F1Recording` (our JSONL recordings and F1's archive folders), `F1State`
   (merges F1's patches, works out mini-sector crossings, laps, pit stops, flags; builds the same `TimingSnapshot`),
@@ -143,7 +145,9 @@ the server in live mode by hand.
 - **UI:** run the test server (above) or point Vite at the live server, and look. Headless checks used this season:
   Firefox + `geckodriver` (both installed) driven over WebDriver HTTP from a small Python script: load the page,
   run JS to read the DOM, take screenshots, crop with PIL. Useful for timing-sensitive behaviour (sample positions
-  every 50 ms) and phone width (`--width=390 --height=844`).
+  every 50 ms) and phone width (Firefox windows can't be narrower than 500 px: load the app in a 390 px iframe from a
+  `data:` page and switch to the frame; storage is partitioned there, so set settings inside the frame). 3D close-ups:
+  open the page with `?debug3d` and call `window.scene3d.debugView(x, y, distance, elevation, bearing)`.
 - **Map/clock behaviour:** import the app's own TS modules (`carPosition`, `smoothing`, `sessionClock`) into a script
   with `npx tsx` and run them on polled live snapshots or captured snapshot files. That's how stops/teleports and
   safety car pacing were measured and tuned.
@@ -225,7 +229,9 @@ the server in live mode by hand.
   (T-numbers as pills); labels that would overlap an earlier one hide. Spherical buildings (the Sphere) are spheres.
 - **Map views:** one switch, 2D | 3D | Orbit | Follow | Free (Free: click the map, WASD/arrows move, Q/E down/up,
   Shift faster, +/- zoom; keys only while the canvas has focus) (`MapView.tsx`; `settings.mapView`, `camera3d`, `followCar`).
-  Tracks with landmarks have a Landmarks button (`showLandmarks`).
+  Tracks with landmarks have a Landmarks button (`showLandmarks`). On tracks with `terrain` (Bathurst) the ground is
+  a mesh with parks, woods, sand, water and the hillside sign painted on a canvas texture; buildings stand on the
+  lowest ground under them (flat footprints on the highest); trees are one instanced mesh; the curtain is hidden.
   "3D" (a still 3D view you can drag) is the default. Settings were renamed (`mapMode` -> `mapView`, `mapCamera` ->
   `camera3d`) each time the default changed, because settings are saved whole and old values would win. Tracks with
   scenery have a Buildings toggle (`flatBuildings`: footprints only). Event pages use it too.

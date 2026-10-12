@@ -39,7 +39,8 @@ const BATTLE_WIDTH = 46
 /** Pit rejoin ghost (pit/): violet, a colour no team, flag or battle uses. */
 const GHOST = 0xb98cff
 /** Scenery colours: muted, so the track and the cars stay the brightest things on screen. */
-const SCENERY = { park: 0x1d3325, beach: 0x6e6248, water: 0x17324d, building: 0x272e37, footprint: 0x313943 }
+const SCENERY = { park: 0x1d3325, wood: 0x1b3524, beach: 0x6e6248, water: 0x17324d, building: 0x272e37, footprint: 0x313943,
+  grandstand: 0x55677a, tree: 0x34613b, ground: 0x252e29 }
 const YELLOW = 0xffd23f
 
 export type CameraMode = 'static' | 'orbit' | 'follow' | 'free'
@@ -71,7 +72,12 @@ export class TrackScene {
   private frame = 0
   private grid: THREE.GridHelper | null = null
   private scenery: THREE.Group | null = null
-  private buildings: THREE.Mesh | null = null
+  private sceneryDef: SceneryDefinition | null = null
+  private buildings: THREE.Mesh[] = []
+  /** The ground's height grid (hilly tracks), from the scenery. */
+  private terrain: SceneryDefinition['terrain'] = null
+  private curtainMesh: THREE.Mesh | null = null
+  private groundPlane: THREE.Mesh | null = null
   /** Landmark and corner labels that came with the scenery (removed when it changes). */
   private sceneryLabels: { el: HTMLSpanElement; at: THREE.Vector3; corner?: boolean; landmark?: boolean }[] = []
   private showLandmarks = true
@@ -121,7 +127,10 @@ export class TrackScene {
     const xray = new THREE.Mesh(ribbon.geometry, new THREE.MeshBasicMaterial({ color: EDGE, transparent: true, opacity: XRAY_OPACITY * 0.5, depthTest: false, depthWrite: false, side: THREE.DoubleSide }))
     xray.renderOrder = 8
     this.scene.add(xray)
-    if (def.elevation?.length) this.scene.add(this.curtain())
+    if (def.elevation?.length) {
+      this.curtainMesh = this.curtain()
+      this.scene.add(this.curtainMesh)
+    }
     this.edges = new THREE.LineBasicMaterial({ color: EDGE })
     for (const side of [1, -1]) {
       const geometry = this.edgeGeometry(side)
@@ -169,11 +178,22 @@ export class TrackScene {
     canvas.addEventListener('keydown', this.onKeyDown)
     canvas.addEventListener('keyup', this.onKeyUp)
     canvas.addEventListener('blur', this.onBlur)
+    // Headless checks (CLAUDE.md "Verifying changes"): with ?debug3d in the URL, scripts can move the camera.
+    if (new URLSearchParams(window.location.search).has('debug3d')) (window as unknown as { scene3d: TrackScene }).scene3d = this
     this.resize = new ResizeObserver(() => this.fit())
     this.resize.observe(host)
     this.fit()
     this.resetOrbit()
     this.frame = requestAnimationFrame(this.tick)
+  }
+
+  /** Debug (?debug3d): look at track point (x, y) from `distance` m away, `elevation` degrees up, from `bearing`° (0 = south). */
+  debugView(x: number, y: number, distance: number, elevation = 35, bearing = 0) {
+    const target = this.toWorld({ x, y }, this.groundAt(x, y))
+    const e = (elevation * Math.PI) / 180, b = (bearing * Math.PI) / 180
+    this.controls.target.copy(target)
+    this.camera.position.copy(target).add(new THREE.Vector3(Math.sin(b) * Math.cos(e), Math.sin(e), Math.cos(b) * Math.cos(e)).multiplyScalar(distance))
+    this.controls.update()
   }
 
   setCamera(mode: CameraMode, followId: string | null) {
@@ -270,20 +290,26 @@ export class TrackScene {
   }
 
   /**
-   * Buildings, water, beaches and parks around the track (tracks/scenery/<CODE>.json). The flat layers don't write
-   * depth and are drawn in a fixed order (parks, beach, water), so the thin gaps between them never flicker; the
-   * track and buildings still draw over them. The grid is hidden: the scenery gives the sense of scale.
+   * Buildings, water, beaches and parks around the track (tracks/scenery/<CODE>.json). Flat tracks: the flat layers
+   * don't write depth and are drawn in a fixed order (parks, woods, beach, water, markings), so the thin gaps between
+   * them never flicker; the track and buildings still draw over them. Hilly tracks with a `terrain` grid (Bathurst):
+   * the ground is a mesh at its real height (exaggerated like the track) with those layers painted onto it, and
+   * buildings and trees stand on it. The grid is hidden: the scenery gives the sense of scale.
    */
   setScenery(scenery: SceneryDefinition | null) {
     if (this.scenery) {
-      this.buildings = null
+      this.buildings = []
       this.scene.remove(this.scenery)
       disposeTree(this.scenery)
       this.scenery = null
     }
     for (const l of this.sceneryLabels) l.el.remove()
     this.sceneryLabels = []
+    this.terrain = scenery?.terrain ?? null
+    this.sceneryDef = scenery
     if (this.grid) this.grid.visible = !scenery
+    if (this.curtainMesh) this.curtainMesh.visible = !this.terrain
+    if (this.groundPlane) this.groundPlane.position.y = this.terrain ? Math.min(...this.terrain.h) * HEIGHT_SCALE - 2 : -0.5
     if (!scenery) return
     // Landmarks just above their roofs; corners (when the track file has none of its own) like the track's labels.
     const label = (text: string, className: string, at: THREE.Vector3, corner = false, landmark = false) => {
@@ -293,54 +319,158 @@ export class TrackScene {
       this.overlay.appendChild(el)
       this.sceneryLabels.push({ el, at, corner, landmark })
     }
-    for (const l of scenery.landmarks ?? []) label(`◆ ${l.name}`, 'm3d-label m3d-landmark', this.toWorld({ x: l.at[0], y: l.at[1] }, (l.h || 20) + 15), false, true)
+    for (const l of scenery.landmarks ?? []) {
+      label(`◆ ${l.name}`, 'm3d-label m3d-landmark', this.toWorld({ x: l.at[0], y: l.at[1] }, this.groundAt(l.at[0], l.at[1]) + (l.h || 20) + 15), false, true)
+    }
     if (this.model.def.labels.length === 0) for (const c of scenery.corners ?? []) label(c.name, 'm3d-label m3d-corner', this.beside(c.distance), true)
     const group = new THREE.Group()
-    const layers: [SceneryArea[], number, number][] = [[scenery.parks, SCENERY.park, 1], [scenery.beach, SCENERY.beach, 2], [scenery.water, SCENERY.water, 3]]
-    for (const [areas, colour, order] of layers) {
-      const shapes = areas.filter((a) => a.outer.length > 2).map((a) => {
-        const shape = new THREE.Shape(a.outer.map(([x, y]) => this.flat(x, y)))
-        for (const h of a.holes) shape.holes.push(new THREE.Path(h.map(([x, y]) => this.flat(x, y))))
-        return shape
-      })
-      if (!shapes.length) continue
-      const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shapes), new THREE.MeshBasicMaterial({ color: colour, depthWrite: false }))
-      mesh.rotation.x = -Math.PI / 2
-      mesh.position.y = -0.4 + order * 0.05
-      mesh.renderOrder = order
-      group.add(mesh)
-    }
-    // Buildings: one extruded prism each, merged into a single mesh (2,000 separate meshes would be slow).
-    const prisms = scenery.buildings.filter((b) => b.ring.length > 2).map((b) => {
-      if (b.shape === 'sphere') return sphereBuilding(b.ring.map(([x, y]) => this.flat(x, y)), b.h)
-      const g = new THREE.ExtrudeGeometry(new THREE.Shape(b.ring.map(([x, y]) => this.flat(x, y))), { depth: b.h - b.min, bevelEnabled: false })
-      g.rotateX(-Math.PI / 2)
-      g.translate(0, b.min, 0)
-      return g
-    })
-    if (prisms.length) {
-      const merged = mergeGeometries(prisms)
-      prisms.forEach((g) => g.dispose())
-      if (merged) {
-        this.buildings = new THREE.Mesh(merged, new THREE.MeshStandardMaterial({ color: SCENERY.building, roughness: 0.95 }))
-        group.add(this.buildings)
-        this.setFlatBuildings(this.flatBuildings)
+    if (this.terrain) group.add(this.terrainMesh(scenery, this.terrain))
+    else {
+      const layers: [SceneryArea[], number, number][] = [[scenery.parks, SCENERY.park, 1], [scenery.woods ?? [], SCENERY.wood, 2],
+        [scenery.beach, SCENERY.beach, 3], [scenery.water, SCENERY.water, 4]]
+      for (const m of scenery.markings ?? []) layers.push([[m], new THREE.Color(m.colour).getHex(), 5])
+      for (const [areas, colour, order] of layers) {
+        const shapes = areas.filter((a) => a.outer.length > 2).map((a) => {
+          const shape = new THREE.Shape(a.outer.map(([x, y]) => this.flat(x, y)))
+          for (const h of a.holes) shape.holes.push(new THREE.Path(h.map(([x, y]) => this.flat(x, y))))
+          return shape
+        })
+        if (!shapes.length) continue
+        const mesh = new THREE.Mesh(new THREE.ShapeGeometry(shapes), new THREE.MeshBasicMaterial({ color: colour, depthWrite: false }))
+        mesh.rotation.x = -Math.PI / 2
+        mesh.position.y = -0.4 + order * 0.05
+        mesh.renderOrder = order
+        group.add(mesh)
       }
     }
+    if (scenery.trees?.length) group.add(this.treeMesh(scenery.trees))
     this.scenery = group
     this.scene.add(group)
+    this.setFlatBuildings(this.flatBuildings)
   }
 
   /**
-   * Buildings as flat grey footprints (squashed to a few cm, just above the ground layers and under the track) or as
-   * blocks at their height. Flat ones are a lighter grey, as they're seen from above.
+   * Buildings as flat grey footprints (just above the ground) or as blocks at their height. Flat ones are a lighter
+   * grey, as they're seen from above. Grandstands are a lighter slate than other buildings, so they stand out.
    */
   setFlatBuildings(flat: boolean) {
     this.flatBuildings = flat
-    if (!this.buildings) return
-    this.buildings.scale.y = flat ? 0.0005 : 1 // a 130 m tower becomes 6.5 cm
-    this.buildings.position.y = flat ? -0.1 : 0
-    ;(this.buildings.material as THREE.MeshStandardMaterial).color.setHex(flat ? SCENERY.footprint : SCENERY.building)
+    if (!this.scenery || !this.sceneryDef) return
+    for (const mesh of this.buildings) {
+      this.scenery.remove(mesh)
+      mesh.geometry.dispose()
+      ;(mesh.material as THREE.Material).dispose()
+    }
+    this.buildings = []
+    const all = this.sceneryDef.buildings.filter((b) => b.ring.length > 2)
+    for (const [list, colour] of [[all.filter((b) => b.kind !== 'grandstand'), SCENERY.building], [all.filter((b) => b.kind === 'grandstand'), SCENERY.grandstand]] as const) {
+      // One extruded prism each, merged into a single mesh (2,000 separate meshes would be slow).
+      const prisms = list.map((b) => {
+        const ring = b.ring.map(([x, y]) => this.flat(x, y))
+        // On a hill, a building stands on the lowest ground under it (the rest of it is cut into the slope); a flat
+        // footprint lies on the highest, so the slope doesn't cover it.
+        const grounds = this.terrain ? b.ring.map(([x, y]) => this.groundAt(x, y)) : [0]
+        const base = flat ? Math.max(...grounds) : Math.min(...grounds)
+        if (b.shape === 'sphere' && !flat) return sphereBuilding(ring, b.h)
+        const height = flat ? 0.05 : b.h - b.min
+        const g = new THREE.ExtrudeGeometry(new THREE.Shape(ring), { depth: height, bevelEnabled: false })
+        g.rotateX(-Math.PI / 2)
+        g.translate(0, base + (flat ? 0.3 : b.min), 0)
+        return g.index ? g.toNonIndexed() : g
+      })
+      if (!prisms.length) continue
+      const merged = mergeGeometries(prisms)
+      prisms.forEach((g) => g.dispose())
+      if (!merged) continue
+      const mesh = new THREE.Mesh(merged, new THREE.MeshStandardMaterial({ color: flat ? SCENERY.footprint : colour, roughness: 0.95 }))
+      this.buildings.push(mesh)
+      this.scenery.add(mesh)
+    }
+  }
+
+  /** Ground height (scaled, m) at a point in track metres: the terrain grid where there is one, else 0. */
+  private groundAt(x: number, y: number): number {
+    const t = this.terrain
+    if (!t) return 0
+    const fx = Math.min(Math.max((x - t.origin[0]) / t.spacing, 0), t.cols - 1.001)
+    const fy = Math.min(Math.max((y - t.origin[1]) / t.spacing, 0), t.rows - 1.001)
+    const c = Math.floor(fx), r = Math.floor(fy), tx = fx - c, ty = fy - r
+    const h = (rr: number, cc: number) => t.h[rr * t.cols + cc]
+    const v = (h(r, c) * (1 - tx) + h(r, c + 1) * tx) * (1 - ty) + (h(r + 1, c) * (1 - tx) + h(r + 1, c + 1) * tx) * ty
+    return v * HEIGHT_SCALE
+  }
+
+  /**
+   * The ground as a mesh at its height, with parks, woods, sand, water and markings (the Mount Panorama sign) painted
+   * onto a canvas texture over it, so they follow the hill exactly.
+   */
+  private terrainMesh(scenery: SceneryDefinition, t: NonNullable<SceneryDefinition['terrain']>) {
+    const positions: number[] = []
+    const uvs: number[] = []
+    const index: number[] = []
+    for (let r = 0; r < t.rows; r++) {
+      for (let c = 0; c < t.cols; c++) {
+        const p = this.toWorld({ x: t.origin[0] + c * t.spacing, y: t.origin[1] + r * t.spacing }, t.h[r * t.cols + c] * HEIGHT_SCALE - 0.3)
+        positions.push(p.x, p.y, p.z)
+        uvs.push(c / (t.cols - 1), r / (t.rows - 1))
+        if (r < t.rows - 1 && c < t.cols - 1) {
+          const a = r * t.cols + c
+          index.push(a, a + 1, a + t.cols, a + 1, a + t.cols + 1, a + t.cols)
+        }
+      }
+    }
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
+    g.setIndex(index)
+    g.computeVertexNormals()
+    // The texture: about 1.5 m a pixel, so the sign's 20-30 m letters read.
+    const spanX = (t.cols - 1) * t.spacing, spanY = (t.rows - 1) * t.spacing
+    const scale = 2048 / Math.max(spanX, spanY)
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(spanX * scale)
+    canvas.height = Math.round(spanY * scale)
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = css(SCENERY.ground)
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    const paint = (areas: SceneryArea[], colour: string) => {
+      ctx.fillStyle = colour
+      for (const a of areas) {
+        const path = new Path2D()
+        for (const ring of [a.outer, ...a.holes]) {
+          ring.forEach(([x, y], i) => {
+            const px = (x - t.origin[0]) * scale, py = canvas.height - (y - t.origin[1]) * scale
+            if (i) path.lineTo(px, py); else path.moveTo(px, py)
+          })
+          path.closePath()
+        }
+        ctx.fill(path, 'evenodd')
+      }
+    }
+    paint(scenery.parks, css(SCENERY.park))
+    paint(scenery.woods ?? [], css(SCENERY.wood))
+    paint(scenery.beach, css(SCENERY.beach))
+    paint(scenery.water, css(SCENERY.water))
+    for (const m of scenery.markings ?? []) paint([m], m.colour)
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy()
+    return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: texture, roughness: 1 }))
+  }
+
+  /** Trees as small cones (one instanced mesh), standing on the ground; heights from the scenery file (real metres). */
+  private treeMesh(trees: [number, number, number][]) {
+    const cone = new THREE.ConeGeometry(1, 1, 7)
+    cone.translate(0, 0.5, 0) // base at 0
+    const mesh = new THREE.InstancedMesh(cone, new THREE.MeshStandardMaterial({ color: SCENERY.tree, roughness: 1, flatShading: true }), trees.length)
+    const m = new THREE.Matrix4()
+    trees.forEach(([x, y, h], i) => {
+      const p = this.toWorld({ x, y }, this.groundAt(x, y) - 0.5)
+      m.makeScale(h * 0.32, h, h * 0.32).setPosition(p)
+      mesh.setMatrixAt(i, m)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    return mesh
   }
 
   /** Moves every car to this frame's placement; cars that aren't placed are hidden. */
@@ -663,6 +793,7 @@ export class TrackScene {
     plane.rotation.x = -Math.PI / 2
     plane.position.y = -0.5
     group.add(plane)
+    this.groundPlane = plane
     // 200 m grid: gives a sense of scale and depth.
     const grid = new THREE.GridHelper(size, Math.round(size / 200), 0x222a33, 0x1c232b)
     grid.position.y = -0.3
@@ -771,6 +902,11 @@ function sphereBuilding(ring: THREE.Vector2[], height: number): THREE.BufferGeom
   // Shape coordinates (x, y) become world (x, -z), as for the extruded buildings after their rotateX.
   g.translate(cx, height - radius, -cy)
   return g
+}
+
+/** A three.js colour number as a CSS colour, for the canvas. */
+function css(colour: number): string {
+  return `#${colour.toString(16).padStart(6, '0')}`
 }
 
 /** A label's screen position, from the transform placeOverlay gave it. */

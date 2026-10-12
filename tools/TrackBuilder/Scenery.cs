@@ -23,6 +23,7 @@ public static class Scenery
         "https://overpass-api.de/api/interpreter",
         "https://overpass.private.coffee/api/interpreter",
         "https://overpass.kumi.systems/api/interpreter",
+        "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
     ];
 
     /// <summary>
@@ -31,9 +32,13 @@ public static class Scenery
     /// </summary>
     /// <param name="output">Converts OSM metres to the track file's coordinates (F1 tracks, Georef); default as is.</param>
     /// <param name="corners">Corner labels to include (F1 tracks: OSM's "Turn N" nodes, already in track coordinates).</param>
+    /// <param name="extraLandmarks">OSM elements to label whatever their score, e.g. "way/306191909" (Bathurst's hotel).</param>
+    /// <param name="terrain">Builds the ground heights for the box [minX, minY, maxX, maxY] (hilly tracks; Terrain.cs).</param>
     public static async Task<object> BuildAsync(IReadOnlyList<Point> lap, Projection projection, double margin, string cachePath,
-        Func<Point, Point>? output = null, IReadOnlyList<object>? corners = null, bool landmarkLabels = true)
+        Func<Point, Point>? output = null, IReadOnlyList<object>? corners = null, bool landmarkLabels = true,
+        IReadOnlyCollection<string>? extraLandmarks = null, Func<double[], Task<object>>? terrain = null)
     {
+        extraLandmarks ??= [];
         output ??= p => p;
         var box = new Box(lap.Min(p => p.X) - margin, lap.Min(p => p.Y) - margin, lap.Max(p => p.X) + margin, lap.Max(p => p.Y) + margin);
         var (south, west) = projection.ToLatLon(new Point(box.MinX, box.MinY));
@@ -46,7 +51,9 @@ public static class Scenery
                 (way["building"]({bb});way["building:part"]({bb});relation["building"]({bb});
                  way["natural"~"^(water|beach|sand|coastline)$"]({bb});relation["natural"~"^(water|beach)$"]({bb});
                  way["leisure"="park"]({bb});relation["leisure"="park"]({bb});way["landuse"="grass"]({bb});
-                 nwr["tourism"~"attraction|theme_park|museum"]["name"]({bb});nwr["man_made"~"^(tower|observation_tower)$"]["name"]({bb});nwr["leisure"="stadium"]["name"]({bb}););
+                 nwr["tourism"~"attraction|theme_park|museum"]["name"]({bb});nwr["man_made"~"^(tower|observation_tower)$"]["name"]({bb});nwr["leisure"="stadium"]["name"]({bb});
+                 node["natural"="tree"]({bb});way["natural"~"^(wood|scrub|tree_row)$"]({bb});relation["natural"="wood"]({bb});
+                 way["landuse"="forest"]({bb});relation["landuse"="forest"]({bb});{ExtraQuery(extraLandmarks)});
                 out body;>;out skel qt;
                 """;
             Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
@@ -55,9 +62,10 @@ public static class Scenery
 
         using var doc = JsonDocument.Parse(await File.ReadAllTextAsync(cachePath));
         var nodes = new Dictionary<long, Point>();
-        var namedNodes = new List<(Point At, Dictionary<string, string> Tags)>();
+        var namedNodes = new List<(Point At, Dictionary<string, string> Tags, string Id)>();
+        var treeNodes = new List<(Point At, Dictionary<string, string> Tags)>();
         var ways = new Dictionary<long, (List<long> Nodes, Dictionary<string, string> Tags)>();
-        var relations = new List<(List<(long Ref, string Role)> Members, Dictionary<string, string> Tags)>();
+        var relations = new List<(List<(long Ref, string Role)> Members, Dictionary<string, string> Tags, long Id)>();
         foreach (var e in doc.RootElement.GetProperty("elements").EnumerateArray())
         {
             var tags = e.TryGetProperty("tags", out var t) ? t.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetString() ?? "") : [];
@@ -66,34 +74,38 @@ public static class Scenery
                 case "node":
                     var at = projection.ToMetres(e.GetProperty("lat").GetDouble(), e.GetProperty("lon").GetDouble());
                     nodes[e.GetProperty("id").GetInt64()] = at;
-                    if (tags.ContainsKey("name")) namedNodes.Add((at, tags));
+                    if (tags.ContainsKey("name")) namedNodes.Add((at, tags, $"node/{e.GetProperty("id").GetInt64()}"));
+                    if (tags.GetValueOrDefault("natural") == "tree") treeNodes.Add((at, tags));
                     break;
                 case "way": ways[e.GetProperty("id").GetInt64()] = (e.GetProperty("nodes").EnumerateArray().Select(n => n.GetInt64()).ToList(), tags); break;
                 case "relation":
                     relations.Add((e.GetProperty("members").EnumerateArray().Where(m => m.GetProperty("type").GetString() == "way")
-                        .Select(m => (m.GetProperty("ref").GetInt64(), m.GetProperty("role").GetString() ?? "")).ToList(), tags));
+                        .Select(m => (m.GetProperty("ref").GetInt64(), m.GetProperty("role").GetString() ?? "")).ToList(), tags, e.GetProperty("id").GetInt64()));
                     break;
             }
         }
         List<Point> Pts(List<long> ids) => ids.Where(nodes.ContainsKey).Select(id => nodes[id]).ToList();
 
         // Areas: closed ways, and multipolygon relations (outer rings with inner rings as holes).
-        var areas = new List<(Dictionary<string, string> Tags, List<Point> Outer, List<List<Point>> Holes)>();
-        foreach (var (wayNodes, tags) in ways.Values)
-            if (wayNodes.Count > 3 && wayNodes[0] == wayNodes[^1]) areas.Add((tags, Pts(wayNodes), []));
-        foreach (var (members, tags) in relations)
+        var areas = new List<(Dictionary<string, string> Tags, List<Point> Outer, List<List<Point>> Holes, string Id)>();
+        foreach (var (id, (wayNodes, tags)) in ways)
+            if (wayNodes.Count > 3 && wayNodes[0] == wayNodes[^1]) areas.Add((tags, Pts(wayNodes), [], $"way/{id}"));
+        foreach (var (members, tags, id) in relations)
         {
             List<List<Point>> RingsOf(string role) => JoinRings(members.Where(m => m.Role == role && ways.ContainsKey(m.Ref)).Select(m => ways[m.Ref].Nodes))
                 .Select(Pts).Where(r => r.Count > 3).ToList();
             var inner = RingsOf("inner");
-            foreach (var outer in RingsOf("outer")) areas.Add((tags, outer, inner.Where(h => Inside(h[0], outer)).ToList()));
+            foreach (var outer in RingsOf("outer")) areas.Add((tags, outer, inner.Where(h => Inside(h[0], outer)).ToList(), $"relation/{id}"));
         }
 
         static string Kind(Dictionary<string, string> t) =>
             t.ContainsKey("building") || t.ContainsKey("building:part") ? "building"
             : t.GetValueOrDefault("natural") is "water" ? "water"
             : t.GetValueOrDefault("natural") is "beach" or "sand" ? "beach"
-            : t.GetValueOrDefault("leisure") == "park" || t.GetValueOrDefault("landuse") == "grass" ? "park" : "";
+            : t.GetValueOrDefault("natural") is "wood" or "scrub" || t.GetValueOrDefault("landuse") == "forest" ? "wood"
+            : t.GetValueOrDefault("leisure") == "park" || t.GetValueOrDefault("landuse") == "grass" ? "park"
+            // Coloured shapes laid on the ground (Bathurst's hillside sign: white letters of painted stone).
+            : t.ContainsKey("colour") && (t.ContainsKey("tourism") || t.ContainsKey("name")) ? "marking" : "";
 
         double[][] Ring(List<Point> ring) => ring.Select(output).Select(p => new[] { Math.Round(p.X, 1), Math.Round(p.Y, 1) }).ToArray();
         double[] At(Point p) { var q = output(p); return [Math.Round(q.X, 1), Math.Round(q.Y, 1)]; }
@@ -107,27 +119,34 @@ public static class Scenery
         // Landmark candidates: attractions, museums and stadiums with a Wikipedia/Wikidata link, and named buildings
         // LandmarkHeight or taller (any link). Scored below.
         var landmarks = new List<(string Name, Point At, double Height, bool Notable, bool Attraction)>();
+        // Asked for by name (--landmarks-add): labelled first, whatever their score.
+        var forced = new List<(string Name, Point At, double Height)>();
         static bool Notable(Dictionary<string, string> t) => t.ContainsKey("wikidata") || t.ContainsKey("wikipedia");
-        foreach (var (tags, outer, _) in areas.Where(a => IsAttraction(a.Tags) && a.Tags.ContainsKey("name") && (Notable(a.Tags) || IsLandmarkTower(a.Tags))))
+        foreach (var (tags, outer, _, id) in areas.Where(a => extraLandmarks.Contains(a.Id) && a.Tags.ContainsKey("name")))
+            if (!forced.Any(f => f.Name == LandmarkName(tags))) forced.Add((LandmarkName(tags), Centroid(outer), HeightOf(tags) ?? 0));
+        foreach (var (at, tags, _) in namedNodes.Where(n => extraLandmarks.Contains(n.Id)))
+            forced.Add((LandmarkName(tags), at, Number(tags.GetValueOrDefault("height")) ?? 0));
+        foreach (var (tags, outer, _, _) in areas.Where(a => IsAttraction(a.Tags) && a.Tags.ContainsKey("name") && (Notable(a.Tags) || IsLandmarkTower(a.Tags))))
             landmarks.Add((EnglishName(tags), Centroid(outer), Number(tags.GetValueOrDefault("height")) ?? 0, true, true));
         // Nodes: linked attractions, and named towers (COTA's observation tower has no link).
-        foreach (var (at, tags) in namedNodes.Where(n => IsAttraction(n.Tags) && (Notable(n.Tags) || IsLandmarkTower(n.Tags))))
+        foreach (var (at, tags, _) in namedNodes.Where(n => IsAttraction(n.Tags) && (Notable(n.Tags) || IsLandmarkTower(n.Tags))))
             landmarks.Add((EnglishName(tags), at, Number(tags.GetValueOrDefault("height")) ?? 0, true, true));
         int measured = 0, fromLevels = 0, assumed = 0;
-        foreach (var (tags, outer, _) in areas.Where(a => Kind(a.Tags) == "building"))
+        foreach (var (tags, outer, _, _) in areas.Where(a => Kind(a.Tags) == "building"))
         {
             var clipped = box.Clip(outer);
             if (clipped.Count < 3 || clipped.Count != outer.Count) continue; // only buildings wholly in the box
             double? height = Number(tags.GetValueOrDefault("height"));
             double? levels = Number(tags.GetValueOrDefault("building:levels"));
-            double h = height ?? (levels is { } l ? l * StoreyMetres : AssumedStoreys * StoreyMetres);
+            bool grandstand = tags.GetValueOrDefault("building") == "grandstand";
+            double h = height ?? (levels is { } l ? l * StoreyMetres : grandstand ? GrandstandMetres : AssumedStoreys * StoreyMetres);
             if (height is not null) measured++; else if (levels is not null) fromLevels++; else assumed++;
             double minH = Number(tags.GetValueOrDefault("min_height")) ?? (Number(tags.GetValueOrDefault("building:min_level")) is { } ml ? ml * StoreyMetres : 0);
             if (h <= minH) continue;
             // Spheres (Las Vegas's Sphere: shape=spherical_cutted) are drawn as spheres, not extruded footprints.
             bool sphere = (tags.GetValueOrDefault("shape") ?? tags.GetValueOrDefault("building:shape") ?? "").StartsWith("spher");
             buildings.Add(new { h = Math.Round(h, 1), min = Math.Round(minH, 1), ring = Ring(outer), assumed = height is null && levels is null,
-                shape = sphere ? "sphere" : null });
+                shape = sphere ? "sphere" : null, kind = grandstand ? "grandstand" : null });
             if (tags.GetValueOrDefault("name") is { Length: > 0 } && h >= LandmarkHeight && !IsAttraction(tags))
                 landmarks.Add((EnglishName(tags), Centroid(outer), h, Notable(tags), false));
         }
@@ -136,6 +155,12 @@ public static class Scenery
         var water = areas.Where(a => Kind(a.Tags) == "water").Select(a => Polygon(a.Outer, a.Holes)).ToList();
         var beach = areas.Where(a => Kind(a.Tags) == "beach").Select(a => Polygon(a.Outer, a.Holes)).ToList();
         var parks = areas.Where(a => Kind(a.Tags) == "park").Select(a => Polygon(a.Outer, a.Holes)).ToList();
+        var woods = areas.Where(a => Kind(a.Tags) == "wood").ToList();
+        var markings = areas.Where(a => Kind(a.Tags) == "marking")
+            .Select(a => new { colour = a.Tags["colour"], outer = Ring(box.Clip(a.Outer)), holes = a.Holes.Select(box.Clip).Where(h => h.Count > 2).Select(Ring) }).ToList();
+        var trees = Trees(treeNodes, ways.Values.Where(w => w.Tags.GetValueOrDefault("natural") == "tree_row").Select(w => Pts(w.Nodes)).ToList(), woods, box)
+            .Select(t => { var q = output(t.At); return new[] { Math.Round(q.X, 1), Math.Round(q.Y, 1), t.Height }; }).ToList();
+        Console.WriteLine($"Scenery: {trees.Count} trees ({treeNodes.Count} mapped one by one, the rest along tree rows and in {woods.Count} woods), {markings.Count} ground markings");
 
         // The sea: each coastline way runs with land on its left and water on its right (OSM convention).
         var coast = JoinLines(ways.Values.Where(w => w.Tags.GetValueOrDefault("natural") == "coastline").Select(w => w.Nodes)).Select(Pts).ToList();
@@ -154,29 +179,95 @@ public static class Scenery
                 Score: l.Height + (l.Attraction ? 300 : 0) + (l.Notable || l.Height >= 150 ? 50 : 0)))
             .Where(l => l.Distance <= LandmarkReach)
             .OrderByDescending(l => l.Score - l.Distance / 10);
-        var shown = new List<(string Name, Point At, double Height)>();
+        var shown = new List<(string Name, Point At, double Height)>(forced);
         foreach (var l in ranked.Where(_ => landmarkLabels))
         {
-            if (shown.Count == MaxLandmarks) break;
+            if (shown.Count >= MaxLandmarks) break;
             if (shown.Any(s => s.Name == l.Name || Point.Distance(s.At, l.At) < LandmarkSpacing)) continue;
             shown.Add((l.Name, l.At, l.Height));
         }
         Console.WriteLine($"Scenery: {shown.Count} landmarks ({string.Join(", ", shown.Select(l => l.Name))})");
         var corners2 = new[] { new Point(box.MinX, box.MinY), new Point(box.MaxX, box.MinY), new Point(box.MaxX, box.MaxY), new Point(box.MinX, box.MaxY) }.Select(output).ToList();
 
+        var boxOut = new[] { Math.Round(corners2.Min(p => p.X)), Math.Round(corners2.Min(p => p.Y)), Math.Round(corners2.Max(p => p.X)), Math.Round(corners2.Max(p => p.Y)) };
         return new
         {
             attribution = Attribution,
             // In the track file's coordinates (for F1 tracks, the bounding box of the turned box).
-            box = new[] { Math.Round(corners2.Min(p => p.X)), Math.Round(corners2.Min(p => p.Y)), Math.Round(corners2.Max(p => p.X)), Math.Round(corners2.Max(p => p.Y)) },
+            box = boxOut,
             landmarks = shown.Select(l => new { name = l.Name, at = At(l.At), h = Math.Round(l.Height) }),
             corners = corners ?? [],
             buildings,
             water = water.Concat(ocean),
             beach,
             parks,
+            woods = woods.Select(a => Polygon(a.Outer, a.Holes)),
+            trees,
+            markings,
+            terrain = terrain is null ? null : await terrain(boxOut),
         };
     }
+
+    /// <summary>Grandstands without a height in OSM (Bathurst's are temporary stands): an assumption, not a measurement.</summary>
+    const double GrandstandMetres = 9;
+    /// <summary>Trees without a height in OSM.</summary>
+    const double TreeMetres = 12;
+    const double ScrubMetres = 4;
+    /// <summary>Metres between trees along a tree row, and between trees filled into a wood (OSM maps woods as areas).</summary>
+    const double RowSpacing = 9;
+    const double WoodSpacing = 16;
+    const int MaxTrees = 30000;
+
+    /// <summary>OSM height, else levels x a storey.</summary>
+    static double? HeightOf(Dictionary<string, string> t) =>
+        Number(t.GetValueOrDefault("height")) ?? (Number(t.GetValueOrDefault("building:levels")) is { } l ? l * StoreyMetres : null);
+
+    /// <summary>
+    /// Trees to draw: each mapped tree, trees every <see cref="RowSpacing"/> m along tree rows, and woods and scrub
+    /// filled on a <see cref="WoodSpacing"/> m grid with a fixed jitter (so a rebuild draws the same trees). OSM maps
+    /// where the woods are, not each tree in them: the filled ones show the wood, not real trees.
+    /// </summary>
+    static List<(Point At, double Height)> Trees(List<(Point At, Dictionary<string, string> Tags)> mapped, List<List<Point>> rows,
+        List<(Dictionary<string, string> Tags, List<Point> Outer, List<List<Point>> Holes, string Id)> woods, Box box)
+    {
+        var trees = new List<(Point, double)>();
+        foreach (var (at, tags) in mapped.Where(t => box.Contains(t.At))) trees.Add((at, Number(tags.GetValueOrDefault("height")) ?? TreeMetres));
+        foreach (var row in rows)
+            for (int i = 0; i + 1 < row.Count; i++)
+            {
+                int n = Math.Max(1, (int)(Point.Distance(row[i], row[i + 1]) / RowSpacing));
+                for (int k = 0; k < n; k++)
+                {
+                    var p = new Point(row[i].X + (row[i + 1].X - row[i].X) * k / n, row[i].Y + (row[i + 1].Y - row[i].Y) * k / n);
+                    if (box.Contains(p)) trees.Add((p, TreeMetres));
+                }
+            }
+        foreach (var (tags, outer, holes, _) in woods)
+        {
+            double height = tags.GetValueOrDefault("natural") == "scrub" ? ScrubMetres : TreeMetres;
+            double minX = outer.Min(p => p.X), maxX = outer.Max(p => p.X), minY = outer.Min(p => p.Y), maxY = outer.Max(p => p.Y);
+            for (double x = Math.Floor(minX / WoodSpacing) * WoodSpacing; x <= maxX; x += WoodSpacing)
+                for (double y = Math.Floor(minY / WoodSpacing) * WoodSpacing; y <= maxY; y += WoodSpacing)
+                {
+                    // A fixed pseudo-random jitter from the grid position, so the trees don't stand in rows.
+                    double jx = Hash(x, y) - 0.5, jy = Hash(y, x) - 0.5;
+                    var p = new Point(x + jx * WoodSpacing * 0.8, y + jy * WoodSpacing * 0.8);
+                    if (box.Contains(p) && Inside(p, outer) && !holes.Any(h => Inside(p, h)))
+                        trees.Add((p, Math.Round(height * (0.75 + 0.5 * Hash(x + 1, y + 1)), 1)));
+                }
+        }
+        return trees.Count > MaxTrees ? trees.Where((_, i) => i % (trees.Count / MaxTrees + 1) == 0).ToList() : trees;
+    }
+
+    static double Hash(double a, double b)
+    {
+        var h = Math.Sin(a * 12.9898 + b * 78.233) * 43758.5453;
+        return h - Math.Floor(h);
+    }
+
+    /// <summary>Overpass clauses for --landmarks-add elements ("way/123" -> way(123);), so they're fetched with the rest.</summary>
+    static string ExtraQuery(IReadOnlyCollection<string> ids) =>
+        string.Concat(ids.Select(id => id.Split('/') is [var type, var n] ? $"{type}({n});" : ""));
 
     const double LandmarkHeight = 60;
     const int MaxLandmarks = 16;
@@ -199,6 +290,10 @@ public static class Scenery
 
     /// <summary>The English name where OSM has one (Yas Island's Ferrari World is named in Arabic), else the name.</summary>
     static string EnglishName(Dictionary<string, string> t) => t.GetValueOrDefault("name:en") is { Length: > 0 } en ? en : t["name"];
+
+    /// <summary>The English name, with "hotel" added for a hotel whose name doesn't say so (Bathurst's is just "Rydges").</summary>
+    static string LandmarkName(Dictionary<string, string> t) =>
+        t.GetValueOrDefault("tourism") == "hotel" && !EnglishName(t).Contains("hotel", StringComparison.OrdinalIgnoreCase) ? $"{EnglishName(t)} hotel" : EnglishName(t);
 
     static Point Centroid(List<Point> ring) => new(ring.Average(p => p.X), ring.Average(p => p.Y));
 

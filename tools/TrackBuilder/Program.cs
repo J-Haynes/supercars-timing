@@ -27,6 +27,9 @@ if (!opt.TryGetValue("code", out var code) || !(opt.TryGetValue("relation", out 
           --georef <CODE>        With --relation: scenery for an existing track file not in lat/lon (F1-61 etc.), fitted
                                  to the OSM circuit; also OSM's "Turn N" corners. The track file isn't changed
           --landmarks false      With --scenery: no landmark labels (Las Vegas: the owner asked for none)
+          --landmarks-add <ids>  With --scenery: also label these OSM elements, e.g. way/306191909,relation/11770469
+          --terrain true         With --scenery and heights: the ground as a height grid (SRTM, cached in
+                                 tools/TrackBuilder/elevation/<CODE>.terrain.json), so scenery sits on the hills
           --scenery <metres>     Also write scenery for the 3D map (buildings, water, beach, sea from OSM via Overpass)
                                  for this far around the circuit, to src/web/src/tracks/scenery/<CODE>.json
           --official <file>      Corners and pit lane from the official track map (tools/TrackBuilder/official/<CODE>.json,
@@ -185,8 +188,13 @@ else Console.WriteLine("Elevation: none (--elevation none)");
 // 7. Scenery for the 3D map (optional): buildings, water, beaches and the sea around the circuit
 if (opt.TryGetValue("scenery", out var sceneryMargin))
 {
+    var extra = (opt.GetValueOrDefault("landmarks-add") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries);
+    Func<double[], Task<object>>? terrain = opt.GetValueOrDefault("terrain") == "true" && elevation is not null
+        ? box => Terrain.BuildAsync(box, samples, elevation, projection, Path.Combine(root, $"tools/TrackBuilder/elevation/{code}.terrain.json"))
+        : null;
     var scenery = await Scenery.BuildAsync(samples, projection, double.Parse(sceneryMargin, CultureInfo.InvariantCulture),
-        Path.Combine(root, $"tools/TrackBuilder/osm/{code}.scenery.osm.json"), landmarkLabels: opt.GetValueOrDefault("landmarks") != "false");
+        Path.Combine(root, $"tools/TrackBuilder/osm/{code}.scenery.osm.json"), landmarkLabels: opt.GetValueOrDefault("landmarks") != "false",
+        extraLandmarks: extra, terrain: terrain);
     var sceneryPath = Path.Combine(Path.GetDirectoryName(outPath)!, "scenery", $"{code}.json");
     Directory.CreateDirectory(Path.GetDirectoryName(sceneryPath)!);
     await File.WriteAllTextAsync(sceneryPath, JsonSerializer.Serialize(scenery) + "\n");
