@@ -175,11 +175,57 @@ every race's "Sector and Lap Times" report: sectors and lap times per car, in-la
   hillside sign reads MOUNT PANORAMA (OSM's 13 letters); grandstand heights are assumed (9 m).
 - Not yet tried: the Follow camera at the Gold Coast, the 3D map on a real phone's GPU.
 
+## What commentators talk about (13 Oct 2026)
+
+Auto-generated YouTube captions (yt-dlp `--write-auto-subs`, no video), read for what the broadcast talks about and
+what it has to work out by hand. Supercars' official channel posts full races: 2024 Townsville 500 Race 13
+(https://www.youtube.com/watch?v=6RgkMPGtsA4, read in full), 2025 Taupō Race 10 (V0uH-0u13xc) and the 2023 Bathurst
+1000 (TnXjXkZPvAo), both scanned by theme. Formula 1's channel has no full races (other uploads are unofficial), so for
+F1: the 2026 Singapore GP highlights (ohgEehLtucc) and the 2025 season's highlights compilation (IiaVcT3SZv0).
+Captions only, kept out of the repo. Theme counts (Townsville / Bathurst 2023): tyres 116 / 224, pit stops and strategy
+75 / 207, battles and pressure 71 / 117, gaps and margins 38 / 128, "fastest on track" 33 / 48, laps to go 33 / 77.
+
+**What they keep reading out, often by hand (we have the data):**
+- **Who was fastest on track last lap**, and where the leaders rank on pace ("the three at the front were only 16th,
+  20th and 22nd fastest"). Repeated every few laps at Townsville. Built: "Fastest on track last lap" in the race feed.
+  Not built: a pace-rank column (rank of each car's last lap).
+- **The gap between the leaders lap by lap, and its trend** ("the elastic band"), plus **where on the lap each car is
+  stronger** (one quicker through turns 8-10, giving it back in 12-13). Mini-sector times per car already exist: a
+  Compare view of mini-sector deltas over the last few laps would show it directly.
+- **Tyre age difference in a battle** ("a five-lap difference in tyre age"), F1 too (fresh softs vs worn mediums).
+  Built: battles in the feed say "stint 18 vs 4 laps" (Supercars) or "tyres M 20 vs S 4" (F1) when 5+ laps apart.
+- **The corrected order during the pit cycle.** At Townsville they read it out once ("the corrected order would be…")
+  and promised to "crystallise those numbers as soon as we can"; at Bathurst, who is leading "on the road" vs in
+  effect. We already estimate a stop's cost (pit/): a **net order** (each car's gap plus stops still owed × stop cost)
+  would answer this continuously. Strongest gap found.
+- **The spread across the top cars** ("6 seconds covers the top six"). Built: "Top N covered by X s" in the feed.
+- **A third car catching a fight** ("Davidson could be the ultimate beneficiary"). Not built: a feed line when the car
+  behind a battle is closing (we have both parts: battles and the interval trend).
+- **Positions made since the grid** (the TV tower's green/red arrows) and **who is still to stop**. Already built.
+- **Stewards' decisions** (penalty, investigation, "no further action"). Already in race control and the feed's log.
+- **Laps to go and minimum co-driver laps** (Bathurst). Already built.
+
+**What they guess at or can't see (gaps we could fill):**
+- **Net order / virtual lead** during stops (above).
+- **Pace in this stint vs the last** (they compare "the end of each stint" from memory): stint-by-stint median pace per
+  car, from the lap history we already have.
+- **Track change** (rain at Townsville: lap times jumped ~3 s across the field). A field-wide lap-time jump is easy to
+  detect and could be a feed event ("lap times up 3 s across the field: conditions?").
+- **Cheap stops under the safety car / VSC**: called out each time in F1. The feed lists who pitted under the caution;
+  the pit ghost is paused then. An estimate of a caution stop's cost would need more measured caution stops.
+- **Primary vs co-driver** (Bathurst: "only Randle is a primary driver in the top 10"): the tower has the markers; a
+  count in the feed would be easy.
+
+**Not measurable from the feed:** fuel loads and fuel windows (litres per stop, "can get to lap 142"), tyre compounds
+and new vs used sets in Supercars, damage, radio. Leave these to the broadcast.
+
 ## Ideas not built yet
 
 From the Bathurst brainstorm (built: safety car mode, charts, battle graph, finals ladder, phone layout, regression
 tests, results pages, replay):
 - Pit windows: stint lengths so far → "due in ~N laps", stops remaining.
+- From the commentary study above: net order through the pit cycle, pace rank per lap, mini-sector strengths in
+  Compare, "third car closing on a battle", stint pace vs the last stint, a track-change alert.
 - Follow a driver: a card with gaps ahead/behind, stint, pit window, penalties; optional browser notifications.
 - Co-driver planner: the lap by which a driver must be in the car to reach the minimum.
 - Pit stop leaderboard: fastest stops and team averages.

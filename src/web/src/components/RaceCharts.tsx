@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { CarLaps, LapHistory, TimingSnapshot } from '../types'
 import { useLapHistory } from '../useLapHistory'
 import { raceOrder } from '../liveGaps'
@@ -7,9 +7,7 @@ import { lapTime } from '../format'
 import { SLOTS, battlePoints, gapPoints, lapTimePoints, linearFit, shortLap, surname, trendLaps } from '../chartData'
 import { LineChart, type Series } from './LineChart'
 import { ChartLab } from './ChartLab'
-
-/** Cars at once in the small panel (the large view takes up to eight). */
-const MAX_CARS = 5
+import { MAX_CHART_CARS as MAX_CARS, useChartSelection, type ChartSelection } from '../chartSelection'
 
 type Tab = 'gaps' | 'laps' | 'battle'
 
@@ -18,10 +16,12 @@ type Tab = 'gaps' | 'laps' | 'battle'
  * two cars with the trend over the last 10 laps. Data comes from GET /api/laps (refreshed every 10 s). "Expand"
  * opens the large chart view (ChartLab) with more cars, zoom and editable axes.
  */
-export function RaceCharts({ timing, history: given }: {
+export function RaceCharts({ timing, history: given, selection }: {
   timing: TimingSnapshot
   /** Lap history to chart (results pages); otherwise the live history is fetched. */
   history?: LapHistory | null
+  /** The cars on the charts, shared with the tower's chart buttons (live page); results pages keep their own. */
+  selection?: ChartSelection
 }) {
   const live = useLapHistory(timing.session.name, { enabled: given === undefined })
   const history = given === undefined ? live : given
@@ -31,22 +31,9 @@ export function RaceCharts({ timing, history: given }: {
   // Lap axis runs to the race distance (161 at Bathurst) when it's known, so the charts show how much race is left.
   const xMax = raceLaps(timing.session) || undefined
 
-  // Selected cars and their colour slots. Starts with the top four on the road; colour follows the car, not its rank.
-  const slots = useRef(new Map<string, number>())
-  const [picked, setPicked] = useState<string[] | null>(null)
-  const selected = picked ?? running.slice(0, 4).map((c) => c.id)
-  const colorOf = (id: string) => {
-    if (!slots.current.has(id)) {
-      const used = new Set([...slots.current.entries()].filter(([k]) => selected.includes(k)).map(([, v]) => v))
-      slots.current.set(id, [...SLOTS.keys()].find((i) => !used.has(i)) ?? 0)
-    }
-    return SLOTS[slots.current.get(id)!]
-  }
-  const toggle = (id: string) => {
-    const next = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id].slice(-MAX_CARS)
-    for (const k of [...slots.current.keys()]) if (!next.includes(k)) slots.current.delete(k)
-    setPicked(next)
-  }
+  // Selected cars and their colours (chartSelection.ts). Starts with the top four on the road.
+  const own = useChartSelection(running.slice(0, 4).map((c) => c.id))
+  const { selected, colorOf, toggle } = selection ?? own
 
   const byId = useMemo(() => new Map((history?.cars ?? []).map((c) => [c.id, c])), [history])
   const label = (id: string) => {
@@ -78,7 +65,8 @@ export function RaceCharts({ timing, history: given }: {
       {tab !== 'battle' && (
         <>
           <div className="chart-cars" aria-label="Cars on the chart">
-            {running.slice(0, 14).map((c) => {
+            {/* The top 14, plus any car further back that's on the chart (added from the tower). */}
+            {running.filter((c, i) => i < 14 || selected.includes(c.id)).map((c) => {
               const on = selected.includes(c.id)
               return (
                 <button key={c.id} type="button" className={`chart-car${on ? ' on' : ''}`} onClick={() => toggle(c.id)} aria-pressed={on}

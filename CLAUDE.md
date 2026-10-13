@@ -64,7 +64,7 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 - `src/web` (React 19 + Vite + TypeScript, strict). `src/types.ts` mirrors the C# DTOs **by hand**: update it when
   `CarRow`/`TimingSnapshot`/`SessionInfo` change. Key modules:
   - Data/logic: `useTiming.ts` (SignalR), `useDelayedUpdate.ts` (broadcast delay), `liveGaps.ts` (live gaps, road
-    order, `raceOrder`), `insights.ts`, `penalties.ts`, `championship.ts` + `finals.ts` (points data, cited),
+    order, `raceOrder`), `insights.ts` (race feed), `battles.ts`, `chartSelection.ts`, `penalties.ts`, `championship.ts` + `finals.ts` (points data, cited),
     `startingGrid.ts`, `raceSummary.ts`, `chartData.ts`, `driverStats.ts` (stints, recent pace), `session.ts` (`isRace`, `flagKind`, `raceLaps`,
     `minDriverLaps`, `cautionPeriods`), `calendar.ts` (upcoming events and session times), `towerLayout.ts`.
   - Pit strategy (`pit/`, experimental estimates): `pitLoss.ts` (what a stop costs: this race's stops, else last
@@ -184,6 +184,9 @@ the server in live mode by hand.
   official classification once the flag is chequered. **Gaps** in races are worked out per timing point
   (`liveGaps.ts`; matches `GI` exactly at the line; PIT/OUT while in/just out of the pits); practice/qualifying and
   finished races use Natsoft's official gaps.
+- **Tower row buttons** (live races until the flag): hovering a row shows a violet ring (the pit rejoin ghost for that
+  car, `settings.pitGhostCar`) and a chart button (adds/removes it on the race charts; `chartSelection.ts`, shared by
+  App with `RaceCharts`, results pages keep their own). Cars that are on either keep a small mark beside the name.
 - **Tower** columns: cells in `TimingTower.tsx` (`COLUMNS`), layouts in `towerLayout.ts`; detailed mode is
   configurable in ⚙ Settings (`SettingsPanel.tsx`, `settings.columns`). Rows slide and pulse on position changes
   (`useRowMoves.ts`, FLIP; tint on the row with a cleanup timer). Driver markers (hollow white = primary, green =
@@ -194,16 +197,23 @@ the server in live mode by hand.
 - **Mini-sectors:** stretch times quicker than 0.8× the median of `RawSegmentSeconds` are rejected (pit-lane lines).
   Never base that median on accepted times (a slow out-lap once locked out every real time); out-laps don't count as
   pace; stretches starting at a snapshot `LP` or a pit crossing aren't timed.
-- **Flags:** always via `flagKind()`. Caution/red: screen border, `SafetyCarBanner`, ticker items, "SC" tags on stops.
+- **Flags:** always via `flagKind()`. Caution/red: screen border, `SafetyCarBanner`, race feed items, "SC" tags on stops.
 - **Focus / Compare** (`DriverDialog.tsx`): click a driver's name in the tower (live and replay). Focus: key numbers,
   sectors vs session best, lap times, stints (split at `pitted` laps; checked: stints ending in a stop = `pitStops`
   for all 26 cars in Race 30), pit stops, driver laps. Compare: gap at the line per lap with the trend since either
   car's last stop (`battlePoints`/`trendLaps`), side-by-side table, both cars' lap times. Measured data only, no
   estimates (no fuel or tyre guesses). In replay it only gets laps up to the replay time.
 - **Penalties:** see "Decision" below. Race control panel shows "Penalty served" lines we work out ourselves.
-- **Insights ticker** (`insights.ts` + `InsightsTicker.tsx`): battles, closing trends, pit-adjusted movers, minimum-lap
-  risk, running long, fastest lap, lead changes, race control, caution events. News-ticker scrolling (items leave
-  only when fully off screen, offset reduced in the same frame): never a CSS animation sized to the text (it jumped).
+- **Race feed** (`insights.ts` `buildFeed` + `RaceFeed.tsx`, above the tower; replaced the scrolling ticker in Oct 2026:
+  moving text was hard to read and everything looked equally important). Still text in two parts: **Now** (ranked by
+  `priority`: minimum-lap risk, pitted under caution, battles, closing, longest-stint cars, fastest on track last lap,
+  movers, spread across the top N) and **Log** (lead changes, fastest laps, race control, cautions/greens; newest
+  first, stamped with the leader's lap, or the track time for messages from before the page loaded; NEW for 30 s).
+  4 + 3 rows (2 + 2 on phones), each expands. Hover highlights the cars; click opens Focus (one car) or Compare (two).
+- **Battles** (`battles.ts`): `battles()` is every chain within 1 s; the map and the feed use `notableBattles()`: none
+  under a caution, none for 2 laps after a start/restart, packs of 5+ cars split to the groups within 0.5 s. Measured on
+  Race 30: ~8 cars "battling" behind the safety car, 11-15-car trains for ~9 laps after the start, 2-3 cars mid-race.
+  The feed also waits 20 s before showing a battle and shows the front 3 (the rest as one "more battles" line).
 - **Championship ladder** (`Ladder.tsx`, data in `championship.ts`: standings after Round 10 + Enduro scale, cited)
   with the top 10 Finals cut in gold. **Finals ladder** (`FinalsLadder.tsx`, rules in `finals.ts`) for the Gold
   Coast: 3000 + 150/120/96/78 bonus, +25 cup winners, top 7 advance, bottom 3 eliminated.
@@ -211,7 +221,7 @@ the server in live mode by hand.
   script against #12161b): gap, lap times, position, battle (trend only over laps since either car's last stop).
   Lap axis runs to the race distance.
 - **Laps to go / race time** in the header (`raceLaps()`: `<E L>`, else `KNOWN_RACE_LAPS`: Bathurst 161, Gold Coast 85).
-- **Layout:** wide screens: the left column (insights, tower, tips) sticks at the bottom of the screen while the
+- **Layout:** wide screens: the left column (race feed, tower, tips) sticks at the bottom of the screen while the
   right column scrolls (`useStickToBottom.ts`; don't make the right column sticky). Phones (< 760 px): `MobileTabs`
   (Leaderboard | Map | Race | Charts), sticky driver column, trimmed header.
 - **Map with a broadcast delay** (both apps): the live feed is ahead of what's shown, so `map/crossingLog.ts` logs
@@ -244,7 +254,7 @@ the server in live mode by hand.
   3D code: it draws `useCarPlacement`'s placements, so 2D, 3D and the elevation strip always agree. Follow locks
   the camera to the car and eases only its heading (an eased position trailed by hundreds of metres at 10× replay).
 - **Pit rejoin ghost** (`pit/`, races only, both series; marked "Estimate" and "Experimental" everywhere): pick a car
-  in the map's "Pit rejoin" menu (`settings.pitGhostCar`); a violet band and ring on both maps show where it would
+  with its tower row's violet button or the map's "Pit rejoin" menu (`settings.pitGhostCar`); a violet band and ring on both maps show where it would
   rejoin if it pitted now, and a card under the map gives the position, the cars around it (clear air at 2 s+, an
   assumption) and where the stop cost came from. Paused under a caution (a stop costs far less; too few measured).
   Stop cost: this race's green-flag stops once 5 of that stop number are in (Supercars: Natsoft `PT` - 2.7 s,

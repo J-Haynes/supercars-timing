@@ -18,7 +18,9 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
 import { PitLog } from './components/PitLog'
 import { RaceControl } from './components/RaceControl'
-import { InsightsTicker } from './components/InsightsTicker'
+import { RaceFeed } from './components/RaceFeed'
+import { useChartSelection } from './chartSelection'
+import { raceOrder } from './liveGaps'
 import { Ladder } from './components/Ladder'
 import { FinalsLadder } from './components/FinalsLadder'
 import { RaceCharts } from './components/RaceCharts'
@@ -56,6 +58,8 @@ export default function App() {
   const [replayUpdate, setReplayUpdate] = useState<TimingUpdate | null>(null)
 
   const timing = update?.timing
+  // Cars on the race charts: shared by the charts panel and the tower's chart buttons. Starts with the top four.
+  const chart = useChartSelection(timing && isRace(timing.session.type) ? raceOrder(timing).slice(0, 4).map((c) => c.id) : [])
   // Support categories share the feed: only show Supercars Championship sessions.
   const supportSession = !isF1 && !!timing?.session.name && !isSupercarsSession(timing.session.name)
   const track = useTrack(timing?.session.trackCode || undefined, timing?.session.track)
@@ -116,7 +120,10 @@ export default function App() {
                   style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
                   <div className="tower-column" ref={towerColumn}>
                   {isRace(timing.session.type) && <SafetyCarBanner timing={timing} />}
-                  {isRace(timing.session.type) && <InsightsTicker timing={timing} onHighlight={setHighlightIds} />}
+                  {isRace(timing.session.type) && (
+                    <RaceFeed timing={timing} onHighlight={setHighlightIds}
+                      onOpen={(carId, compareId) => setDriverView({ carId, compareId, tab: compareId ? 'compare' : 'focus' })} />
+                  )}
                   <TimingTower
                     timing={timing}
                     simple={settings.simple}
@@ -128,6 +135,7 @@ export default function App() {
                     onHover={setHoverId}
                     onTogglePin={togglePinned}
                     onOpen={(carId) => setDriverView({ carId, compareId: null, tab: 'focus' })}
+                    actions={{ pitGhostCar: settings.pitGhostCar, onPitGhost: (pitGhostCar) => updateSettings({ pitGhostCar }), chart }}
                   />
                   {driverView && (
                     <DriverDialog timing={timing} {...driverView} onClose={() => setDriverView(null)}
@@ -170,7 +178,7 @@ export default function App() {
                       {!isF1 && isRace(timing.session.type) && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
                     </div>
                     <div className="panel-charts">
-                      {isRace(timing.session.type) && <RaceCharts timing={timing} />}
+                      {isRace(timing.session.type) && <RaceCharts timing={timing} selection={chart} />}
                     </div>
                     <div className="panel-race">
                       {(timing.raceControl?.length || timing.session.lapRecord) ? <RaceControl timing={timing} /> : null}

@@ -10,6 +10,15 @@ import { carPenalties } from '../penalties'
 import { liveGap, parkedAtLine, raceFinished, raceOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
 import { useSessionClock } from '../map/useSessionClock'
+import type { ChartSelection } from '../chartSelection'
+
+/** Per-row buttons on the live race tower (shown on hover): pit rejoin estimate and the race charts. */
+export interface RowActionProps {
+  /** Car number whose pit rejoin estimate is on (settings.pitGhostCar). */
+  pitGhostCar: string | null
+  onPitGhost: (carNumber: string | null) => void
+  chart: ChartSelection
+}
 
 interface Ctx {
   car: CarRow
@@ -37,6 +46,7 @@ interface Ctx {
   lapsLeft: number
   /** Opens the driver's Focus view (DriverDialog). */
   onOpen?: (id: string) => void
+  actions?: RowActionProps
 }
 
 interface Column {
@@ -102,7 +112,7 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen }) => {
+    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
@@ -127,6 +137,7 @@ const COLUMNS: Record<string, Column> = {
             </span>
           ))}
           <PitTimer car={car} serverNow={now} rate={clockRate} />
+          {actions && <RowActions car={car} actions={actions} />}
         </>
       )
     },
@@ -202,6 +213,53 @@ function DriverMarker({ car }: { car: CarRow }) {
       title={primary ? 'Primary driver in the car' : 'Co-driver in the car'}
       aria-label={primary ? 'Primary driver' : 'Co-driver'}
     />
+  )
+}
+
+/**
+ * Pit rejoin and chart buttons for a row. They appear over the end of the driver cell while the row is hovered or has
+ * focus (no layout shift); a car that's on either keeps a small mark beside its name: a violet dashed ring like the
+ * ghost on the map, and a bar in its chart colour.
+ */
+function RowActions({ car, actions }: { car: CarRow; actions: RowActionProps }) {
+  const ghostOn = actions.pitGhostCar === car.carNumber
+  const chartOn = actions.chart.selected.includes(car.id)
+  const color = chartOn ? actions.chart.colorOf(car.id) : undefined
+  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation()
+  return (
+    <>
+      {(ghostOn || chartOn) && (
+        <span className="row-marks" aria-hidden>
+          {ghostOn && <span className="row-mark-ghost" title="Pit rejoin estimate on the map" />}
+          {chartOn && <span className="row-mark-chart" style={{ background: color }} title="On the race charts" />}
+        </span>
+      )}
+      <span className="row-actions" onDoubleClick={stop}>
+        <button type="button" className={`row-action ghost${ghostOn ? ' on' : ''}`} aria-pressed={ghostOn}
+          onClick={(e) => { stop(e); actions.onPitGhost(ghostOn ? null : car.carNumber) }}
+          title={ghostOn ? 'Hide the pit rejoin estimate' : `Pit rejoin: where #${car.carNumber} would rejoin if it pitted now (experimental estimate)`}>
+          <span className="row-action-ring" aria-hidden />
+          <span className="visually-hidden">Pit rejoin estimate for #{car.carNumber}</span>
+        </button>
+        <button type="button" className={`row-action chart${chartOn ? ' on' : ''}`} aria-pressed={chartOn}
+          style={color ? { color, borderColor: color } : undefined}
+          onClick={(e) => { stop(e); actions.chart.toggle(car.id) }}
+          title={chartOn ? 'Take off the race charts' : `Add #${car.carNumber} to the race charts`}>
+          <ChartIcon />
+          <span className="visually-hidden">{chartOn ? 'Remove from' : 'Add to'} the race charts</span>
+        </button>
+      </span>
+    </>
+  )
+}
+
+/** A small line chart; uses the text colour (the car's chart colour once it's on). */
+function ChartIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
+      <path d="M1.5 14.5h13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity=".55" />
+      <path d="M2 11l4-4.5 3 2.5 5-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
 
@@ -282,7 +340,7 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions }: {
   timing: TimingSnapshot
   simple: boolean
   /** The viewer's detailed-mode layout per session kind (settings panel). */
@@ -297,6 +355,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   onTogglePin: (carNumber: string) => void
   /** Click on a driver's name: open their Focus view. */
   onOpen?: (id: string) => void
+  /** Pit rejoin and chart buttons on each row (live races only). */
+  actions?: RowActionProps
 }) {
   const { best, timingPoints } = timing
   const race = isRace(timing.session.type)
@@ -316,6 +376,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   const leaderLaps = cars[0]?.laps ?? 0
   const lapsLeft = totalLaps > 0 ? Math.max(0, totalLaps - leaderLaps) : 0
   const minLaps = minDriverLaps(timing.session)
+  // Row buttons only while racing: no pit stops or charts to add after the flag, or outside races.
+  const rowActions = race && !finished ? actions : undefined
 
   return (
     <div className={`tower-wrap${simple ? ' simple' : ''}`}>
@@ -329,7 +391,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions }
             const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr
