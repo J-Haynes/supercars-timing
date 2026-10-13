@@ -10,6 +10,7 @@ import { calibrateTimingPoints } from './calibrate'
 import { usePositionSync } from './usePositionSync'
 import { TAU, TAU_CAUTION, smoothPosition, type Smoothed } from './smoothing'
 import { CrossingLog, knownPosition, type Crossing } from './crossingLog'
+import { useReferenceFallback } from './useReferenceFallback'
 
 const PIT_SPACING = 70
 
@@ -31,12 +32,17 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
   // Provisional tracks have no timing point positions yet: learn them from live pace, and keep them stable
   // (only re-place if the typical lap changes by more than 3%, e.g. after a damp start dries out).
   const calibration = useRef<{ key: string; total: number; points: TrackDefinition['timingPoints'] } | null>(null)
+  // Until this session has timed every stretch, use an earlier session's at this track (useReferenceFallback).
+  const own = timing.segmentReference
+  const ownComplete = !!own && own.length === order.length && own.every((x) => x > 0)
+  const fallbackReference = useReferenceFallback(track.code, order, !!track.provisional && !ownComplete)
+  const reference = ownComplete ? own : fallbackReference ?? own
   const calibrated = useMemo(() => {
     if (!track.provisional) return null
     const key = `${track.code}|${timing.session.name}|${order.join(',')}`
     const names = Object.fromEntries(timing.timingPoints.map((p) => [p.id, p.name]))
-    const points = calibrateTimingPoints(track, order, names, timing.segmentReference)
-    const total = (timing.segmentReference ?? []).reduce((a, b) => a + b, 0)
+    const points = calibrateTimingPoints(track, order, names, reference ?? undefined)
+    const total = (reference ?? []).reduce((a, b) => a + b, 0)
     const frozen = calibration.current
     if (points && (!frozen || frozen.key !== key || Math.abs(total - frozen.total) / frozen.total > 0.03)) {
       calibration.current = { key, total, points }
@@ -44,7 +50,7 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
       calibration.current = null
     }
     return calibration.current?.points ?? null
-  }, [track, order, timing.session.name, timing.timingPoints, timing.segmentReference])
+  }, [track, order, timing.session.name, timing.timingPoints, reference])
   const effective = useMemo(() => (calibrated ? { ...track, timingPoints: calibrated } : track), [track, calibrated])
   const awaitingCalibration = !!track.provisional && !calibrated
   const crossings = useRef(new CrossingLog())

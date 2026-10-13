@@ -1,35 +1,18 @@
-import { useState, type CSSProperties } from 'react'
+import { useState } from 'react'
 import { useTiming } from './useTiming'
 import { useDelayedUpdate } from './useDelayedUpdate'
 import { useSettings } from './settings'
 import { SessionHeader } from './components/SessionHeader'
 import { Controls } from './components/Controls'
-import { TimingTower } from './components/TimingTower'
-import { DriverDialog, type DriverTab } from './components/DriverDialog'
-import { MapView } from './components/MapView'
-import { ColumnSplitter } from './components/ColumnSplitter'
 import { TipsPanel } from './components/TipsPanel'
 import { Menu } from './components/Menu'
 import { ResultsView } from './components/ResultsView'
 import { EventPreview } from './components/EventPreview'
 import { ReplayView } from './components/ReplayView'
+import { SessionView } from './components/SessionView'
 import type { UpcomingEvent } from './calendar'
-import { ErrorBoundary } from './components/ErrorBoundary'
-import { ShootoutCard, pickFocusCar } from './components/ShootoutCard'
-import { PitLog } from './components/PitLog'
-import { RaceControl } from './components/RaceControl'
-import { RaceFeed } from './components/RaceFeed'
-import { useChartSelection } from './chartSelection'
-import { raceOrder } from './liveGaps'
-import { Ladder } from './components/Ladder'
-import { FinalsLadder } from './components/FinalsLadder'
-import { RaceCharts } from './components/RaceCharts'
 import { SettingsPanel } from './components/SettingsPanel'
-import { useTrack } from './tracks'
-import { useStickToBottom } from './useStickToBottom'
-import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './components/MobileTabs'
-import { flagKind, isRace, isShootout, isSupercarsSession } from './session'
-import { SafetyCarBanner } from './components/SafetyCarBanner'
+import { flagKind, isRace, isSupercarsSession } from './session'
 import type { RecordedSession, TimingUpdate } from './types'
 import { isF1 } from './series'
 
@@ -38,14 +21,6 @@ export default function App() {
   const { settings, update: updateSettings, togglePinned } = useSettings()
   // Everything below shows the delayed update, so the tower, map and clock stay in sync with the broadcast.
   const { update, buffered } = useDelayedUpdate(latest, settings.delay)
-  const [hoverId, setHoverId] = useState<string | null>(null)
-  // Driver focus / compare dialog, opened from a driver's name in the tower.
-  const [driverView, setDriverView] = useState<{ carId: string; compareId: string | null; tab: DriverTab } | null>(null)
-  // Cars named by the insight under the mouse, highlighted in the tower and on the map.
-  const [highlightIds, setHighlightIds] = useState<string[]>([])
-  const towerColumn = useStickToBottom<HTMLDivElement>()
-  // Phone layout: which section the tab bar shows (desktop shows everything).
-  const [mobileTab, setMobileTab] = useState<MobileTab>(() => loadMobileTab())
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // null = live timing; otherwise the recorded session whose results are on screen.
@@ -58,16 +33,9 @@ export default function App() {
   const [replayUpdate, setReplayUpdate] = useState<TimingUpdate | null>(null)
 
   const timing = update?.timing
-  // Cars on the race charts: shared by the charts panel and the tower's chart buttons. Starts with the top four.
-  const chart = useChartSelection(timing && isRace(timing.session.type) ? raceOrder(timing).slice(0, 4).map((c) => c.id) : [])
   // Support categories share the feed: only show Supercars Championship sessions.
   const supportSession = !isF1 && !!timing?.session.name && !isSupercarsSession(timing.session.name)
-  const track = useTrack(timing?.session.trackCode || undefined, timing?.session.track)
   const hasCars = !!timing && timing.cars.length > 0 && !supportSession
-  const rate = latest && (latest.feed.state === 'live' || latest.feed.state === 'replaying') ? latest.feed.clockRate ?? 1 : 0
-  // The on-track card shows automatically for Shootout sessions (by Natsoft's session name), or when forced on.
-  const showCard = !!timing && (settings.focusCard === 'on' || (settings.focusCard === 'auto' && isShootout(timing.session.name, timing.session.type)))
-  const focusId = showCard && timing ? pickFocusCar(timing.cars, timing.now)?.id ?? null : null
   // Red / yellow (safety car, full-course yellow) flags frame the whole screen while they're out.
   const kind = !results && !supportSession && timing ? flagKind(timing.session.flag) : undefined
   const frame = kind === 'red' ? ' flag-frame flag-frame-red' : kind === 'caution' ? ' flag-frame flag-frame-yellow' : ''
@@ -113,80 +81,7 @@ export default function App() {
           />
           <main>
             {hasCars && update ? (
-              <>
-                {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
-                <MobileTabs tab={mobileTab} race={isRace(timing.session.type)} onTab={(t) => { setMobileTab(t); saveMobileTab(t) }} />
-                <div className={`layout${settings.simple ? ' simple' : ''}${settings.mapWidth ? ' sized' : ''}`} data-tab={mobileTab}
-                  style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
-                  <div className="tower-column" ref={towerColumn}>
-                  {isRace(timing.session.type) && <SafetyCarBanner timing={timing} />}
-                  {isRace(timing.session.type) && (
-                    <RaceFeed timing={timing} onHighlight={setHighlightIds}
-                      onOpen={(carId, compareId) => setDriverView({ carId, compareId, tab: compareId ? 'compare' : 'focus' })} />
-                  )}
-                  <TimingTower
-                    timing={timing}
-                    simple={settings.simple}
-                    columnPrefs={settings.columns}
-                    hoverId={hoverId}
-                    highlightIds={highlightIds}
-                    clockRate={rate}
-                    pinned={settings.pinned}
-                    onHover={setHoverId}
-                    onTogglePin={togglePinned}
-                    onOpen={(carId) => setDriverView({ carId, compareId: null, tab: 'focus' })}
-                    actions={{ pitGhostCar: settings.pitGhostCar, onPitGhost: (pitGhostCar) => updateSettings({ pitGhostCar }), chart }}
-                  />
-                  {driverView && (
-                    <DriverDialog timing={timing} {...driverView} onClose={() => setDriverView(null)}
-                      onChange={(carId, compareId, tab) => setDriverView({ carId, compareId, tab })} />
-                  )}
-                  <TipsPanel
-                    open={!settings.tipDismissed}
-                    onClose={() => updateSettings({ tipDismissed: true })}
-                    onOpen={() => updateSettings({ tipDismissed: false })}
-                  />
-                  </div>
-                  <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
-                  <aside className="map-panel">
-                    <div className="panel-map">
-                    {track ? (
-                      <ErrorBoundary fallback={<div className="map-missing">The track map hit an error. Check the browser console.</div>}>
-                        <MapView settings={settings} onSettings={updateSettings}
-                          track={track}
-                          update={update}
-                          live={latest}
-                          hoverId={hoverId}
-                          highlightIds={highlightIds}
-                          focusId={focusId}
-                          pinned={settings.pinned}
-                          rotation={settings.mapRotation[track.code] ?? 0}
-                          onRotate={(deg) => updateSettings({ mapRotation: { ...settings.mapRotation, [track.code]: ((deg % 360) + 360) % 360 } })}
-                          onHover={setHoverId}
-                          onTogglePin={togglePinned}
-                        />
-                      </ErrorBoundary>
-                    ) : (
-                      <div className="map-missing">
-                        No map for {timing.session.track || 'this track'} yet. Build one with <code>{isF1 ? 'tools/F1TrackBuilder' : 'tools/TrackBuilder'}</code>.
-                      </div>
-                    )}
-                    </div>
-                    <div className="panel-race">
-                      {/* Supercars championship and Finals ladders: no F1 standings yet. */}
-                      {!isF1 && <Ladder timing={timing} onHighlight={setHighlightIds} />}
-                      {!isF1 && isRace(timing.session.type) && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
-                    </div>
-                    <div className="panel-charts">
-                      {isRace(timing.session.type) && <RaceCharts timing={timing} selection={chart} />}
-                    </div>
-                    <div className="panel-race">
-                      {(timing.raceControl?.length || timing.session.lapRecord) ? <RaceControl timing={timing} /> : null}
-                      {isRace(timing.session.type) && <PitLog timing={timing} />}
-                    </div>
-                  </aside>
-                </div>
-              </>
+              <SessionView update={update} live={latest} settings={settings} updateSettings={updateSettings} togglePinned={togglePinned} tips />
             ) : (
               <EmptyState state={latest?.feed.state} detail={latest?.feed.detail} connection={connection} support={supportSession ? timing?.session.name : undefined} />
             )}

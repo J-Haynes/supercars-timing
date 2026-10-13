@@ -572,12 +572,15 @@ main { flex: 1; padding: 0 16px 24px; }
 .tower tbody tr:hover .row-actions, .tower tbody tr:focus-within .row-actions { opacity: 1; pointer-events: auto; }
 .row-action { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; padding: 0; border-radius: 5px;
   border: 1px solid #3a4654; background: var(--bg); color: var(--muted); cursor: pointer; }
-.row-action:hover { color: var(--text); border-color: var(--text); }
+/* Hover only lights the border; "on" is filled. (They used to look the same, so a button just turned off, still under
+   the mouse or tapped on a phone, looked on.) Hover styles only where there's a real pointer. */
+@media (hover: hover) { .row-action:hover { color: var(--text); border-color: var(--text); } }
 /* Pit rejoin: the ghost's violet dashed ring (map, PitGhostPanel). */
 .row-action.ghost { border-color: #6c55a0; }
-.row-action.ghost:hover, .row-action.ghost.on { border-color: #b98cff; background: rgba(185, 140, 255, .14); }
+@media (hover: hover) { .row-action.ghost:hover { border-color: #b98cff; } }
+.row-action.ghost.on { border-color: #b98cff; background: #b98cff; }
 .row-action-ring { width: 11px; height: 11px; border-radius: 50%; border: 2px dashed #b98cff; }
-.row-action.ghost.on .row-action-ring { border-style: solid; background: rgba(185, 140, 255, .45); }
+.row-action.ghost.on .row-action-ring { border: 2px solid #1a1030; background: transparent; }
 .row-action.chart.on { background: color-mix(in srgb, currentColor 16%, var(--bg)); }
 /* Marks beside the name while a car is on: the ghost ring, a bar in its chart colour. */
 .row-marks { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; vertical-align: 1px; }
@@ -883,3 +886,16 @@ html { scrollbar-gutter: stable; }
   border: 1px solid; }
 .uc-badge.ahead, .uc-badge.worked { color: #6fd18c; border-color: rgba(111, 209, 140, .5); }
 .uc-badge.behind, .uc-badge.failed { color: #ffb15c; border-color: rgba(255, 177, 92, .5); }
+
+/* The car with the pit rejoin estimate on (TrackMap CarDot, 3D tags): violet like its ghost. */
+.map-car.ghosted { opacity: 1; }
+.map-car .ghost-car-ring { fill: none; stroke: #b98cff; stroke-width: 9; }
+.map-car.ghosted text { fill: #d9c4ff; }
+.m3d-tag.ghosted { color: #d9c4ff; border-color: #b98cff !important; box-shadow: 0 0 0 1px #b98cff; }
+
+/* Pit rejoin estimate in the tower: the car's tag and a dashed row where it would rejoin (violet, like the map). */
+.ghost-tag { margin-left: 8px; font: 600 10px ui-monospace, monospace; color: #d9c4ff; border: 1px dashed #b98cff; border-radius: 3px; padding: 0 4px; vertical-align: 1px; white-space: nowrap; }
+.tower tbody tr.ghost-row td { padding: 4px 10px; font-size: 12px; color: #d9c4ff; background: rgba(185, 140, 255, .08);
+  border-top: 1px dashed #b98cff; border-bottom: 1px dashed #b98cff; }
+.ghost-row .pit-ghost-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 8px; vertical-align: -1px; }
+.ghost-row-note { margin-left: 8px; color: var(--muted); font-size: 11px; }

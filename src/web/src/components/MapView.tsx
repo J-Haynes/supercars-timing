@@ -3,7 +3,7 @@ import { TrackMap } from './TrackMap'
 import { isRace } from '../session'
 import { isF1 } from '../series'
 import type { Settings } from '../settings'
-import { usePitGhost } from '../pit/usePitGhost'
+import type { PitGhost } from '../pit/usePitGhost'
 import { PitGhostPanel } from '../pit/PitGhostPanel'
 
 // three.js is large (~0.5 MB): only fetched when a viewer switches to 3D.
@@ -22,9 +22,11 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
  * The track map in the viewer's chosen view: 2D (TrackMap), or the 3D map (TrackMap3D, the default) standing still,
  * orbiting or following a car. Both place cars with the same code (map/useCarPlacement.ts). Remembered in settings.
  */
-export function MapView({ settings, onSettings, ...props }: ComponentProps<typeof TrackMap> & {
+export function MapView({ settings, onSettings, ghost = null, ...props }: ComponentProps<typeof TrackMap> & {
   settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels' | 'showBattles' | 'showLandmarks' | 'pitGhostCar'>
   onSettings: (change: Partial<Settings>) => void
+  /** The pit rejoin estimate for settings.pitGhostCar (SessionView works it out once for the map and the tower). */
+  ghost?: PitGhost | null
 }) {
   const view: View = settings.mapView === '2d' ? '2d' : settings.camera3d
   const pick = (v: View) => onSettings(v === '2d' ? { mapView: '2d' } : { mapView: '3d', camera3d: v })
@@ -48,7 +50,6 @@ export function MapView({ settings, onSettings, ...props }: ComponentProps<typeo
   )
   const showBattles = settings.showBattles && isRace(props.update.timing.session.type)
   // Pit rejoin ghost (pit/: an experimental estimate), races only: pick a car to see where it would rejoin.
-  const ghost = usePitGhost(props.update.timing, props.track, settings.pitGhostCar)
   const raceCars = [...props.update.timing.cars].filter((c) => !c.retired).sort((a, b) => (a.position || 99) - (b.position || 99))
   const ghostPicker = isRace(props.update.timing.session.type) && raceCars.length > 0 && (
     <select className={`pit-ghost-pick${settings.pitGhostCar ? ' active' : ''}`} value={settings.pitGhostCar ?? ''}

@@ -24,10 +24,10 @@ export interface PitGhost {
  * it comes out). Worked out when the timing changes; the maps place the ghost every frame (ghostDistances).
  * Null when no car is chosen or it isn't a race.
  */
-export function usePitGhost(timing: TimingSnapshot, track: TrackDefinition, carNumber: string | null): PitGhost | null {
+export function usePitGhost(timing: TimingSnapshot | undefined, track: TrackDefinition | null | undefined, carNumber: string | null): PitGhost | null {
   return useMemo(() => {
-    const car = carNumber ? timing.cars.find((c) => c.carNumber === carNumber && !c.retired) : undefined
-    if (!car || !isRace(timing.session.type)) return null
+    const car = carNumber && timing ? timing.cars.find((c) => c.carNumber === carNumber && !c.retired) : undefined
+    if (!car || !timing || !track || !isRace(timing.session.type)) return null
     const flag = flagKind(timing.session.flag)
     const order = ['M', ...timing.timingPoints.map((p) => p.id)]
     const fallback = order.map((id) => track.segmentSeconds.find((s) => s.from === id)?.seconds || 0)

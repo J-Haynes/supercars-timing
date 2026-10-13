@@ -165,7 +165,7 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
           return (
             <CarDot key={car.id} car={car} p={p} dim={pl.dim} scale={1 / Math.sqrt(zoom)}
               hovered={car.id === hoverId || highlightIds.includes(car.id)} focused={car.id === focusId} pinned={pinned.includes(car.carNumber)}
-              onHover={onHover} onTogglePin={onTogglePin} />
+              ghosted={car.id === pitGhost?.car.id} onHover={onHover} onTogglePin={onTogglePin} />
           )
         })}
       </svg>
@@ -302,13 +302,15 @@ function useZoomPan(fit: { x: number; y: number; w: number; h: number }) {
 type View = ReturnType<typeof makeView>
 
 
-function CarDot({ car, p, dim, scale, hovered, focused, pinned, onHover, onTogglePin }: {
+function CarDot({ car, p, dim, scale, hovered, focused, pinned, ghosted = false, onHover, onTogglePin }: {
   car: CarRow; p: Vec; dim: boolean; scale: number; hovered: boolean; focused: boolean; pinned: boolean
+  /** The car with the pit rejoin estimate on: a violet ring and number, like its ghost. */
+  ghosted?: boolean
   onHover: (id: string | null) => void
   onTogglePin: (carNumber: string) => void
 }) {
-  const classes = ['map-car', `mfr-${car.manufacturer.toLowerCase()}`, dim && 'dim', hovered && 'hovered', focused && 'focused', pinned && 'pinned']
-  const big = hovered || pinned || focused
+  const classes = ['map-car', `mfr-${car.manufacturer.toLowerCase()}`, dim && 'dim', hovered && 'hovered', focused && 'focused', pinned && 'pinned', ghosted && 'ghosted']
+  const big = hovered || pinned || focused || ghosted
   return (
     <g
       transform={`translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(${scale.toFixed(3)})`}
@@ -319,6 +321,7 @@ function CarDot({ car, p, dim, scale, hovered, focused, pinned, onHover, onToggl
     >
       <title>{`P${car.position} #${car.carNumber} ${car.driver}${car.inPit ? ' (pit)' : ''}`}</title>
       {(pinned || focused) && <circle r={CAR_RADIUS * 1.7} className={focused ? 'focus-ring' : 'pin-ring'} />}
+      {ghosted && <circle r={CAR_RADIUS * 1.55} className="ghost-car-ring" />}
       <circle r={big ? CAR_RADIUS * 1.3 : CAR_RADIUS} style={teamStyle(car, 'fill')} />
       <text dy="0.36em">{car.carNumber}</text>
     </g>

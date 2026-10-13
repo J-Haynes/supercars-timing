@@ -1,5 +1,5 @@
 import type { RecordedSession, TimingSnapshot } from './types'
-import { ENDURO_POINTS, STANDINGS_AFTER_R10, projectedFinish } from './championship'
+import { ENDURO_POINTS, STANDINGS_AFTER_R10, inPointsSeason, projectedFinish } from './championship'
 
 /**
  * Finals rounds (2026): the top 10 after Bathurst go to the Finals. At each Finals round their points reset and
@@ -49,6 +49,8 @@ export const FINALS_ROUNDS: FinalsRound[] = [
 ]
 
 export function finalsRoundFor(meeting: string): FinalsRound | undefined {
+  // This season's Finals only: last year's Gold Coast (a rebuilt past race) matched too.
+  if (!inPointsSeason(meeting)) return undefined
   return FINALS_ROUNDS.find((r) => r.meeting.test(meeting))
 }
 

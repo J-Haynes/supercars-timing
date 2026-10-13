@@ -1,0 +1,141 @@
+import { useState, type CSSProperties } from 'react'
+import type { LapHistory, TimingUpdate } from '../types'
+import type { Settings } from '../settings'
+import { useTrack } from '../tracks'
+import { isRace, isShootout } from '../session'
+import { isF1 } from '../series'
+import { raceOrder } from '../liveGaps'
+import { useChartSelection } from '../chartSelection'
+import { useStickToBottom } from '../useStickToBottom'
+import { usePitGhost } from '../pit/usePitGhost'
+import { TimingTower } from './TimingTower'
+import { DriverDialog, type DriverTab } from './DriverDialog'
+import { MapView } from './MapView'
+import { ColumnSplitter } from './ColumnSplitter'
+import { TipsPanel } from './TipsPanel'
+import { ErrorBoundary } from './ErrorBoundary'
+import { ShootoutCard, pickFocusCar } from './ShootoutCard'
+import { PitLog } from './PitLog'
+import { RaceControl } from './RaceControl'
+import { RaceFeed } from './RaceFeed'
+import { Ladder } from './Ladder'
+import { FinalsLadder } from './FinalsLadder'
+import { RaceCharts } from './RaceCharts'
+import { SafetyCarBanner } from './SafetyCarBanner'
+import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './MobileTabs'
+
+/**
+ * A session on screen, live or replayed: the race feed, tower, map, ladders, charts, race control and pit log, with
+ * everything that joins them (hover and highlights, the driver dialog, the pit rejoin estimate shared by the tower
+ * and the map, the chart selection, the phone tabs). The live page (App) and the replay page (ReplayView) both use
+ * it, so a feature added here is in both: they used to be built separately and kept drifting apart.
+ */
+export function SessionView({ update, live, history, settings, updateSettings, togglePinned, resetKey, tips = false }: {
+  /** What's shown (the delayed update live; the replay's moment in a replay). */
+  update: TimingUpdate
+  /** The map's view of what comes next: the live feed ahead of a broadcast delay, or a replay's lookahead. */
+  live: TimingUpdate | null
+  /** Lap history for the charts and the driver dialog: undefined = fetch the live one; a replay passes its laps up to
+   * the replay time. */
+  history?: LapHistory | null
+  settings: Settings
+  updateSettings: (patch: Partial<Settings>) => void
+  togglePinned: (carNumber: string) => void
+  /** Changes when the race feed should start again (a replay seeking backwards). */
+  resetKey?: number
+  /** The tips panel under the tower (live page). */
+  tips?: boolean
+}) {
+  const { timing } = update
+  const race = isRace(timing.session.type)
+  const track = useTrack(timing.session.trackCode || undefined, timing.session.track)
+  const rate = update.feed.state === 'live' || update.feed.state === 'replaying' ? update.feed.clockRate ?? 1 : 0
+  const [hoverId, setHoverId] = useState<string | null>(null)
+  // Cars named by the feed item under the mouse, highlighted in the tower and on the map.
+  const [highlightIds, setHighlightIds] = useState<string[]>([])
+  const [driverView, setDriverView] = useState<{ carId: string; compareId: string | null; tab: DriverTab } | null>(null)
+  const [mobileTab, setMobileTab] = useState<MobileTab>(() => loadMobileTab())
+  const towerColumn = useStickToBottom<HTMLDivElement>()
+  // Cars on the race charts: shared by the charts panel and the tower's chart buttons. Starts with the top four.
+  const chart = useChartSelection(race ? raceOrder(timing).slice(0, 4).map((c) => c.id) : [])
+  // The pit rejoin estimate (experimental): one for the tower and the map.
+  const ghost = usePitGhost(timing, track, settings.pitGhostCar)
+  // The on-track card shows automatically for Shootout sessions (by Natsoft's session name), or when forced on.
+  const showCard = settings.focusCard === 'on' || (settings.focusCard === 'auto' && isShootout(timing.session.name, timing.session.type))
+  const focusId = showCard ? pickFocusCar(timing.cars, timing.now)?.id ?? null : null
+  const open = (carId: string, compareId: string | null = null) => setDriverView({ carId, compareId, tab: compareId ? 'compare' : 'focus' })
+
+  return (
+    <>
+      {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
+      <MobileTabs tab={mobileTab} race={race} onTab={(t) => { setMobileTab(t); saveMobileTab(t) }} />
+      <div className={`layout${settings.simple ? ' simple' : ''}${settings.mapWidth ? ' sized' : ''}`} data-tab={mobileTab}
+        style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
+        <div className="tower-column" ref={towerColumn}>
+          {race && <SafetyCarBanner timing={timing} />}
+          {race && <RaceFeed key={resetKey} timing={timing} onHighlight={setHighlightIds} onOpen={open} />}
+          <TimingTower
+            timing={timing}
+            simple={settings.simple}
+            columnPrefs={settings.columns}
+            hoverId={hoverId}
+            highlightIds={highlightIds}
+            clockRate={rate}
+            pinned={settings.pinned}
+            onHover={setHoverId}
+            onTogglePin={togglePinned}
+            onOpen={(carId) => open(carId)}
+            actions={{ pitGhostCar: settings.pitGhostCar, onPitGhost: (pitGhostCar) => updateSettings({ pitGhostCar }), chart }}
+            pitGhost={ghost}
+          />
+          {driverView && (
+            <DriverDialog timing={timing} {...driverView} history={history} onClose={() => setDriverView(null)}
+              onChange={(carId, compareId, tab) => setDriverView({ carId, compareId, tab })} />
+          )}
+          {tips && (
+            <TipsPanel open={!settings.tipDismissed} onClose={() => updateSettings({ tipDismissed: true })}
+              onOpen={() => updateSettings({ tipDismissed: false })} />
+          )}
+        </div>
+        <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
+        <aside className="map-panel">
+          <div className="panel-map">
+            {track ? (
+              <ErrorBoundary fallback={<div className="map-missing">The track map hit an error. Check the browser console.</div>}>
+                <MapView settings={settings} onSettings={updateSettings} ghost={ghost}
+                  track={track}
+                  update={update}
+                  live={live}
+                  hoverId={hoverId}
+                  highlightIds={highlightIds}
+                  focusId={focusId}
+                  pinned={settings.pinned}
+                  rotation={settings.mapRotation[track.code] ?? 0}
+                  onRotate={(deg) => updateSettings({ mapRotation: { ...settings.mapRotation, [track.code]: ((deg % 360) + 360) % 360 } })}
+                  onHover={setHoverId}
+                  onTogglePin={togglePinned}
+                />
+              </ErrorBoundary>
+            ) : (
+              <div className="map-missing">
+                No map for {timing.session.track || 'this track'} yet. Build one with <code>{isF1 ? 'tools/F1TrackBuilder' : 'tools/TrackBuilder'}</code>.
+              </div>
+            )}
+          </div>
+          <div className="panel-race">
+            {/* Supercars championship and Finals ladders (this season's only): no F1 standings yet. */}
+            {!isF1 && <Ladder timing={timing} onHighlight={setHighlightIds} />}
+            {!isF1 && race && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
+          </div>
+          <div className="panel-charts">
+            {race && <RaceCharts timing={timing} history={history} selection={chart} />}
+          </div>
+          <div className="panel-race">
+            {(timing.raceControl?.length || timing.session.lapRecord) ? <RaceControl timing={timing} /> : null}
+            {race && <PitLog timing={timing} />}
+          </div>
+        </aside>
+      </div>
+    </>
+  )
+}

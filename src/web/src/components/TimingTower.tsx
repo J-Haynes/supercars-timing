@@ -12,6 +12,7 @@ import { useRowMoves } from './useRowMoves'
 import { useSessionClock } from '../map/useSessionClock'
 import type { ChartSelection } from '../chartSelection'
 import { useTowerSignals, type TowerSignals } from '../towerSignals'
+import type { PitGhost } from '../pit/usePitGhost'
 
 /** Per-row buttons on the live race tower (shown on hover): pit rejoin estimate and the race charts. */
 export interface RowActionProps {
@@ -51,6 +52,8 @@ interface Ctx {
   actions?: RowActionProps
   /** Battles, the pit-adjusted leader and undercuts (towerSignals.ts). */
   signals: TowerSignals
+  /** The pit rejoin estimate on screen (pit/usePitGhost.ts), shared with the map. */
+  pitGhost: PitGhost | null
 }
 
 interface Column {
@@ -116,7 +119,7 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions, signals }) => {
+    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions, signals, pitGhost }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
@@ -142,6 +145,7 @@ const COLUMNS: Record<string, Column> = {
           ))}
           <PitTimer car={car} serverNow={now} rate={clockRate} />
           <SignalBadges car={car} signals={signals} />
+          {pitGhost?.car.id === car.id && <GhostTag ghost={pitGhost} />}
           {actions && <RowActions car={car} actions={actions} />}
         </>
       )
@@ -298,6 +302,17 @@ function SignalBadges({ car, signals }: { car: CarRow; signals: TowerSignals }) 
   )
 }
 
+/** On the row of the car with the pit rejoin estimate on: where it would rejoin (the map shows the same). */
+function GhostTag({ ghost }: { ghost: PitGhost }) {
+  const r = ghost.rejoin
+  const text = ghost.status === 'ok' && r ? `PIT → P${r.position}` : ghost.status === 'caution' ? 'PIT · paused' : ghost.status === 'in-pit' ? 'PIT · in pits' : null
+  if (!text) return null
+  const title = ghost.status === 'ok' && r
+    ? `If #${ghost.car.carNumber} pitted now it would rejoin P${r.position}${r.best !== r.worst ? ` (likely P${r.best}–P${r.worst})` : ''}. Experimental estimate: see the card under the map.`
+    : ghost.status === 'caution' ? 'Pit rejoin estimate paused under the safety car (a stop costs far less, not enough measured)' : 'In the pits now'
+  return <span className="ghost-tag" title={title}>{text}</span>
+}
+
 /** How long the final pit-lane time stays on the badge after the car leaves. */
 const PIT_RESULT_SECONDS = 8
 
@@ -375,7 +390,7 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions, pitGhost = null }: {
   timing: TimingSnapshot
   simple: boolean
   /** The viewer's detailed-mode layout per session kind (settings panel). */
@@ -392,6 +407,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   onOpen?: (id: string) => void
   /** Pit rejoin and chart buttons on each row (live races only). */
   actions?: RowActionProps
+  /** The pit rejoin estimate: a tag on the car's row and a "would rejoin here" row where it would come out. */
+  pitGhost?: PitGhost | null
 }) {
   const { best, timingPoints } = timing
   const race = isRace(timing.session.type)
@@ -415,6 +432,21 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   const rowActions = race && !finished ? actions : undefined
   const signals = useTowerSignals(timing, [], timing.session.trackCode)
 
+  // Where the "would rejoin here" row goes: before the car that would be just behind it (others only, in race order).
+  const rejoin = race && !finished && pitGhost?.status === 'ok' ? pitGhost.rejoin : null
+  const others = rejoin ? cars.filter((c) => c.id !== pitGhost!.car.id) : []
+  const ghostRowAt = rejoin ? (others[rejoin.position - 1]?.id ?? 'end') : null
+  const ghostRow = rejoin && pitGhost && (
+    <tr key="pit-ghost" className="ghost-row">
+      <td colSpan={columns.length}>
+        <span className="pit-ghost-swatch" aria-hidden />
+        #{pitGhost.car.carNumber} {pitGhost.car.driver} would rejoin here · <b>P{rejoin.position}</b>
+        {rejoin.best !== rejoin.worst && <> (likely P{rejoin.best}–P{rejoin.worst})</>}
+        <span className="ghost-row-note">estimate</span>
+      </td>
+    </tr>
+  )
+
   return (
     <div className={`tower-wrap${simple ? ' simple' : ''}`}>
       <table className="tower">
@@ -426,8 +458,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
           </tr>
         </thead>
         <tbody>
-          {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions, signals }
+          {cars.map((car, i) => [ghostRowAt === car.id && ghostRow, (() => {
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions, signals, pitGhost }
             const role = signals.battle.get(car.id)
             const classes = [role && `battle-${role}`, car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
@@ -447,7 +479,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
                 })}
               </tr>
             )
-          })}
+          })()])}
+          {ghostRowAt === 'end' && ghostRow}
         </tbody>
       </table>
     </div>

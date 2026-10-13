@@ -1,17 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
-import { useTrack } from '../tracks'
 import { useSettings } from '../settings'
-import { cautionPeriods, isRace, leaderLap } from '../session'
-import { TimingTower } from './TimingTower'
-import { DriverDialog, type DriverTab } from './DriverDialog'
-import { MapView } from './MapView'
-import { ColumnSplitter } from './ColumnSplitter'
-import { SafetyCarBanner } from './SafetyCarBanner'
-import { RaceControl } from './RaceControl'
-import { ErrorBoundary } from './ErrorBoundary'
-import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './MobileTabs'
-import { RaceFeed } from './RaceFeed'
+import { cautionPeriods, leaderLap } from '../session'
+import { SessionView } from './SessionView'
 
 const SPEEDS = [1, 2, 5, 10, 20, 60]
 /** How often the page asks the server for the snapshot at the current replay time (real time). */
@@ -61,11 +52,6 @@ export function ReplayView({ session, onBack, onUpdate }: {
   const [t, setT] = useState(0)
   const [loading, setLoading] = useState(false)
   const { settings, update: updateSettings, togglePinned } = useSettings()
-  const [hoverId, setHoverId] = useState<string | null>(null)
-  // Phones: which part shows (the same tab bar and remembered tab as the live page). Without it the phone layout's
-  // CSS hid the leaderboard and only the map was visible. No charts here, so a "charts" tab falls back to the tower.
-  const [mobileTab, setMobileTab] = useState<MobileTab>(() => { const t = loadMobileTab(); return t === 'charts' ? 'tower' : t })
-  const [driverView, setDriverView] = useState<{ carId: string; compareId: string | null; tab: DriverTab } | null>(null)
 
   useEffect(() => {
     // Start 20 s before the first green flag (from the session's results) to skip the pre-race wait, else at the
@@ -141,13 +127,14 @@ export function ReplayView({ session, onBack, onUpdate }: {
   }
   // The map's "live feed": the snapshot LOOKAHEAD_SECONDS ahead, so it knows every car's next crossing.
   const aheadUpdate: TimingUpdate | null = ahead && { feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 }, timing: ahead }
-  const [highlightIds, setHighlightIds] = useState<string[]>([])
+  // Lap history up to the replay time (charts, driver dialog): nothing from later in the race.
+  const shownLaps = useMemo(() => laps && timing && { ...laps, cars: laps.cars.map((c) => ({ ...c, laps: c.laps.filter((l) => l.at <= timing.now) })) },
+    [laps, timing])
   // Tell the header what's on screen: only when the snapshot, play state or speed change, not every render.
   useEffect(() => { onUpdate?.(timing && { feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 }, timing }) },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onUpdate is a fresh closure each render
     [timing, playing, speed, session.name])
   useEffect(() => () => onUpdate?.(null), []) // eslint-disable-line react-hooks/exhaustive-deps -- on leaving only
-  const track = useTrack(timing?.session.trackCode || session.trackCode || undefined, timing?.session.track || session.track)
 
   // Scrubber marks: every 10th lap of the leader, and safety car periods.
   const lapMarks = useMemo(() => {
@@ -189,48 +176,11 @@ export function ReplayView({ session, onBack, onUpdate }: {
         </div>
       </div>
 
-      {!update ? <p className="menu-muted">Loading replay…</p> : (<>
-        <MobileTabs tab={mobileTab} race={false} onTab={(t) => { setMobileTab(t); saveMobileTab(t) }} />
-        <div className={`layout${settings.mapWidth ? ' sized' : ''}`} data-tab={mobileTab}
-          style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
-          <div className="tower-column">
-            {isRace(update.timing.session.type) && <SafetyCarBanner timing={update.timing} />}
-            {/* Keyed on seeks backwards: the feed's log starts again rather than keep events from later on. */}
-            {isRace(update.timing.session.type) && (
-              <RaceFeed key={epoch} timing={update.timing} onHighlight={setHighlightIds}
-                onOpen={(carId, compareId) => setDriverView({ carId, compareId, tab: compareId ? 'compare' : 'focus' })} />
-            )}
-            <TimingTower timing={update.timing} simple={settings.simple} columnPrefs={settings.columns} hoverId={hoverId}
-              highlightIds={highlightIds}
-              clockRate={update.feed.clockRate} pinned={settings.pinned} onHover={setHoverId} onTogglePin={togglePinned}
-              onOpen={(carId) => setDriverView({ carId, compareId: null, tab: 'focus' })}
-              actions={{ pitGhostCar: settings.pitGhostCar, onPitGhost: (pitGhostCar) => updateSettings({ pitGhostCar }) }} />
-            {driverView && (
-              // Only the laps completed by the replay time, so nothing from later in the race shows.
-              <DriverDialog timing={update.timing} {...driverView} onClose={() => setDriverView(null)}
-                history={laps && { ...laps, cars: laps.cars.map((c) => ({ ...c, laps: c.laps.filter((l) => l.at <= update.timing.now) })) }}
-                onChange={(carId, compareId, tab) => setDriverView({ carId, compareId, tab })} />
-            )}
-          </div>
-          <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
-          <aside className="map-panel">
-            <div className="panel-map">
-            {track ? (
-              <ErrorBoundary fallback={<div className="map-missing">The track map hit an error.</div>}>
-                <MapView settings={settings} onSettings={updateSettings} track={track} update={update} live={aheadUpdate} hoverId={hoverId}
-                  highlightIds={highlightIds} focusId={null} pinned={settings.pinned}
-                  rotation={settings.mapRotation[track.code] ?? 0}
-                  onRotate={(deg) => updateSettings({ mapRotation: { ...settings.mapRotation, [track.code]: ((deg % 360) + 360) % 360 } })}
-                  onHover={setHoverId} onTogglePin={togglePinned} />
-              </ErrorBoundary>
-            ) : <div className="map-missing">No map for this track.</div>}
-            </div>
-            <div className="panel-race">
-              {(update.timing.raceControl?.length ?? 0) > 0 ? <RaceControl timing={update.timing} /> : <p className="menu-muted">No race control messages yet.</p>}
-            </div>
-          </aside>
-        </div>
-      </>)}
+      {!update ? <p className="menu-muted">Loading replay…</p> : (
+        // The same view as live timing (SessionView), so every feature is in both. Laps up to the replay time only.
+        <SessionView update={update} live={aheadUpdate} settings={settings} updateSettings={updateSettings} togglePinned={togglePinned}
+          history={shownLaps} resetKey={epoch} />
+      )}
     </section>
   )
 }

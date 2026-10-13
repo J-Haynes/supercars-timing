@@ -51,7 +51,9 @@ export class TrackScene {
   private readonly camera = new THREE.PerspectiveCamera(45, 1, 5, 40000)
   private readonly controls: OrbitControls
   private readonly overlay: HTMLDivElement
-  private readonly cars = new Map<string, { group: THREE.Group; body: THREE.MeshBasicMaterial; tag: HTMLSpanElement; seen: boolean }>()
+  private readonly cars = new Map<string, { group: THREE.Group; body: THREE.MeshBasicMaterial; rim: THREE.Mesh; tag: HTMLSpanElement; seen: boolean }>()
+  /** Rim for the car with the pit rejoin estimate on: the ghost's violet, a little wider. */
+  private readonly ghostRimMaterial = new THREE.MeshBasicMaterial({ color: GHOST, depthTest: false })
   private readonly carGroup = new THREE.Group()
   private readonly dotGeometry = new THREE.SphereGeometry(1, 20, 14)
   /** Drawn inside out, slightly bigger than the dot: a dark outline from any angle. */
@@ -474,12 +476,18 @@ export class TrackScene {
   }
 
   /** Moves every car to this frame's placement; cars that aren't placed are hidden. */
-  setCars(placements: Placement[], tagged: Set<string>) {
+  setCars(placements: Placement[], tagged: Set<string>, ghostId: string | null = null) {
     this.tagged = tagged
     for (const c of this.cars.values()) c.seen = false
     for (const pl of placements) {
       const c = this.car(pl.car)
       c.seen = true
+      const ghosted = pl.car.id === ghostId
+      if ((c.rim.material === this.ghostRimMaterial) !== ghosted) {
+        c.rim.material = ghosted ? this.ghostRimMaterial : this.rimMaterial
+        c.rim.scale.setScalar(ghosted ? 1.45 : 1.18)
+        c.tag.classList.toggle('ghosted', ghosted)
+      }
       c.group.visible = true
       if (c.body.transparent !== pl.dim) {
         c.body.transparent = pl.dim
@@ -884,7 +892,7 @@ export class TrackScene {
     tag.textContent = row.carNumber
     tag.style.borderColor = `#${colour.toString(16).padStart(6, '0')}`
     this.overlay.appendChild(tag)
-    const entry = { group, body, tag, seen: true }
+    const entry = { group, body, rim, tag, seen: true }
     this.cars.set(row.id, entry)
     return entry
   }

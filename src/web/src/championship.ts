@@ -59,7 +59,18 @@ export interface LadderRow {
   rankBefore: number
 }
 
+/** The season the points data here and in finals.ts is for. */
+export const POINTS_SEASON = 2026
+
+/** False for a meeting from another season ("2025 Boost Mobile Gold Coast 500", a rebuilt past race): this season's
+ * standings and Finals rules don't apply to it. Meetings without a year count as this season. */
+export function inPointsSeason(meeting: string): boolean {
+  const year = meeting.match(/^(\d{4})\s/)?.[1]
+  return !year || Number(year) === POINTS_SEASON
+}
+
 export function championshipFor(session: SessionInfo): RaceChampionship | undefined {
+  if (!inPointsSeason(session.meeting)) return undefined
   return RACES.find((r) => r.meeting.test(session.meeting) && r.session.test(session.name))
 }
 

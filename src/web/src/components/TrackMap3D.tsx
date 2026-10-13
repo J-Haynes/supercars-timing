@@ -81,7 +81,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
   useEffect(() => { scene.current?.setCamera(camera, followed?.id ?? null) }, [camera, followed?.id])
 
   // Number tags: the leader, the followed car, pinned, hovered and highlighted cars.
-  const tagged = new Set([leader?.id, followed?.id, hoverId, ...highlightIds, ...cars.filter((c) => pinned.includes(c.carNumber)).map((c) => c.id)]
+  const tagged = new Set([leader?.id, followed?.id, hoverId, pitGhost?.car.id, ...highlightIds, ...cars.filter((c) => pinned.includes(c.carNumber)).map((c) => c.id)]
     .filter((id): id is string => !!id))
   // Every frame (the session clock re-renders this component): move the cars.
   useEffect(() => {
@@ -90,7 +90,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
     s.hover = onHover
     s.togglePin = onTogglePin
     s.setCaution(flagNow === 'caution')
-    s.setCars(placements, tagged)
+    s.setCars(placements, tagged, pitGhost?.car.id ?? null)
     const distanceOf = new Map(placements.flatMap((p) => (p.kind === 'track' ? [[p.car.id, p.distance] as const] : [])))
     s.setBattles(battleSpans(battleList, distanceOf, model.length))
     s.setPitGhost(ghostOnTrack(pitGhost, placements, model))
