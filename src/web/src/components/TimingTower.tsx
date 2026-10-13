@@ -11,6 +11,7 @@ import { liveGap, parkedAtLine, raceFinished, raceOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
 import { useSessionClock } from '../map/useSessionClock'
 import type { ChartSelection } from '../chartSelection'
+import { useTowerSignals, type TowerSignals } from '../towerSignals'
 
 /** Per-row buttons on the live race tower (shown on hover): pit rejoin estimate and the race charts. */
 export interface RowActionProps {
@@ -47,6 +48,8 @@ interface Ctx {
   /** Opens the driver's Focus view (DriverDialog). */
   onOpen?: (id: string) => void
   actions?: RowActionProps
+  /** Battles, the pit-adjusted leader and undercuts (towerSignals.ts). */
+  signals: TowerSignals
 }
 
 interface Column {
@@ -112,7 +115,7 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions }) => {
+    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions, signals }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
@@ -137,6 +140,7 @@ const COLUMNS: Record<string, Column> = {
             </span>
           ))}
           <PitTimer car={car} serverNow={now} rate={clockRate} />
+          <SignalBadges car={car} signals={signals} />
           {actions && <RowActions car={car} actions={actions} />}
         </>
       )
@@ -164,6 +168,8 @@ const COLUMNS: Record<string, Column> = {
       const s = seconds(g.int)
       return s && `+${s}`
     },
+    // In a battle with the car ahead (towerSignals): the interval in the maps' battle colour.
+    cellClass: ({ car, signals }) => { const r = signals.battle.get(car.id); return r === 'mid' || r === 'last' ? 'battle-int' : '' },
   },
   last: {
     key: 'last', header: 'Last', numeric: true,
@@ -260,6 +266,33 @@ function ChartIcon() {
       <path d="M1.5 14.5h13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity=".55" />
       <path d="M2 11l4-4.5 3 2.5 5-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+/**
+ * Soft race signals beside the name (towerSignals.ts, estimates): "net P1" for the pit-adjusted leader while it isn't
+ * the road leader, and an undercut tag: "UC #19 +1.2" = would be 1.2 s ahead of #19 if #19 stopped now (green if
+ * ahead, amber if not), then "UC ✓" / "UC ✗" for a minute once #19 has stopped.
+ */
+function SignalBadges({ car, signals }: { car: CarRow; signals: TowerSignals }) {
+  const uc = signals.undercut.get(car.id)
+  const net = signals.netLeader?.id === car.id ? signals.netLeader : null
+  return (
+    <>
+      {net && (
+        <span className="net-badge" title={`Pit-adjusted leader (estimate): if every car had made the same number of stops, #${car.carNumber} would lead by about ${net.margin.toFixed(1)} s. Uses the estimated cost of a stop (pit rejoin estimate).`}>
+          net P1
+        </span>
+      )}
+      {uc && (
+        <span className={`uc-badge ${uc.state === 'pending' ? (uc.margin >= 0 ? 'ahead' : 'behind') : uc.state}`}
+          title={uc.state === 'pending'
+            ? `Undercut on #${uc.target.carNumber} ${uc.target.driver} (estimate): if #${uc.target.carNumber} stopped now, #${car.carNumber} would be about ${Math.abs(uc.margin).toFixed(1)} s ${uc.margin >= 0 ? 'ahead' : 'behind'}.`
+            : `Undercut on #${uc.target.carNumber} ${uc.target.driver} ${uc.state === 'worked' ? 'worked' : 'didn\'t work'}: ${Math.abs(uc.margin).toFixed(1)} s ${uc.margin >= 0 ? 'ahead' : 'behind'} after both stopped.`}>
+          {uc.state === 'pending' ? `UC #${uc.target.carNumber} ${uc.margin >= 0 ? '+' : '−'}${Math.abs(uc.margin).toFixed(1)}` : uc.state === 'worked' ? 'UC ✓' : 'UC ✗'}
+        </span>
+      )}
+    </>
   )
 }
 
@@ -378,6 +411,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   const minLaps = minDriverLaps(timing.session)
   // Row buttons only while racing: no pit stops or charts to add after the flag, or outside races.
   const rowActions = race && !finished ? actions : undefined
+  const signals = useTowerSignals(timing, [], timing.session.trackCode)
 
   return (
     <div className={`tower-wrap${simple ? ' simple' : ''}`}>
@@ -391,8 +425,9 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         </thead>
         <tbody>
           {cars.map((car, i) => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions }
-            const classes = [car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions, signals }
+            const role = signals.battle.get(car.id)
+            const classes = [role && `battle-${role}`, car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr
                 key={car.id}

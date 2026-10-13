@@ -867,3 +867,19 @@ html { scrollbar-gutter: stable; }
 
 .event-sessions-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .event-sessions-head h3 { margin: 0; }
+
+/* Tower race signals (towerSignals.ts). Battles: a bracket at the left edge of the position cell joining the rows, in
+   the maps' battle colour; the chaser's interval in the same colour. */
+.tower td.col-pos { position: relative; }
+.tower tr[class*="battle-"] td.col-pos::before { content: ''; position: absolute; left: 3px; width: 3px; background: #2fd3ff; border-radius: 2px; }
+.tower tr.battle-first td.col-pos::before { top: 50%; bottom: 0; }
+.tower tr.battle-mid td.col-pos::before { top: 0; bottom: 0; }
+.tower tr.battle-last td.col-pos::before { top: 0; bottom: 50%; }
+.tower td.battle-int { color: #2fd3ff; font-weight: 600; }
+/* Pit-adjusted leader: soft on purpose (an estimate): muted, dashed. */
+.net-badge { margin-left: 8px; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted);
+  border: 1px dashed #5a6673; border-radius: 3px; padding: 0 4px; vertical-align: 1px; white-space: nowrap; }
+.uc-badge { margin-left: 8px; font: 600 10px ui-monospace, monospace; border-radius: 3px; padding: 1px 4px; vertical-align: 1px; white-space: nowrap;
+  border: 1px solid; }
+.uc-badge.ahead, .uc-badge.worked { color: #6fd18c; border-color: rgba(111, 209, 140, .5); }
+.uc-badge.behind, .uc-badge.failed { color: #ffb15c; border-color: rgba(255, 177, 92, .5); }

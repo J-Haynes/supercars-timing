@@ -187,6 +187,13 @@ the server in live mode by hand.
 - **Tower row buttons** (live races until the flag): hovering a row shows a violet ring (the pit rejoin ghost for that
   car, `settings.pitGhostCar`) and a chart button (adds/removes it on the race charts; `chartSelection.ts`, shared by
   App with `RaceCharts`, results pages keep their own). Cars that are on either keep a small mark beside the name.
+- **Tower race signals** (`towerSignals.ts`, live and replay): a cyan bracket joining the rows of each battle
+  (`notableBattles`, same as the map and feed) with the chaser's interval in cyan; a soft dashed "net P1" on the
+  pit-adjusted leader (progress minus stops still owed × the pit ghost's stop cost) only while it isn't the road leader,
+  held 15 s and ahead by 1 s+; undercut tags "UC #19 +1.2" (if #19 stopped now, 1.2 s ahead), then "UC ✓/✗" for a minute.
+  An undercut pair is decided at pit entry (nearest car within 3 s on the road yet to make that stop); a car is only
+  judged once it has crossed a timing point after its stop (rejoin.progress holds it at the next point until then).
+  Checked on Bathurst Race 30 (1-3 tags at a time in the first stop window) and the rebuilt 2025 Gold Coast races.
 - **Tower** columns: cells in `TimingTower.tsx` (`COLUMNS`), layouts in `towerLayout.ts`; detailed mode is
   configurable in ⚙ Settings (`SettingsPanel.tsx`, `settings.columns`). Rows slide and pulse on position changes
   (`useRowMoves.ts`, FLIP; tint on the row with a cleanup timer). Driver markers (hollow white = primary, green =
