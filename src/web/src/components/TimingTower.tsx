@@ -442,6 +442,12 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         <span className="pit-ghost-swatch" aria-hidden />
         #{pitGhost.car.carNumber} {pitGhost.car.driver} would rejoin here · <b>P{rejoin.position}</b>
         {rejoin.best !== rejoin.worst && <> (likely P{rejoin.best}–P{rejoin.worst})</>}
+        {/* Where that leaves it once everyone has stopped (towerSignals): the number that matters for the race. */}
+        {signals.netPosition.has(pitGhost.car.id) && (
+          <i className="ghost-row-net" title="Pit-adjusted position (estimate): where this car is if every car had made the same number of stops">
+            {' '}· P{signals.netPosition.get(pitGhost.car.id)} pit-adjusted
+          </i>
+        )}
         <span className="ghost-row-note">estimate</span>
       </td>
     </tr>

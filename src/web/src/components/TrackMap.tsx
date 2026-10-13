@@ -322,7 +322,7 @@ function CarDot({ car, p, dim, scale, hovered, focused, pinned, ghosted = false,
       <title>{`P${car.position} #${car.carNumber} ${car.driver}${car.inPit ? ' (pit)' : ''}`}</title>
       {(pinned || focused) && <circle r={CAR_RADIUS * 1.7} className={focused ? 'focus-ring' : 'pin-ring'} />}
       {ghosted && <circle r={CAR_RADIUS * 1.55} className="ghost-car-ring" />}
-      <circle r={big ? CAR_RADIUS * 1.3 : CAR_RADIUS} style={teamStyle(car, 'fill')} />
+      <circle className="car-body" r={big ? CAR_RADIUS * 1.3 : CAR_RADIUS} style={teamStyle(car, 'fill')} />
       <text dy="0.36em">{car.carNumber}</text>
     </g>
   )

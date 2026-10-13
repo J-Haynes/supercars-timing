@@ -182,7 +182,10 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-car.mfr-chevrolet text { fill: #241300; }
 .map-car.mfr-toyota circle { fill: var(--toyota); }
 .map-car.dim { opacity: .45; }
-.map-car.hovered circle { stroke: #fff; stroke-width: 10; }
+/* Hovered (or highlighted from the feed): bigger, white outline, bigger number. Only the dot itself: the pin and
+   pit rejoin rings keep their colours (they used to turn white too). 3D: .m3d-tag.hovered and scene3d.setCars. */
+.map-car.hovered .car-body { stroke: #fff; stroke-width: 10; }
+.map-car.hovered text { font-size: 54px; }
 .map-car .pin-ring { fill: none; stroke: var(--yellow); stroke-width: 12; }
 .map-car.pinned { opacity: 1; }
 .map-caption { color: var(--muted); font-size: 11px; padding: 6px 4px 0; }
@@ -892,6 +895,7 @@ html { scrollbar-gutter: stable; }
 .map-car .ghost-car-ring { fill: none; stroke: #b98cff; stroke-width: 9; }
 .map-car.ghosted text { fill: #d9c4ff; }
 .m3d-tag.ghosted { color: #d9c4ff; border-color: #b98cff !important; box-shadow: 0 0 0 1px #b98cff; }
+.m3d-tag.hovered { font-size: 13px; box-shadow: 0 0 0 1.5px #fff; z-index: 2; }
 
 /* Pit rejoin estimate in the tower: the car's tag and a dashed row where it would rejoin (violet, like the map). */
 .ghost-tag { margin-left: 8px; font: 600 10px ui-monospace, monospace; color: #d9c4ff; border: 1px dashed #b98cff; border-radius: 3px; padding: 0 4px; vertical-align: 1px; white-space: nowrap; }
@@ -899,3 +903,4 @@ html { scrollbar-gutter: stable; }
   border-top: 1px dashed #b98cff; border-bottom: 1px dashed #b98cff; }
 .ghost-row .pit-ghost-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 8px; vertical-align: -1px; }
 .ghost-row-note { margin-left: 8px; color: var(--muted); font-size: 11px; }
+.ghost-row-net { color: var(--text); }

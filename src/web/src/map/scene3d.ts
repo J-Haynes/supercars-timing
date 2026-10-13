@@ -51,7 +51,9 @@ export class TrackScene {
   private readonly camera = new THREE.PerspectiveCamera(45, 1, 5, 40000)
   private readonly controls: OrbitControls
   private readonly overlay: HTMLDivElement
-  private readonly cars = new Map<string, { group: THREE.Group; body: THREE.MeshBasicMaterial; rim: THREE.Mesh; tag: HTMLSpanElement; seen: boolean }>()
+  private readonly cars = new Map<string, { group: THREE.Group; body: THREE.MeshBasicMaterial; rim: THREE.Mesh; tag: HTMLSpanElement; seen: boolean; hovered: boolean }>()
+  /** Rim for the hovered car: white, like the 2D map. */
+  private readonly hoverRimMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false })
   /** Rim for the car with the pit rejoin estimate on: the ghost's violet, a little wider. */
   private readonly ghostRimMaterial = new THREE.MeshBasicMaterial({ color: GHOST, depthTest: false })
   private readonly carGroup = new THREE.Group()
@@ -476,18 +478,23 @@ export class TrackScene {
   }
 
   /** Moves every car to this frame's placement; cars that aren't placed are hidden. */
-  setCars(placements: Placement[], tagged: Set<string>, ghostId: string | null = null) {
+  setCars(placements: Placement[], tagged: Set<string>, ghostId: string | null = null, hoverIds: Set<string> = new Set()) {
     this.tagged = tagged
     for (const c of this.cars.values()) c.seen = false
     for (const pl of placements) {
       const c = this.car(pl.car)
       c.seen = true
+      // Hovered: a white rim and a bigger dot (see tick); the pit rejoin car: a wider violet rim. Hover wins.
       const ghosted = pl.car.id === ghostId
-      if ((c.rim.material === this.ghostRimMaterial) !== ghosted) {
-        c.rim.material = ghosted ? this.ghostRimMaterial : this.rimMaterial
-        c.rim.scale.setScalar(ghosted ? 1.45 : 1.18)
-        c.tag.classList.toggle('ghosted', ghosted)
+      const hovered = hoverIds.has(pl.car.id)
+      const rim = hovered ? this.hoverRimMaterial : ghosted ? this.ghostRimMaterial : this.rimMaterial
+      if (c.rim.material !== rim) {
+        c.rim.material = rim
+        c.rim.scale.setScalar(hovered ? 1.3 : ghosted ? 1.45 : 1.18)
       }
+      c.hovered = hovered
+      c.tag.classList.toggle('ghosted', ghosted)
+      c.tag.classList.toggle('hovered', hovered)
       c.group.visible = true
       if (c.body.transparent !== pl.dim) {
         c.body.transparent = pl.dim
@@ -543,7 +550,7 @@ export class TrackScene {
       this.ghostRing.quaternion.copy(this.camera.quaternion)
     }
     for (const c of this.cars.values()) {
-      if (c.group.visible) c.group.scale.setScalar(Math.min(DOT_MAX, Math.max(DOT_MIN, c.group.position.distanceTo(this.camera.position) / DOT_PER_DISTANCE)))
+      if (c.group.visible) c.group.scale.setScalar(Math.min(DOT_MAX, Math.max(DOT_MIN, c.group.position.distanceTo(this.camera.position) / DOT_PER_DISTANCE)) * (c.hovered ? 1.3 : 1))
     }
     this.renderer.render(this.scene, this.camera)
     this.placeOverlay()
@@ -892,7 +899,7 @@ export class TrackScene {
     tag.textContent = row.carNumber
     tag.style.borderColor = `#${colour.toString(16).padStart(6, '0')}`
     this.overlay.appendChild(tag)
-    const entry = { group, body, rim, tag, seen: true }
+    const entry = { group, body, rim, tag, seen: true, hovered: false }
     this.cars.set(row.id, entry)
     return entry
   }

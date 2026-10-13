@@ -24,6 +24,9 @@ export interface TowerSignals {
   netLeader: { id: string; margin: number } | null
   /** Per undercutting car. */
   undercut: Map<string, Undercut>
+  /** Pit-adjusted position of every car with a progress estimate (green flag only): where it would be if every car
+   * had made the same number of stops. Shown with the pit rejoin estimate. */
+  netPosition: Map<string, number>
 }
 
 export interface Undercut {
@@ -79,7 +82,7 @@ export function useTowerSignals(timing: TimingSnapshot, fallback: number[], trac
 export const newSignalMemory = (): SignalMemory => ({ pending: new Map(), net: null, lastProgress: new Map() })
 
 export function towerSignals(timing: TimingSnapshot, fallback: number[], trackCode: string, memory: SignalMemory): TowerSignals {
-  const empty: TowerSignals = { battle: new Map(), netLeader: null, undercut: new Map() }
+  const empty: TowerSignals = { battle: new Map(), netLeader: null, undercut: new Map(), netPosition: new Map() }
   if (!isRace(timing.session.type) || raceFinished(timing)) return empty
 
   const battle = new Map<string, 'first' | 'mid' | 'last'>()
@@ -101,15 +104,18 @@ export function towerSignals(timing: TimingSnapshot, fallback: number[], trackCo
 
   // Net order: every car charged for the stops it still owes compared with the cars that have made the most.
   const most = Math.max(0, ...running.map(stopsDone))
-  const net = running
-    .map((c) => {
-      const p = prog.get(c.id)
-      let owed = 0
-      for (let s = stopsDone(c) + 1; s <= most; s++) owed += lossFor(s)
-      return p === null || p === undefined || !settled(c) ? null : { car: c, p: p - owed }
-    })
+  const owedOf = (c: CarRow) => {
+    let owed = 0
+    for (let s = stopsDone(c) + 1; s <= most; s++) owed += lossFor(s)
+    return owed
+  }
+  const adjusted = running
+    .map((c) => { const p = prog.get(c.id); return p == null ? null : { car: c, p: p - owedOf(c) } })
     .filter((x): x is { car: CarRow; p: number } => !!x)
     .sort((a, b) => b.p - a.p)
+  // Positions for every car; the "net P1" tag only from cars settled out of the pits (stricter, see `settled`).
+  const netPosition = new Map(adjusted.map((x, i) => [x.car.id, i + 1]))
+  const net = adjusted.filter((x) => settled(x.car))
   const roadLeader = running.map((c) => ({ c, p: prog.get(c.id) })).filter((x) => x.p != null).sort((a, b) => b.p! - a.p!)[0]?.c
   // Only while some cars are settled out of the pits and others still owe stops, and once it has held for a bit.
   const unsettled = running.some((c) => !settled(c) && c.pitLog.length > 0 && now - (c.pitLog.at(-1)!.inAt || now) < 3 * m.lap)
@@ -123,7 +129,7 @@ export function towerSignals(timing: TimingSnapshot, fallback: number[], trackCo
     const p = prog.get(c.id)
     if (settled(c) && p != null) memory.lastProgress.set(c.id, { p, at: now })
   }
-  return { battle, netLeader, undercut }
+  return { battle, netLeader, undercut, netPosition }
 }
 
 function undercuts(running: CarRow[], prog: Map<string, number | null>, m: ProgressModel, now: number,

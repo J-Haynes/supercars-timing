@@ -25,6 +25,11 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 
 ## How we work
 
+- **Every change applies to live AND replay, F1 AND Supercars**, unless the owner says otherwise (only series-specific
+  things stay in one series, e.g. F1 Overtake Mode within 1 s). Session features go in `SessionView.tsx`; check both
+  series and a replay. If something can't apply somewhere, say so. **Known gap:** F1 has no results or replay yet
+  (no F1 sessions API; F1 recordings exist in `data/recordings/f1/`).
+
 - **Branches:** work on a feature/fix branch, never straight on `main`. One commit per feature or fix, with a message
   that says what changed, why, and how it was checked. Merge to `main` (fast-forward) and push only when the owner says.
 - **Commit trailer** (from the session's attribution settings): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
@@ -275,7 +280,8 @@ the server in live mode by hand.
   the camera to the car and eases only its heading (an eased position trailed by hundreds of metres at 10× replay).
 - **Pit rejoin ghost** (`pit/`, races only, both series; marked "Estimate" and "Experimental" everywhere): pick a car
   with its tower row's violet button or the map's "Pit rejoin" menu (`settings.pitGhostCar`); the tower shows "PIT → P12"
-  on its row and a dashed "would rejoin here" row, the maps a violet ring and number on its dot; a violet band and ring on both maps show where it would
+  on its row and a dashed "would rejoin here" row (with its pit-adjusted position, `towerSignals.netPosition`), the maps a
+  violet ring and number on its dot. Hovered (or feed-highlighted) cars: bigger dot, white outline, bigger number, 2D and 3D; a violet band and ring on both maps show where it would
   rejoin if it pitted now, and a card under the map gives the position, the cars around it (clear air at 2 s+, an
   assumption) and where the stop cost came from. Paused under a caution (a stop costs far less; too few measured).
   Stop cost: this race's green-flag stops once 5 of that stop number are in (Supercars: Natsoft `PT` - 2.7 s,

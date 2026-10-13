@@ -90,7 +90,8 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
     s.hover = onHover
     s.togglePin = onTogglePin
     s.setCaution(flagNow === 'caution')
-    s.setCars(placements, tagged, pitGhost?.car.id ?? null)
+    // Same as the 2D map: the hovered car and the feed's highlighted cars stand out.
+    s.setCars(placements, tagged, pitGhost?.car.id ?? null, new Set([hoverId, ...highlightIds].filter((id): id is string => !!id)))
     const distanceOf = new Map(placements.flatMap((p) => (p.kind === 'track' ? [[p.car.id, p.distance] as const] : [])))
     s.setBattles(battleSpans(battleList, distanceOf, model.length))
     s.setPitGhost(ghostOnTrack(pitGhost, placements, model))
