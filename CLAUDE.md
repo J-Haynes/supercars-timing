@@ -27,8 +27,7 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 
 - **Every change applies to live AND replay, F1 AND Supercars**, unless the owner says otherwise (only series-specific
   things stay in one series, e.g. F1 Overtake Mode within 1 s). Session features go in `SessionView.tsx`; check both
-  series and a replay. If something can't apply somewhere, say so. **Known gap:** F1 has no results or replay yet
-  (no F1 sessions API; F1 recordings exist in `data/recordings/f1/`).
+  series and a replay. If something can't apply somewhere, say so.
 
 - **Branches:** work on a feature/fix branch, never straight on `main`. One commit per feature or fix, with a message
   that says what changed, why, and how it was checked. Merge to `main` (fast-forward) and push only when the owner says.
@@ -124,7 +123,11 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 (method `snapshot`) · `GET /api/sessions` (Supercars only; `?all=true` for support categories) ·
 `GET /api/sessions/{id}/results` · `GET /api/sessions/{id}/laps` · `GET /api/sessions/{id}/replay/info` ·
 `GET /api/sessions/{id}/replay?t=<natsoft time>&viewer=<id>`.
-F1: `GET /api/f1/health` · `GET /api/f1/snapshot` · `GET /api/f1/laps` · hub `/hubs/f1` (same `snapshot` method).
+F1: `GET /api/f1/health` · `GET /api/f1/snapshot` · `GET /api/f1/laps` · hub `/hubs/f1` (same `snapshot` method) ·
+`GET /api/f1/sessions` and `/api/f1/sessions/{id}/results|laps|replay/info|replay?t=&viewer=` (same shapes as Supercars;
+`F1/F1Sessions.cs`: our recordings split by F1's SessionInfo key, merged across restarts, the hub's stale on-connect
+snapshots left out, plus archive folders in `data/recordings/f1-archive/` with a SessionInfo.jsonStream; meeting names
+get the year, e.g. "2026 Singapore Grand Prix"). The frontend uses `API_BASE` for all of these.
 
 ## Commands
 
@@ -281,7 +284,8 @@ the server in live mode by hand.
 - **Pit rejoin ghost** (`pit/`, races only, both series; marked "Estimate" and "Experimental" everywhere): pick a car
   with its tower row's violet button or the map's "Pit rejoin" menu (`settings.pitGhostCar`); the tower shows "PIT → P12"
   on its row and a dashed "would rejoin here" row (with its pit-adjusted position, `towerSignals.netPosition`), the maps a
-  violet ring and number on its dot. Hovered (or feed-highlighted) cars: bigger dot, white outline, bigger number, 2D and 3D; a violet band and ring on both maps show where it would
+  violet ring and number on its dot. It turns itself off once the car has made the stop (left the pits and crossed its
+  first timing point since: its real place is known then; not at pit entry, the stop is when it's worth watching). Hovered (or feed-highlighted) cars: bigger dot, white outline, bigger number, 2D and 3D; a violet band and ring on both maps show where it would
   rejoin if it pitted now, and a card under the map gives the position, the cars around it (clear air at 2 s+, an
   assumption) and where the stop cost came from. Paused under a caution (a stop costs far less; too few measured).
   Stop cost: this race's green-flag stops once 5 of that stop number are in (Supercars: Natsoft `PT` - 2.7 s,
@@ -298,7 +302,7 @@ the server in live mode by hand.
   penalties, cars well down), Charts, Pit stops, Race control, Championship. Data: `/api/sessions/{id}/results` + `/laps`.
 - **Replay** (`ReplayView.tsx`, "▶ Replay" on a results page): tower (with signals and the pit rejoin row button) + race
   feed + map + banner + race control at any time. The map also gets the snapshot 90 s ahead (its own server cursor,
-  `viewer=<id>-ahead`) as its "live" feed, so it knows each car's next crossing like with a broadcast delay (rebuilt
+  `viewer=<id>-ahead`) as its "live" feed (default speed 1×), so it knows each car's next crossing like with a broadcast delay (rebuilt
   Gold Coast Race 28: 0 % -> 100 % of positions known); the crossing log and the feed reset on a backwards seek. Play/
   pause, 1-60×, scrubber with lap ticks and safety car bands; starts 20 s before the first green. The page moves the
   time and polls `/replay?t=` every 250 ms; the server keeps a cursor per viewer.
@@ -314,8 +318,8 @@ the server in live mode by hand.
 - **Two apps, one project:** Supercars at `/`, F1 at `/f1`; the header's switch (the two logos, `src/web/src/assets`,
   sources in `SessionHeader.tsx`) is a link (full page load) and `/` remembers the last choice. Keep the header
   identical in both apps (it always has three title lines; `scrollbar-gutter: stable`) so nothing moves on switching. Everything branches on `isF1` from `series.ts`; settings are stored
-  per series. The F1 menu has Live and Upcoming (`F1_UPCOMING` in `calendar.ts`, from the Jolpica API, cited;
-  `SERIES_UPCOMING` picks the series) but no Results yet (those come from Natsoft recordings). The F1 app hides
+  per series. The F1 menu has Live, Results, Past seasons and Upcoming (`F1_UPCOMING` in `calendar.ts`, from the Jolpica API,
+  cited; `SERIES_UPCOMING` picks the series). F1 results have no Championship tab (no F1 standings). The F1 app hides
   the ladders and the manufacturer key; it adds team colours (`teamStyle`), a tyre column and grid positions (from `CarRow`'s
   optional F1 fields `Tyre`, `TyreLaps`, `TeamColour`, `GridPosition`, `Retired`; defaults keep Natsoft unchanged).
 - **Server:** the F1 feed runs alongside Natsoft (config section `F1`, `F1:Enabled=false` turns it off). One
