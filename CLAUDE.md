@@ -92,7 +92,9 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   `F1FeedService` (+ `F1Store`, `F1Hub`, `F1Options`: live/replay, recording, warm start, broadcasting).
 - `src/web/src/series.ts`: which app the page is (`/f1` = F1, else Supercars), its API base and hub, team colours.
 - `deploy/`: the systemd user service and its README (install, logs, Tailscale serve).
-- `tools/PitLoss` (time lost per pit stop: `natsoft_report.py` from Natsoft results-site reports, `f1_archive.py` from F1's
+- `tools/HistoricalRace` (past races as replayable recordings, rebuilt from Natsoft's "Sector and Lap Times" reports +
+  a cited event file, e.g. `gc2025.json`; what's estimated is in its docstring), `tools/MapDelaySim` (the map with a
+  broadcast delay, Supercars), `tools/PitLoss` (time lost per pit stop: `natsoft_report.py` from Natsoft results-site reports, `f1_archive.py` from F1's
   archive; `backtest.mts` scores the pit rejoin estimate on real stops; `demo-server.sh` replays races on :5081;
   findings in `docs/PLANNING.md`, "Pit strategy features"), `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
   README has the Gold Coast checklist), `tools/OfficialMap` (corners and pit lane from Supercars' official track map
@@ -326,6 +328,9 @@ the server in live mode by hand.
 
 ## Next round: Gold Coast 500 (23-25 Oct 2026)
 
+- **Preparation notes:** `docs/GOLD-COAST-2026-PREP.md` (what happened in 2025, numbers to expect, what to watch in
+  the app). Last year's races are replayable: menu → Past seasons (rebuilt with `tools/HistoricalRace`).
+
 - Sessions and sources are in `calendar.ts` (Supercars schedule "correct as of 16 Sep"). Races 31 and 32, 85 laps.
 - **Before the weekend:** set `FINALS_ROUNDS[0].cupWinners.enduro` in `finals.ts` (Enduro Cup winner, +25) and check the
   Bathurst result our Finals seeding uses against the official one (post-race penalties aren't in the feed). Add a
@@ -389,3 +394,5 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
    fetch the session times automatically from the series' websites (`docs/PLANNING.md`, "Using Natsoft's data
    responsibly"), so a changed or newly published timetable can't be missed.
 6. Persist sessions (SQL or static per-session archives) only if cross-season queries or deployment need it.
+7. Modular layout: panels the viewer can hide and reorder (drag and drop), the tower fixed, a fuller settings drawer.
+   Planned with the owner, not built: design and a 6-step backlog in `docs/PLANNING.md`, "Modular layout".

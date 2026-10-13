@@ -175,6 +175,48 @@ every race's "Sector and Lap Times" report: sectors and lap times per car, in-la
   hillside sign reads MOUNT PANORAMA (OSM's 13 letters); grandstand heights are assumed (9 m).
 - Not yet tried: the Follow camera at the Gold Coast, the 3D map on a real phone's GPU.
 
+## Modular layout: plan and backlog (13 Oct 2026, not built)
+
+Asked for by the owner: as panels keep being added, viewers should be able to **hide and reorder** them. **The tower
+(leaderboard) is fixed**: it can't be moved or hidden. Moving is drag and drop; hiding works on the panel itself and in
+the settings menu, which gets fleshed out.
+
+**Today:** App.tsx places panels by hand. Left column (sticks to the bottom on wide screens, `useStickToBottom`): safety
+car banner, race feed, tower, tips. Right column (`aside.map-panel`): map (+ pit ghost card), championship and Finals
+ladders, charts, race control, pit log, each wrapped in `panel-map` / `panel-race` / `panel-charts` for the phone tabs.
+The replay page has its own subset. Settings hold only tower columns (with a drag/arrow reorder list we can reuse).
+
+**Design:**
+- A **panel registry** (`panels.ts`): id, title, the component, which pages it can appear on (live / replay / results),
+  when it applies (races only, Supercars only, has data), default column and order, and its phone tab. App and
+  ReplayView render columns from it instead of by hand. The tower and the safety car banner aren't in the registry
+  (fixed); the race feed is (above the tower by default, can be hidden or moved).
+- **Layout state** in settings: `layout: { left: string[]; right: string[]; hidden: string[] }` per series (settings
+  are already per series). New panels added later appear in their default place for viewers with a saved layout (merge:
+  unknown ids go to their default slot). A new key name, not a reuse, so old saved settings can't fight the default.
+- **A panel shell** (`Panel.tsx`): one header for every panel: title, a drag handle, and a ⋯ menu (Hide, Move to other
+  column, Move up / down). Panels with their own options (map view, chart tabs) keep them in their own toolbar.
+- **Drag and drop:** pointer events (not the HTML5 drag API: it doesn't work on touch) on the handle; a placeholder
+  shows where the panel will land, within or across the two columns. Keyboard: the ⋯ menu's Move items. Phones: no
+  drag; the settings list's arrows, and each panel's phone tab (Leaderboard | Map | Race | Charts) is a setting.
+- **Settings drawer** grows sections: *Layout* (every panel with a show toggle, drag/arrows to reorder, which column,
+  reset), *Leaderboard* (today's column list, simple mode, the new signals on/off: battles, net leader, undercuts),
+  *Map* (view, corners, battles, landmarks, buildings, pit rejoin car), *Timing* (broadcast delay, time zone), *About*
+  (data sources, what's an estimate). Controls bar keeps the quick ones (simple mode, delay).
+- **Sticky left column:** it sticks to the bottom; a tall panel moved into it (charts) would make it long. Only allow
+  the short ones there (feed, ladders, race control, pit log) or switch stickiness off when it's taller than the screen.
+
+**Backlog** (each a branch and commit; check at 1600 px and 390 px):
+1. Panel registry + shell, same layout as today (no behaviour change): every panel gets the header and a Hide action;
+   hidden panels come back from settings. *Done when* the live page, replay and results look as before and each
+   panel hides and returns.
+2. Settings drawer sections (Layout, Leaderboard, Map, Timing, About) with Layout listing panels (toggle + arrows +
+   column) and Reset. Move the existing column editor under Leaderboard.
+3. Drag and drop on wide screens (pointer events, placeholder, both columns), saved to settings; keyboard Move items.
+4. Phones: per-panel tab choice; the tab bar only shows tabs that have panels.
+5. Toggles for the tower signals (battle brackets, net P1, undercut tags) and the race feed's two halves.
+6. Replay and results pages use the same registry and layout (their own subset of panels).
+
 ## Map with a broadcast delay (13 Oct 2026)
 
 Question: watching with a 20-40 s delay (a stream), is the map free of dots waiting at timing points or jumping
