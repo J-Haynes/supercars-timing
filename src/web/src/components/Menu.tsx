@@ -31,6 +31,13 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
   }, [onClose])
 
   const byMeeting = groupBy(sessions ?? [], (s) => s.meeting || 'Other')
+  // Earlier seasons (e.g. last year's races, rebuilt from Natsoft's published times by tools/HistoricalRace) get their
+  // own section under this season's results.
+  const yearOf = (meeting: string) => Number(meeting.match(/^(\d{4})\s/)?.[1] ?? 0)
+  const season = Math.max(0, ...Object.keys(byMeeting).map(yearOf))
+  const meetings = Object.entries(byMeeting)
+  const current = meetings.filter(([m]) => yearOf(m) === 0 || yearOf(m) === season)
+  const past = meetings.filter(([m]) => yearOf(m) !== 0 && yearOf(m) !== season)
   // Each meeting's sessions are folded under its name; the meeting on screen starts unfolded.
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const activeMeeting = sessions?.find((s) => s.id === resultsId)?.meeting
@@ -41,6 +48,34 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
     else next.add(meeting)
     return next
   })
+
+  const renderMeeting = (meeting: string, list: RecordedSession[], withYear = false) => (
+            <div key={meeting} className="menu-group">
+              <h3>
+                <button type="button" className="menu-meeting" aria-expanded={isOpen(meeting)} onClick={() => toggle(meeting)}>
+                  <span className="menu-chevron" aria-hidden>{isOpen(meeting) ? '▾' : '▸'}</span>
+                  {withYear ? meeting : meeting.replace(/^\d{4}\s+/, '')}
+                  <span className="menu-count">{list.length} {list.length === 1 ? 'session' : 'sessions'}</span>
+                </button>
+              </h3>
+              {isOpen(meeting) && Object.entries(groupBy(list, (s) => dayLabel(s.start))).map(([day, daySessions]) => (
+                <div key={day}>
+                  <div className="menu-day">{day}</div>
+                  {daySessions.map((s) => {
+                    const { session } = splitName(s.name)
+                    return (
+                      <button key={s.id} type="button" className={`menu-item session${s.id === resultsId ? ' active' : ''}`}
+                        onClick={() => { onResults(s); onClose() }}>
+                        <span className="session-name">{session}{s.id.includes('_hist-') && <span className="menu-tag" title="Rebuilt from Natsoft's published lap and sector times (tools/HistoricalRace): some times are estimates">rebuilt</span>}</span>
+                        <span className="session-meta">{timeLabel(s.start)} · {Math.round(s.durationSeconds / 60)} min</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          
+  )
 
   return (
     <>
@@ -63,32 +98,12 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
           <h2>Results</h2>
           {sessions === null && <p className="menu-muted">Loading…</p>}
           {sessions?.length === 0 && <p className="menu-muted">No results yet. Supercars sessions appear here once they've been recorded.</p>}
-          {Object.entries(byMeeting).map(([meeting, list]) => (
-            <div key={meeting} className="menu-group">
-              <h3>
-                <button type="button" className="menu-meeting" aria-expanded={isOpen(meeting)} onClick={() => toggle(meeting)}>
-                  <span className="menu-chevron" aria-hidden>{isOpen(meeting) ? '▾' : '▸'}</span>
-                  {meeting.replace(/^\d{4}\s+/, '')}
-                  <span className="menu-count">{list.length} {list.length === 1 ? 'session' : 'sessions'}</span>
-                </button>
-              </h3>
-              {isOpen(meeting) && Object.entries(groupBy(list, (s) => dayLabel(s.start))).map(([day, daySessions]) => (
-                <div key={day}>
-                  <div className="menu-day">{day}</div>
-                  {daySessions.map((s) => {
-                    const { session } = splitName(s.name)
-                    return (
-                      <button key={s.id} type="button" className={`menu-item session${s.id === resultsId ? ' active' : ''}`}
-                        onClick={() => { onResults(s); onClose() }}>
-                        <span className="session-name">{session}</span>
-                        <span className="session-meta">{timeLabel(s.start)} · {Math.round(s.durationSeconds / 60)} min</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
-          ))}
+          {current.map(([meeting, list]) => renderMeeting(meeting, list))}
+        </section>}
+
+        {!isF1 && past.length > 0 && <section>
+          <h2>Past seasons</h2>
+          {past.map(([meeting, list]) => renderMeeting(meeting, list, true))}
         </section>}
 
         <section>

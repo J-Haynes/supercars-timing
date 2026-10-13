@@ -1,0 +1,478 @@
+{
+ "_about": "2025 Boost Mobile Gold Coast 500 (Races 28 and 29), for tools/HistoricalRace/report_to_recording.py. Lap and sector times come from Natsoft's 'Sector and Lap Times' reports (data/recordings/natsoft-results/, git-ignored, saved by hand). This file holds what the reports don't have: grid, the winner's race time and lead-lap gaps (to place each car's lap 1), vehicles, and post-race penalties. Source: https://en.wikipedia.org/wiki/2025_Gold_Coast_500 (revision read 13 Oct 2026), citing https://www.supercars.com/results/2025/2025-gold-coast/R6 and /R12. Corrected: Stanaway is #62 in Race 28 (Wikipedia says #18). Wikipedia's Race 29 row for #3 says 84 laps with a seconds gap: inconsistent, so the generator checks every derived lap 1 and estimates implausible ones.",
+ "meeting": "2025 Boost Mobile Gold Coast 500",
+ "trackCode": "SURF",
+ "trackName": "SURFERS PARADISE STREET CIRCUIT",
+ "utcOffsetHours": 10,
+ "races": {
+  "R28": {
+   "report": "data/recordings/natsoft-results/gc2025_r28.txt",
+   "session": "2025 Repco Supercars Championship - Race 28",
+   "code": "R6",
+   "laps": 85,
+   "start": "2025-10-25T15:18:00",
+   "penalties": [
+    {
+     "number": "18",
+     "seconds": 5,
+     "text": "Stewards: Penalty Car 18 - 5 seconds - track limits (applied after the race)"
+    }
+   ],
+   "classification": [
+    {
+     "number": "25",
+     "driver": "Chaz Mostert",
+     "team": "Walkinshaw Andretti United",
+     "car": "Ford Mustang S650",
+     "grid": 4,
+     "laps": 85,
+     "result": "1:53:27.795"
+    },
+    {
+     "number": "88",
+     "driver": "Broc Feeney",
+     "team": "Triple Eight Race Engineering",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 2,
+     "laps": 85,
+     "result": "+7.609"
+    },
+    {
+     "number": "26",
+     "driver": "Kai Allen",
+     "team": "Grove Racing",
+     "car": "Ford Mustang S650",
+     "grid": 12,
+     "laps": 85,
+     "result": "+9.948"
+    },
+    {
+     "number": "40",
+     "driver": "Cam Waters",
+     "team": "Tickford Racing",
+     "car": "Ford Mustang S650",
+     "grid": 6,
+     "laps": 85,
+     "result": "+11.195"
+    },
+    {
+     "number": "1",
+     "driver": "Will Brown",
+     "team": "Triple Eight Race Engineering",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 10,
+     "laps": 85,
+     "result": "+29.083"
+    },
+    {
+     "number": "7",
+     "driver": "James Courtney",
+     "team": "Blanchard Racing Team",
+     "car": "Ford Mustang S650",
+     "grid": 7,
+     "laps": 85,
+     "result": "+34.302"
+    },
+    {
+     "number": "8",
+     "driver": "Andre Heimgartner",
+     "team": "Brad Jones Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 13,
+     "laps": 85,
+     "result": "+34.962"
+    },
+    {
+     "number": "18",
+     "driver": "Anton De Pasquale",
+     "team": "Team 18",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 9,
+     "laps": 85,
+     "result": "+37.894"
+    },
+    {
+     "number": "55",
+     "driver": "Thomas Randle",
+     "team": "Tickford Racing",
+     "car": "Ford Mustang S650",
+     "grid": 14,
+     "laps": 85,
+     "result": "+43.315"
+    },
+    {
+     "number": "19",
+     "driver": "Matthew Payne",
+     "team": "Grove Racing",
+     "car": "Ford Mustang S650",
+     "grid": 3,
+     "laps": 85,
+     "result": "+44.121"
+    },
+    {
+     "number": "14",
+     "driver": "Bryce Fullwood",
+     "team": "Brad Jones Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 21,
+     "laps": 85,
+     "result": "+45.373"
+    },
+    {
+     "number": "31",
+     "driver": "James Golding",
+     "team": "PremiAir Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 5,
+     "laps": 85,
+     "result": "+45.702"
+    },
+    {
+     "number": "17",
+     "driver": "Will Davison",
+     "team": "Dick Johnson Racing",
+     "car": "Ford Mustang S650",
+     "grid": 17,
+     "laps": 85,
+     "result": "+47.459"
+    },
+    {
+     "number": "20",
+     "driver": "David Reynolds",
+     "team": "Team 18",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 8,
+     "laps": 85,
+     "result": "+51.868"
+    },
+    {
+     "number": "9",
+     "driver": "Jack Le Brocq",
+     "team": "Erebus Motorsport",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 19,
+     "laps": 85,
+     "result": "+56.011"
+    },
+    {
+     "number": "96",
+     "driver": "Macauley Jones",
+     "team": "Brad Jones Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 23,
+     "laps": 85,
+     "result": "+59.232"
+    },
+    {
+     "number": "3",
+     "driver": "Aaron Cameron",
+     "team": "Blanchard Racing Team",
+     "car": "Ford Mustang S650",
+     "grid": 16,
+     "laps": 84,
+     "result": "+1 lap"
+    },
+    {
+     "number": "10",
+     "driver": "Nick Percat",
+     "team": "Matt Stone Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 11,
+     "laps": 84,
+     "result": "+1 lap"
+    },
+    {
+     "number": "62",
+     "driver": "Richie Stanaway",
+     "team": "PremiAir Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 18,
+     "laps": 80,
+     "result": "+5 laps"
+    },
+    {
+     "number": "2",
+     "driver": "Ryan Wood",
+     "team": "Walkinshaw Andretti United",
+     "car": "Ford Mustang S650",
+     "grid": 1,
+     "laps": 77,
+     "result": "+8 laps"
+    },
+    {
+     "number": "4",
+     "driver": "Cameron Hill",
+     "team": "Matt Stone Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 22,
+     "laps": 76,
+     "result": "Mechanical"
+    },
+    {
+     "number": "12",
+     "driver": "Jaxon Evans",
+     "team": "Brad Jones Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 20,
+     "laps": 25,
+     "result": "Accident"
+    },
+    {
+     "number": "99",
+     "driver": "Cooper Murray",
+     "team": "Erebus Motorsport",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 15,
+     "laps": 17,
+     "result": "Tyre issue"
+    },
+    {
+     "number": "38",
+     "driver": "Brodie Kostecki",
+     "team": "Dick Johnson Racing",
+     "car": "Ford Mustang S650",
+     "grid": null,
+     "laps": 0,
+     "result": "Accident"
+    }
+   ]
+  },
+  "R29": {
+   "report": "data/recordings/natsoft-results/gc2025_r29.txt",
+   "session": "2025 Repco Supercars Championship - Race 29",
+   "code": "R12",
+   "laps": 85,
+   "start": "2025-10-26T14:13:00",
+   "penalties": [
+    {
+     "number": "18",
+     "seconds": 15,
+     "text": "Stewards: Penalty Car 18 - 15 seconds - contact with car 7 (applied after the race)"
+    },
+    {
+     "number": "31",
+     "seconds": 27,
+     "text": "Stewards: Penalty Car 31 - drive-through, 27 seconds - safety car procedure (applied after the race)"
+    }
+   ],
+   "classification": [
+    {
+     "number": "25",
+     "driver": "Chaz Mostert",
+     "team": "Walkinshaw Andretti United",
+     "car": "Ford Mustang S650",
+     "grid": 3,
+     "laps": 85,
+     "result": "1:43:39.119"
+    },
+    {
+     "number": "88",
+     "driver": "Broc Feeney",
+     "team": "Triple Eight Race Engineering",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 1,
+     "laps": 85,
+     "result": "+0.575"
+    },
+    {
+     "number": "8",
+     "driver": "Andre Heimgartner",
+     "team": "Brad Jones Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 6,
+     "laps": 85,
+     "result": "+2.619"
+    },
+    {
+     "number": "19",
+     "driver": "Matthew Payne",
+     "team": "Grove Racing",
+     "car": "Ford Mustang S650",
+     "grid": 9,
+     "laps": 85,
+     "result": "+2.954"
+    },
+    {
+     "number": "40",
+     "driver": "Cam Waters",
+     "team": "Tickford Racing",
+     "car": "Ford Mustang S650",
+     "grid": 4,
+     "laps": 85,
+     "result": "+3.297"
+    },
+    {
+     "number": "26",
+     "driver": "Kai Allen",
+     "team": "Grove Racing",
+     "car": "Ford Mustang S650",
+     "grid": 8,
+     "laps": 85,
+     "result": "+4.605"
+    },
+    {
+     "number": "55",
+     "driver": "Thomas Randle",
+     "team": "Tickford Racing",
+     "car": "Ford Mustang S650",
+     "grid": 2,
+     "laps": 85,
+     "result": "+5.762"
+    },
+    {
+     "number": "1",
+     "driver": "Will Brown",
+     "team": "Triple Eight Race Engineering",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 18,
+     "laps": 85,
+     "result": "+6.372"
+    },
+    {
+     "number": "2",
+     "driver": "Ryan Wood",
+     "team": "Walkinshaw Andretti United",
+     "car": "Ford Mustang S650",
+     "grid": 13,
+     "laps": 85,
+     "result": "+7.518"
+    },
+    {
+     "number": "3",
+     "driver": "Aaron Cameron",
+     "team": "Blanchard Racing Team",
+     "car": "Ford Mustang S650",
+     "grid": 7,
+     "laps": 84,
+     "result": "+8.285"
+    },
+    {
+     "number": "38",
+     "driver": "Brodie Kostecki",
+     "team": "Dick Johnson Racing",
+     "car": "Ford Mustang S650",
+     "grid": 14,
+     "laps": 85,
+     "result": "+8.983"
+    },
+    {
+     "number": "20",
+     "driver": "David Reynolds",
+     "team": "Team 18",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 24,
+     "laps": 85,
+     "result": "+9.425"
+    },
+    {
+     "number": "99",
+     "driver": "Cooper Murray",
+     "team": "Erebus Motorsport",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 21,
+     "laps": 85,
+     "result": "+9.847"
+    },
+    {
+     "number": "12",
+     "driver": "Jaxon Evans",
+     "team": "Brad Jones Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 16,
+     "laps": 85,
+     "result": "+10.617"
+    },
+    {
+     "number": "9",
+     "driver": "Jack Le Brocq",
+     "team": "Erebus Motorsport",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 20,
+     "laps": 85,
+     "result": "+11.395"
+    },
+    {
+     "number": "18",
+     "driver": "Anton De Pasquale",
+     "team": "Team 18",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 17,
+     "laps": 85,
+     "result": "+21.943"
+    },
+    {
+     "number": "4",
+     "driver": "Cameron Hill",
+     "team": "Matt Stone Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 19,
+     "laps": 84,
+     "result": "+1 lap"
+    },
+    {
+     "number": "31",
+     "driver": "James Golding",
+     "team": "PremiAir Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 5,
+     "laps": 84,
+     "result": "+1 lap"
+    },
+    {
+     "number": "96",
+     "driver": "Macauley Jones",
+     "team": "Brad Jones Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 23,
+     "laps": 83,
+     "result": "+2 laps"
+    },
+    {
+     "number": "17",
+     "driver": "Will Davison",
+     "team": "Dick Johnson Racing",
+     "car": "Ford Mustang S650",
+     "grid": 15,
+     "laps": 83,
+     "result": "+2 laps"
+    },
+    {
+     "number": "14",
+     "driver": "Bryce Fullwood",
+     "team": "Brad Jones Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 12,
+     "laps": 81,
+     "result": "+4 laps"
+    },
+    {
+     "number": "10",
+     "driver": "Nick Percat",
+     "team": "Matt Stone Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 11,
+     "laps": 75,
+     "result": "+10 laps"
+    },
+    {
+     "number": "62",
+     "driver": "Richie Stanaway",
+     "team": "PremiAir Racing",
+     "car": "Chevrolet Camaro ZL1",
+     "grid": 10,
+     "laps": 81,
+     "result": "Suspension"
+    },
+    {
+     "number": "7",
+     "driver": "James Courtney",
+     "team": "Blanchard Racing Team",
+     "car": "Ford Mustang S650",
+     "grid": 5,
+     "laps": 76,
+     "result": "Accident"
+    }
+   ]
+  }
+ }
+}

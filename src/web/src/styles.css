@@ -339,6 +339,7 @@ main { flex: 1; padding: 0 16px 24px; }
   color: var(--text); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
 .menu-meeting:hover { background: #1a2129; }
 .menu-chevron { width: 12px; color: var(--muted); }
+.menu-tag { margin-left: 6px; font: 600 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; vertical-align: 1px; }
 .menu-count { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; white-space: nowrap; }
 .menu-day { color: var(--muted); font-size: 12px; margin: 8px 0 4px; }
 .menu-muted { color: var(--muted); font-size: 13px; }

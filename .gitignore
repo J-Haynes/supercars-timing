@@ -29,3 +29,6 @@ data/recordings/*
 
 # Raw Overpass answers for TrackBuilder --scenery (large; fetched again when missing)
 tools/TrackBuilder/osm/*.scenery.osm.json
+
+# Python bytecode (tools/)
+__pycache__/
