@@ -175,6 +175,48 @@ every race's "Sector and Lap Times" report: sectors and lap times per car, in-la
   hillside sign reads MOUNT PANORAMA (OSM's 13 letters); grandstand heights are assumed (9 m).
 - Not yet tried: the Follow camera at the Gold Coast, the 3D map on a real phone's GPU.
 
+## Map with a broadcast delay (13 Oct 2026)
+
+Question: watching with a 20-40 s delay (a stream), is the map free of dots waiting at timing points or jumping
+forward? By then the live feed already has each car's next crossing, so `knownPosition` can place it exactly.
+
+**Supercars** (`tools/MapDelaySim/delay-sim.mts`, Race 30 through the replay endpoint, the app's own placement code at
+60 frames a second, car-frames after a 60 s warm-up):
+
+| window | delay | position known | > 100 m/s | backwards | stalled (green) |
+|---|---|---|---|---|---|
+| green, stops (15 min) | 0 s | 0 % | 1.4 % | 0 | 0.14 % → 0 |
+| | 5 s | 31 % | 1.0 % | 0 | |
+| | 20 s | 96.3 % | 0.04 % | 0 | 0.13 % → 0 |
+| | 40 s | 100 % | 0.03 % | 0 | 0.13 % → 0 |
+| safety car + restart (20 min) | 20 s | 93 % green, 72 % under the SC | 0.17 % | 0.07 % | car #1 only |
+| | 40 s | 97 % green, 94 % under the SC | 0.07 % | 0.03 % | car #1 only |
+
+(→ = after the fix below.) The only stalls were cars leaving the pits: their last crossing was the line, passed in the
+pit lane ~70 s earlier, so they looked overdue and waited just short of point 1 until they crossed it (and with a
+delay the 70 s "stretch" was over `knownPosition`'s 60 s limit). Fixed: `rejoined()` in `useCarPlacement.ts` starts the
+stretch at Natsoft's pit-out time. Left: (a) the car now starts from the line, not the real pit exit, so it can run a
+little fast to point 1 (the 0.03-0.07 % above); placing it from the pit lane's end would fix that. (b) Under a safety car
+some stretches take longer than the delay, so ~6 % (40 s) to ~28 % (20 s) of positions are still `cautionPace`
+estimates (smooth, no jumps). Car #1 really stopped on track (it caused the safety car).
+
+**F1** (`tools/F1MapEval/evalmap.py`, 2025 Singapore GP race, scored against F1's real car positions from the archive;
+configs "app, delay Ns" = the app's `F1_PACING`):
+
+| delay | error (green) mean / p90 | frozen | speed off by > 25 m/s (per second) |
+|---|---|---|---|
+| 0 s | 21.5 / 55.3 m | 0.1 % | 7.6 % |
+| 5 s | 20.0 / 47.4 m | 0.0 % | 5.1 % |
+| 20 s | 20.0 / 47.3 m | 0.0 % | 5.1 % |
+| 40 s | 20.0 / 47.4 m | 0.0 % | 5.1 % |
+
+So F1 dots never wait at a mini-sector once there's a few seconds of delay, and the step at each crossing is 2.6 m.
+What's left is speed wobble *between* crossings, not helped by more delay. Interpolating linearly in metres instead of
+along the track's speed profile is worse (6.8 %). Smoothing each crossing's time with a straight-line fit through its
+neighbours (real time vs the profile's simulated time, ±2 crossings, possible with a delay) halves it (2.4 %) but
+puts dots further off (p90 47 → 69 m, bias -12 → -17 m): **backlog**, needs a decision on smooth vs accurate (and a
+look at where the -12 m bias comes from).
+
 ## What commentators talk about (13 Oct 2026)
 
 Auto-generated YouTube captions (yt-dlp `--write-auto-subs`, no video), read for what the broadcast talks about and

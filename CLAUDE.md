@@ -230,6 +230,9 @@ the server in live mode by hand.
   the log has (the delayed snapshot can be older). Live Singapore GP, 5 s delay: next crossing known 91 % of the time.
   The session clock slows down (never backwards) when it's > 2.5 s ahead of the data, until within 0.3 s: before
   that it stayed ~5 s ahead of the delayed data after a page load with a delay set.
+  With a 20-40 s delay (watching a stream) positions are known 96-100 % of the time under green (Supercars, Race 30,
+  `tools/MapDelaySim`); F1 dots never wait at a mini-sector (`tools/F1MapEval`, real positions). Cars leaving the pits
+  start their stretch at pit-out (`rejoined()`). Numbers and what's left: docs/PLANNING.md, "Map with a broadcast delay".
 - **Map:** cars are placed by fraction of the *simulated* stretch time vs expected real time (`carPosition.ts`). Visual
   only (never changes timing data): 4% slack on expected times, the step at each crossing fades out (0.3 s green,
   0.8 s caution, `smoothing.ts`), the clock blends server corrections over 0.5 s. Out-laps use the car's previous

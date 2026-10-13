@@ -429,6 +429,11 @@ CONFIGS = {
     'slack 1.0, hold 0.3, creep .9': dict(strategy=s_current, slack=1.0, hold=0.3, creep=0.9),
     'slack 1.0, hold 0.3, creep .85, delay 1s': dict(strategy=s_current, slack=1.0, hold=0.3, creep=0.85, lookahead=1),
     'slack 1.0, hold 0.3, creep .85, delay 3s': dict(strategy=s_current, slack=1.0, hold=0.3, creep=0.85, lookahead=3),
+    # The app's F1_PACING (carPosition.ts) at broadcast delays, Oct 2026: is a 20-40 s delay (watching a stream) clean?
+    'app, no delay': dict(strategy=s_current, slack=1.0, hold=0.3, creep=0.9),
+    'app, delay 5s': dict(strategy=s_current, slack=1.0, hold=0.3, creep=0.9, lookahead=5),
+    'app, delay 20s': dict(strategy=s_current, slack=1.0, hold=0.3, creep=0.9, lookahead=20),
+    'app, delay 40s': dict(strategy=s_current, slack=1.0, hold=0.3, creep=0.9, lookahead=40),
 }
 
 

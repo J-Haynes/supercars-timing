@@ -89,7 +89,8 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     // With a broadcast delay the live feed may already have a newer crossing than the delayed snapshot (the
     // snapshot only shows it a moment after it happened): estimate on from that one, or the car stepped back.
     const seen = live && !row.inPit ? crossings.current.latest(row.id, now) : undefined
-    const car = seen && seen.at > row.lastPointAt ? { ...row, lastPoint: seen.point, lastPointAt: seen.at } : row
+    const crossed = seen && seen.at > row.lastPointAt ? { ...row, lastPoint: seen.point, lastPointAt: seen.at } : row
+    const car = rejoined(crossed, now)
     if (shootout && car.inPit) continue
     const inLap = shootout && car.lapsSincePit >= 2
     // In-laps are slow: don't cap them at racing pace.
@@ -97,7 +98,10 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) continue
     if (state.kind === 'track') {
       // Known from the live feed (broadcast delay): where the car really was between two crossings.
-      const pair = live ? crossings.current.around(car.id, now) : undefined
+      const around = live ? crossings.current.around(car.id, now) : undefined
+      // Just out of the pits: the stretch starts at pit-out, not at the line crossing made in the pit lane (rejoined).
+      const pair = around && car.lastPointAt > around[0].at && car.lastPoint === around[0].point
+        ? [{ point: car.lastPoint, at: car.lastPointAt }, around[1]] as const : around
       const distance = (pair && knownPosition(model, pair[0], pair[1], now)) ?? state.distance
       const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, caution ? TAU_CAUTION : TAU)
       smoothing.current.set(car.id, sm)
@@ -109,6 +113,18 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
   }
 
   return { now, model, effective, placements, sync, awaitingCalibration, flagNow, caution: !!caution }
+}
+
+/**
+ * A car that has left the pits since its last crossing, and whose last crossing was the line (Supercars: the pit lane
+ * runs past it), starts its stretch at its pit-out time: from the line crossing made ~70 s earlier it looked long
+ * overdue and waited just short of the next point until it crossed (measured on Race 30 with a 40 s broadcast delay:
+ * every stall left on the map was a car leaving the pits; the stretch was over knownPosition's 60 s limit too).
+ */
+export function rejoined(car: CarRow, now: number): CarRow {
+  const out = car.pitLog?.at(-1)?.outAt ?? 0
+  if (car.inPit || car.lastPoint !== 'M' || out <= car.lastPointAt || out > now) return car
+  return { ...car, lastPointAt: out }
 }
 
 /** For tracks without a mapped pit lane: a row beside the control line. */
