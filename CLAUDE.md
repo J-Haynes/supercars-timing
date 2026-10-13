@@ -246,7 +246,8 @@ the server in live mode by hand.
   script against #12161b): gap, lap times, position, battle (trend only over laps since either car's last stop).
   Lap axis runs to the race distance.
 - **Laps to go / race time** in the header (`raceLaps()`: `<E L>`, else `KNOWN_RACE_LAPS`: Bathurst 161, Gold Coast 85).
-- **Layout:** wide screens: the left column (race feed, tower, tips) sticks at the bottom of the screen while the
+- **Layout:** side by side from 1000 px (was 1500; the minimum the columns need is ~970 px), stacked below, phone
+  tabs under 760 px. Side by side: the left column (race feed, tower, tips) sticks at the bottom of the screen while the
   right column scrolls (`useStickToBottom.ts`; don't make the right column sticky). Phones (< 760 px): `MobileTabs`
   (Leaderboard | Map | Race | Charts), sticky driver column, trimmed header.
 - **Map with a broadcast delay** (both apps): the live feed is ahead of what's shown, so `map/crossingLog.ts` logs
@@ -254,7 +255,10 @@ the server in live mode by hand.
   shown (`knownPosition`); it only estimates when the next crossing isn't in yet, and then from the newest crossing
   the log has (the delayed snapshot can be older). Live Singapore GP, 5 s delay: next crossing known 91 % of the time.
   The session clock slows down (never backwards) when it's > 2.5 s ahead of the data, until within 0.3 s: before
-  that it stayed ~5 s ahead of the delayed data after a page load with a delay set.
+  that it stayed ~5 s ahead of the delayed data after a page load with a delay set. The snapshot on screen also goes
+  into the crossing log (`addPast`), so positions are known straight away after loading, seeking or switching views;
+  the map counts as synced (no grey "Syncing car positions") once 90 % of positions are known, and stays synced for
+  the session across 2D/3D switches. Narrow maps (< 560 px, a container query) put the toolbar in a bar above the map.
   With a 20-40 s delay (watching a stream) positions are known 96-100 % of the time under green (Supercars, Race 30,
   `tools/MapDelaySim`); F1 dots never wait at a mini-sector (`tools/F1MapEval`, real positions). Cars leaving the pits
   start their stretch at pit-out (`rejoined()`). Numbers and what's left: docs/PLANNING.md, "Map with a broadcast delay".

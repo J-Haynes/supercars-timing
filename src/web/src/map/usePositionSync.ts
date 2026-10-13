@@ -6,6 +6,9 @@ const SYNCED_SHARE = 0.9
 /** Give up waiting after this long (a stopped car or a quiet feed shouldn't keep the notice up). */
 const MAX_WAIT_MS = 45_000
 
+/** Sessions this page has already synced: a map view mounted later (2D <-> 3D switch) doesn't grey out again. */
+const syncedSessions = new Set<string>()
+
 /**
  * After the page loads, how many cars have passed a timing point since. Until most have, the map's estimates are
  * based on crossings from before the page loaded, so TrackMap shows a "syncing" notice.
@@ -23,7 +26,8 @@ export function usePositionSync(cars: CarRow[], sessionKey: string, running: boo
     if (before === undefined) first.lastPointAt.set(c.id, c.lastPointAt) // joined after load: count from now
     return before !== undefined && c.lastPointAt > before
   }).length
-  const synced = !running || onTrack.length === 0 || updated >= onTrack.length * SYNCED_SHARE
+  const synced = syncedSessions.has(sessionKey) || !running || onTrack.length === 0 || updated >= onTrack.length * SYNCED_SHARE
     || performance.now() - first.at > MAX_WAIT_MS
-  return { synced, updated, total: onTrack.length }
+  if (synced && running) syncedSessions.add(sessionKey)
+  return { synced, updated, total: onTrack.length, markSynced: () => { syncedSessions.add(sessionKey) } }
 }

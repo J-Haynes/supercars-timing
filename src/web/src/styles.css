@@ -103,7 +103,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-panel { order: -1; }
 /* The drag handle between tower and map (ColumnSplitter): only on wide screens, where they sit side by side. */
 .col-splitter { display: none; }
-@media (min-width: 1500px) {
+@media (min-width: 1000px) {
   /* Three columns: tower, the 16 px handle (it is the gap), map. */
   .layout { grid-template-columns: minmax(0, 1fr) 16px minmax(380px, 30%); column-gap: 0; align-items: start; }
   /* A width the viewer dragged to, kept within limits as the window changes (the tower keeps at least 520 px). */
@@ -144,7 +144,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .tower-wrap.simple .tower td { padding-top: 9px; padding-bottom: 9px; font-size: 15px; }
 
 /* Track map */
-.track-map { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 8px; position: relative; }
+.track-map { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 8px; position: relative; container-type: inline-size; }
 .track-map svg { touch-action: none; cursor: default; }
 /* No text selection on the map: dragging to pan shouldn't highlight corner names. */
 .track-map, .track-map svg text { user-select: none; -webkit-user-select: none; }
@@ -160,7 +160,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-tools button:hover { border-color: var(--muted); }
 .map-car .focus-ring { fill: none; stroke: #fff; stroke-width: 10; stroke-dasharray: 18 12; }
 .track-map svg { display: block; width: 100%; height: auto; max-height: calc(100vh - 140px); }
-@media (max-width: 1499px) { .track-map svg { max-height: 520px; } }
+@media (max-width: 999px) { .track-map svg { max-height: 520px; } }
 .track-outline { fill: none; stroke: #2b3540; stroke-width: 34; stroke-linejoin: round; }
 .track-surface { fill: none; stroke: #46525f; stroke-width: 14; stroke-linejoin: round; }
 .pit-lane { fill: none; stroke: #46525f; stroke-width: 8; stroke-dasharray: 22 16; }
@@ -904,3 +904,15 @@ html { scrollbar-gutter: stable; }
 .ghost-row .pit-ghost-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 8px; vertical-align: -1px; }
 .ghost-row-note { margin-left: 8px; color: var(--muted); font-size: 11px; }
 .ghost-row-net { color: var(--text); }
+
+/* Narrow maps (the map column at its narrowest, phones): the toolbar leaves the map and becomes a tidy bar above it,
+   instead of ragged right-aligned rows over a third of the map. By the map's own width (container query), so it works
+   wherever the map is. Row 1: the view switch, full width; then the toggles sharing a row; the pit rejoin picker full
+   width. */
+@container (max-width: 560px) {
+  .track-map .map-tools { position: static; justify-content: stretch; margin-bottom: 8px; }
+  .track-map .map-tools > * { flex: 1 1 auto; }
+  .track-map .map-tools .map-views { flex: 1 1 100%; }
+  .track-map .map-tools .map-views button { flex: 1 1 0; }
+  .track-map .map-tools select { flex: 1 1 100%; max-width: none; height: 28px; }
+}

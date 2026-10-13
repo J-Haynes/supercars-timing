@@ -46,6 +46,25 @@ export class CrossingLog {
     }
   }
 
+  /**
+   * The crossings in a snapshot from the past: the one on screen, behind the live feed by the broadcast delay or a
+   * replay's lookahead. Inserted in time order (the log already has later ones) and never clears the log. Without it
+   * the log only had crossings from the live/lookahead feed, so for the first `delay` seconds after opening the page,
+   * switching map views or seeking a replay, no car had a known crossing before the time shown and the map guessed.
+   */
+  addPast(update: TimingUpdate) {
+    const { timing } = update
+    if (`${timing.session.meeting}|${timing.session.name}` !== this.session) return
+    for (const car of timing.cars) {
+      if (!car.lastPoint || !car.lastPointAt) continue
+      let list = this.cars.get(car.id)
+      if (!list) this.cars.set(car.id, (list = []))
+      if (list.some((c) => Math.abs(c.at - car.lastPointAt) < 1e-6)) continue
+      const i = list.findIndex((c) => c.at > car.lastPointAt)
+      list.splice(i < 0 ? list.length : i, 0, { point: car.lastPoint, at: car.lastPointAt })
+    }
+  }
+
   /** The car's latest crossing at or before `now` (may be newer than the delayed snapshot's: it arrived live). */
   latest(carId: string, now: number): Crossing | undefined {
     const list = this.cars.get(carId)

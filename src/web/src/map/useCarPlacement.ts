@@ -57,6 +57,10 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
   useEffect(() => {
     if (live) crossings.current.add(live)
   }, [live])
+  // The snapshot on screen too: every car's crossing at or before the time shown is then known straight away.
+  useEffect(() => {
+    if (live) crossings.current.addPast(update)
+  }, [live, update])
   // Per-car dot smoothing across timing point crossings (map/smoothing.ts). Visual only.
   const smoothing = useRef(new Map<string, Smoothed>())
   // Just after the page loads, positions come from crossings made before it; say so until most cars have updated.
@@ -87,6 +91,8 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
   // Back of the field first, so pit slots are handed out in a stable order.
   const placements: Placement[] = []
   let pitIndex = 0
+  let onTrack = 0
+  let known = 0
   // Once a session has ended (not just the chequered flag: the cool-down lap still shows) nobody is on track. F1's
   // hub sends the last session's full state on connecting, days later; each car's last mini-sector then looked like
   // a crossing made just now, and the map raced the field round for ~10 s.
@@ -104,7 +110,10 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) continue
     if (state.kind === 'track') {
       // Known from the live feed (broadcast delay): where the car really was between two crossings.
-      const distance = knownDistance(model, car, live ? crossings.current.around(car.id, now) : undefined, now) ?? state.distance
+      const exact = knownDistance(model, car, live ? crossings.current.around(car.id, now) : undefined, now)
+      onTrack++
+      if (exact !== undefined) known++
+      const distance = exact ?? state.distance
       const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, caution ? TAU_CAUTION : TAU)
       smoothing.current.set(car.id, sm)
       placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: state.stale })
@@ -114,7 +123,11 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     }
   }
 
-  return { now, model, effective, placements, sync, awaitingCalibration, flagNow, caution: !!caution }
+  // Synced as soon as positions are known rather than estimated (a replay, or live with a broadcast delay): no grey
+  // map after a seek or a 2D/3D switch. markSynced keeps it synced for the session across view switches.
+  const knownNow = onTrack > 0 && known >= onTrack * 0.9
+  if (knownNow) sync.markSynced()
+  return { now, model, effective, placements, sync: knownNow ? { ...sync, synced: true } : sync, awaitingCalibration, flagNow, caution: !!caution }
 }
 
 /**
