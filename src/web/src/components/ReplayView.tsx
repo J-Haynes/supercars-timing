@@ -10,6 +10,7 @@ import { ColumnSplitter } from './ColumnSplitter'
 import { SafetyCarBanner } from './SafetyCarBanner'
 import { RaceControl } from './RaceControl'
 import { ErrorBoundary } from './ErrorBoundary'
+import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './MobileTabs'
 
 const SPEEDS = [1, 2, 5, 10, 20, 60]
 /** How often the page asks the server for the snapshot at the current replay time (real time). */
@@ -51,6 +52,9 @@ export function ReplayView({ session, onBack, onUpdate }: {
   const [loading, setLoading] = useState(false)
   const { settings, update: updateSettings, togglePinned } = useSettings()
   const [hoverId, setHoverId] = useState<string | null>(null)
+  // Phones: which part shows (the same tab bar and remembered tab as the live page). Without it the phone layout's
+  // CSS hid the leaderboard and only the map was visible. No charts here, so a "charts" tab falls back to the tower.
+  const [mobileTab, setMobileTab] = useState<MobileTab>(() => { const t = loadMobileTab(); return t === 'charts' ? 'tower' : t })
   const [driverView, setDriverView] = useState<{ carId: string; compareId: string | null; tab: DriverTab } | null>(null)
 
   useEffect(() => {
@@ -161,8 +165,9 @@ export function ReplayView({ session, onBack, onUpdate }: {
         </div>
       </div>
 
-      {!update ? <p className="menu-muted">Loading replay…</p> : (
-        <div className={`layout${settings.mapWidth ? ' sized' : ''}`}
+      {!update ? <p className="menu-muted">Loading replay…</p> : (<>
+        <MobileTabs tab={mobileTab} race={false} onTab={(t) => { setMobileTab(t); saveMobileTab(t) }} />
+        <div className={`layout${settings.mapWidth ? ' sized' : ''}`} data-tab={mobileTab}
           style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
           <div className="tower-column">
             {isRace(update.timing.session.type) && <SafetyCarBanner timing={update.timing} />}
@@ -178,6 +183,7 @@ export function ReplayView({ session, onBack, onUpdate }: {
           </div>
           <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
           <aside className="map-panel">
+            <div className="panel-map">
             {track ? (
               <ErrorBoundary fallback={<div className="map-missing">The track map hit an error.</div>}>
                 <MapView settings={settings} onSettings={updateSettings} track={track} update={update} hoverId={hoverId} focusId={null} pinned={settings.pinned}
@@ -186,10 +192,13 @@ export function ReplayView({ session, onBack, onUpdate }: {
                   onHover={setHoverId} onTogglePin={togglePinned} />
               </ErrorBoundary>
             ) : <div className="map-missing">No map for this track.</div>}
-            {(update.timing.raceControl?.length ?? 0) > 0 && <RaceControl timing={update.timing} />}
+            </div>
+            <div className="panel-race">
+              {(update.timing.raceControl?.length ?? 0) > 0 ? <RaceControl timing={update.timing} /> : <p className="menu-muted">No race control messages yet.</p>}
+            </div>
           </aside>
         </div>
-      )}
+      </>)}
     </section>
   )
 }
