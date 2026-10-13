@@ -281,7 +281,10 @@ the server in live mode by hand.
 - **Results** (`ResultsView.tsx`, from the menu): Classification (positions gained, laps down, badges, driver laps),
   Summary (`raceSummary.ts`: winner and race time, laps led, lead changes, safety cars, movers, fastest stop,
   penalties, cars well down), Charts, Pit stops, Race control, Championship. Data: `/api/sessions/{id}/results` + `/laps`.
-- **Replay** (`ReplayView.tsx`, "▶ Replay" on a results page): tower + map + banner + race control at any time, play/
+- **Replay** (`ReplayView.tsx`, "▶ Replay" on a results page): tower (with signals and the pit rejoin row button) + race
+  feed + map + banner + race control at any time. The map also gets the snapshot 90 s ahead (its own server cursor,
+  `viewer=<id>-ahead`) as its "live" feed, so it knows each car's next crossing like with a broadcast delay (rebuilt
+  Gold Coast Race 28: 0 % -> 100 % of positions known); the crossing log and the feed reset on a backwards seek. Play/
   pause, 1-60×, scrubber with lap ticks and safety car bands; starts 20 s before the first green. The page moves the
   time and polls `/replay?t=` every 250 ms; the server keeps a cursor per viewer.
 - **Upcoming events** (`EventPreview.tsx`, from the menu): session timetable from `calendar.ts` (local track time,

@@ -20,6 +20,22 @@ export class TrackModel {
     this.pointDistance = new Map(def.timingPoints.map((p) => [p.id, p.distance]))
   }
 
+  private exit: number | null | undefined
+  /** Distance along the lap nearest the pit lane's last point (where cars rejoin), or null without a pit lane. */
+  get pitExitDistance(): number | null {
+    if (this.exit !== undefined) return this.exit
+    const end = this.def.pitLane.at(-1)
+    let best = Infinity
+    this.exit = null
+    if (end) {
+      this.def.path.forEach(([x, y], i) => {
+        const d = (x - end[0]) ** 2 + (y - end[1]) ** 2
+        if (d < best) { best = d; this.exit = i * this.def.step }
+      })
+    }
+    return this.exit
+  }
+
   /** Wraps any distance into [0, length). */
   wrap(d: number): number {
     return ((d % this.length) + this.length) % this.length

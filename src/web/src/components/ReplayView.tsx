@@ -11,10 +11,17 @@ import { SafetyCarBanner } from './SafetyCarBanner'
 import { RaceControl } from './RaceControl'
 import { ErrorBoundary } from './ErrorBoundary'
 import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './MobileTabs'
+import { RaceFeed } from './RaceFeed'
 
 const SPEEDS = [1, 2, 5, 10, 20, 60]
 /** How often the page asks the server for the snapshot at the current replay time (real time). */
 const POLL_MS = 250
+/**
+ * The map also gets the snapshot this far ahead of the replay time (session seconds), like the live feed with a
+ * broadcast delay: it then knows each car's next crossing and places it between crossings instead of guessing its
+ * pace (map/crossingLog.ts). Longer than the slowest stretch (Bathurst under a safety car, ~60 s).
+ */
+const LOOKAHEAD_SECONDS = 90
 
 /** Natsoft time is track-local wall-clock time encoded as Unix seconds: format as UTC to get track time. */
 const trackTime = (t: number) => new Date(t * 1000).toISOString().slice(11, 19)
@@ -46,6 +53,9 @@ export function ReplayView({ session, onBack, onUpdate }: {
   const [range, setRange] = useState<{ start: number; end: number } | null>(null)
   const [laps, setLaps] = useState<LapHistory | null>(null)
   const [timing, setTiming] = useState<TimingSnapshot | null>(null)
+  const [ahead, setAhead] = useState<TimingSnapshot | null>(null)
+  // Bumped on every backwards seek, so the race feed starts again instead of keeping events from later on.
+  const [epoch, setEpoch] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(10)
   const [t, setT] = useState(0)
@@ -91,6 +101,7 @@ export function ReplayView({ session, onBack, onUpdate }: {
 
   // Ask for the snapshot at the current time, at most every POLL_MS, and straight away after a seek.
   const inFlight = useRef(false)
+  const shownNow = useRef(0)
   const lastAsked = useRef(-1)
   useEffect(() => {
     if (!range) return
@@ -101,8 +112,18 @@ export function ReplayView({ session, onBack, onUpdate }: {
       lastAsked.current = at
       const slow = setTimeout(() => setLoading(true), 300) // a backwards seek rebuilds from the start
       try {
-        const res = await fetch(`/api/sessions/${id}/replay?t=${at}&viewer=${viewerId}`)
-        if (res.ok) setTiming(await res.json())
+        // The snapshot ahead uses its own server cursor, so the two never make each other rebuild.
+        const [res, next] = await Promise.all([
+          fetch(`/api/sessions/${id}/replay?t=${at}&viewer=${viewerId}`),
+          fetch(`/api/sessions/${id}/replay?t=${Math.min(at + LOOKAHEAD_SECONDS, range.end)}&viewer=${viewerId}-ahead`).catch(() => null),
+        ])
+        if (res.ok) {
+          const snap: TimingSnapshot = await res.json()
+          if (snap.now < shownNow.current - 1) setEpoch((e) => e + 1)
+          shownNow.current = snap.now
+          setTiming(snap)
+        }
+        if (next?.ok) setAhead(await next.json())
       } finally {
         clearTimeout(slow)
         setLoading(false)
@@ -118,6 +139,9 @@ export function ReplayView({ session, onBack, onUpdate }: {
     feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 },
     timing,
   }
+  // The map's "live feed": the snapshot LOOKAHEAD_SECONDS ahead, so it knows every car's next crossing.
+  const aheadUpdate: TimingUpdate | null = ahead && { feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 }, timing: ahead }
+  const [highlightIds, setHighlightIds] = useState<string[]>([])
   // Tell the header what's on screen: only when the snapshot, play state or speed change, not every render.
   useEffect(() => { onUpdate?.(timing && { feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 }, timing }) },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onUpdate is a fresh closure each render
@@ -171,9 +195,16 @@ export function ReplayView({ session, onBack, onUpdate }: {
           style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
           <div className="tower-column">
             {isRace(update.timing.session.type) && <SafetyCarBanner timing={update.timing} />}
+            {/* Keyed on seeks backwards: the feed's log starts again rather than keep events from later on. */}
+            {isRace(update.timing.session.type) && (
+              <RaceFeed key={epoch} timing={update.timing} onHighlight={setHighlightIds}
+                onOpen={(carId, compareId) => setDriverView({ carId, compareId, tab: compareId ? 'compare' : 'focus' })} />
+            )}
             <TimingTower timing={update.timing} simple={settings.simple} columnPrefs={settings.columns} hoverId={hoverId}
+              highlightIds={highlightIds}
               clockRate={update.feed.clockRate} pinned={settings.pinned} onHover={setHoverId} onTogglePin={togglePinned}
-              onOpen={(carId) => setDriverView({ carId, compareId: null, tab: 'focus' })} />
+              onOpen={(carId) => setDriverView({ carId, compareId: null, tab: 'focus' })}
+              actions={{ pitGhostCar: settings.pitGhostCar, onPitGhost: (pitGhostCar) => updateSettings({ pitGhostCar }) }} />
             {driverView && (
               // Only the laps completed by the replay time, so nothing from later in the race shows.
               <DriverDialog timing={update.timing} {...driverView} onClose={() => setDriverView(null)}
@@ -186,7 +217,8 @@ export function ReplayView({ session, onBack, onUpdate }: {
             <div className="panel-map">
             {track ? (
               <ErrorBoundary fallback={<div className="map-missing">The track map hit an error.</div>}>
-                <MapView settings={settings} onSettings={updateSettings} track={track} update={update} hoverId={hoverId} focusId={null} pinned={settings.pinned}
+                <MapView settings={settings} onSettings={updateSettings} track={track} update={update} live={aheadUpdate} hoverId={hoverId}
+                  highlightIds={highlightIds} focusId={null} pinned={settings.pinned}
                   rotation={settings.mapRotation[track.code] ?? 0}
                   onRotate={(deg) => updateSettings({ mapRotation: { ...settings.mapRotation, [track.code]: ((deg % 360) + 360) % 360 } })}
                   onHover={setHoverId} onTogglePin={togglePinned} />

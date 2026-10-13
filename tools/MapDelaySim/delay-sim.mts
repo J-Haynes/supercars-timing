@@ -7,6 +7,7 @@
 //   npx tsx ../../tools/MapDelaySim/delay-sim.mts <session id> <track code> <from natsoft time> <seconds> [label] [samples.json]
 // Race 30, green running and stops:   V8SUPER_20261011_094535-2510 MOUN 1791721779 900
 // Race 30, safety car and restart:    V8SUPER_20261011_094535-2510 MOUN 1791738700 1200
+// Rebuilt 2025 Gold Coast Race 28, green: DELAYS=0,90 ... V8SUPER_20251025_051800_hist-r28-0 SURF 1761410080 900
 // Findings (Oct 2026) are in docs/PLANNING.md, "Map with a broadcast delay".
 (globalThis as any).window = { location: { pathname: '/' } }
 const W = new URL('../../src/web/src', import.meta.url).pathname
@@ -15,14 +16,17 @@ const { carPosition, cautionPace, SUPERCARS_PACING } = await import(`${W}/map/ca
 const { CrossingLog, knownPosition } = await import(`${W}/map/crossingLog.ts`)
 const { smoothPosition, TAU, TAU_CAUTION } = await import(`${W}/map/smoothing.ts`)
 const { cautionPeriods, flagKind } = await import(`${W}/session.ts`)
-const { rejoined } = await import(`${W}/map/useCarPlacement.ts`)
+const { rejoined, knownDistance } = await import(`${W}/map/useCarPlacement.ts`)
+const { calibrateTimingPoints } = await import(`${W}/map/calibrate.ts`)
 const { readFileSync } = await import('node:fs')
 const [session, code] = [process.argv[2], process.argv[3]]
 const track = JSON.parse(readFileSync(`${W}/tracks/${code}.json`, 'utf8'))
-const model = new TrackModel(track)
+// Provisional tracks (no timing points yet) are calibrated from the session's pace, as useCarPlacement does: once.
+let model = track.provisional ? null : new TrackModel(track)
 const base = `http://localhost:5081/api/sessions/${session}`
 const [from, seconds] = [Number(process.argv[4]), Number(process.argv[5])]
-const DELAYS = [0, 5, 20, 40]
+// Delays to compare (s); a replay's lookahead (ReplayView, 90 s) behaves like a delay of that length.
+const DELAYS = (process.env.DELAYS ?? '0,5,20,40').split(',').map(Number)
 const STEP = 0.25
 const WARMUP = 60 // seconds after "page load" before counting (the log starts empty)
 
@@ -49,6 +53,12 @@ for (let t = from; t <= from + seconds; t += STEP) {
     for (const b of buffer) if (b.now <= now + 1e-6) shown = b
     if (!shown) continue
     const order = ['M', ...shown.timingPoints.map((p: any) => p.id)]
+    if (!model) {
+      const names = Object.fromEntries(shown.timingPoints.map((p: any) => [p.id, p.name]))
+      const points = calibrateTimingPoints(track, order, names, shown.segmentReference)
+      if (!points) continue
+      model = new TrackModel({ ...track, timingPoints: points })
+    }
     const baseline = order.map((id: string) => track.segmentSeconds.find((s: any) => s.from === id)?.seconds || 0)
     const fallback = order.map((_: string, i: number) => shown.segmentReference?.[i] || baseline[i])
     const flag = flagKind(shown.session.flag)
@@ -61,9 +71,8 @@ for (let t = from; t <= from + seconds; t += STEP) {
       const car = rejoined(seen && seen.at > row.lastPointAt ? { ...row, lastPoint: seen.point, lastPointAt: seen.at } : row, now)
       const state = carPosition(car, model, order, fallback, now, undefined, baseline, caution, SUPERCARS_PACING)
       if (state.kind !== 'track') { lastShown.get(d)!.delete(row.id); continue }
-      const around0 = log.around(car.id, now)
-      const pair = around0 && car.lastPointAt > around0[0].at && car.lastPoint === around0[0].point ? [{ point: car.lastPoint, at: car.lastPointAt }, around0[1]] : around0
-      const kp = pair && knownPosition(model, pair[0], pair[1], now)
+      const pair = log.around(car.id, now)
+      const kp = knownDistance(model, car, pair, now)
       const distance = kp ?? state.distance
       const sm = smoothPosition(smooth.get(d)!.get(car.id), car.lastPointAt, distance, now, model.length, caution ? TAU_CAUTION : TAU)
       smooth.get(d)!.set(car.id, sm)
@@ -83,7 +92,7 @@ for (let t = from; t <= from + seconds; t += STEP) {
         const why = !pair ? (log.latest(car.id, now) && !log.around(car.id, now) ? 'next crossing not in yet' : 'no crossing pair') : pair[1].at - pair[0].at > 60 ? 'stretch > 60 s' : 'pair spans > half a lap / same point'
         st.why[why] = (st.why[why] ?? 0) + 1
       }
-      if (d === 40 && (speed > 100 || (flag === 'green' && speed < 8))) samples.push({ t: Math.round(t), car: car.carNumber, kind: speed > 100 ? 'FAST' : 'stall', speed: Math.round(speed), at: Math.round(sm.shown), known: kp !== undefined, last: car.lastPoint, sinceCross: Math.round(now - car.lastPointAt), inPitLap: row.lapsSincePit, pitOut: (row.pitLog ?? []).at(-1)?.outAt ? Math.round(now - row.pitLog.at(-1).outAt) : null, pair: pair && [pair[0].point, Math.round(pair[0].at - now), pair[1].point, Math.round(pair[1].at - now)] })
+      if (d === DELAYS[DELAYS.length - 1] && (speed > 100 || (flag === 'green' && speed < 8))) samples.push({ t: Math.round(t), car: car.carNumber, kind: speed > 100 ? 'FAST' : 'stall', speed: Math.round(speed), at: Math.round(sm.shown), known: kp !== undefined, last: car.lastPoint, sinceCross: Math.round(now - car.lastPointAt), inPitLap: row.lapsSincePit, pitOut: (row.pitLog ?? []).at(-1)?.outAt ? Math.round(now - row.pitLog.at(-1).outAt) : null, pair: pair && [pair[0].point, Math.round(pair[0].at - now), pair[1].point, Math.round(pair[1].at - now)] })
       if (speed > 100) st.fast++
       if (speed < -2) st.back++
       if (flag === 'green' && speed < 8 && speed >= -2) st.stall++

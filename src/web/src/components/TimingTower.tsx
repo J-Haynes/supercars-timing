@@ -18,7 +18,8 @@ export interface RowActionProps {
   /** Car number whose pit rejoin estimate is on (settings.pitGhostCar). */
   pitGhostCar: string | null
   onPitGhost: (carNumber: string | null) => void
-  chart: ChartSelection
+  /** The race charts' selection; no chart button without it (the replay page has no charts). */
+  chart?: ChartSelection
 }
 
 interface Ctx {
@@ -229,8 +230,9 @@ function DriverMarker({ car }: { car: CarRow }) {
  */
 function RowActions({ car, actions }: { car: CarRow; actions: RowActionProps }) {
   const ghostOn = actions.pitGhostCar === car.carNumber
-  const chartOn = actions.chart.selected.includes(car.id)
-  const color = chartOn ? actions.chart.colorOf(car.id) : undefined
+  const chart = actions.chart
+  const chartOn = !!chart?.selected.includes(car.id)
+  const color = chartOn ? chart!.colorOf(car.id) : undefined
   const stop = (e: { stopPropagation: () => void }) => e.stopPropagation()
   return (
     <>
@@ -247,13 +249,13 @@ function RowActions({ car, actions }: { car: CarRow; actions: RowActionProps }) 
           <span className="row-action-ring" aria-hidden />
           <span className="visually-hidden">Pit rejoin estimate for #{car.carNumber}</span>
         </button>
-        <button type="button" className={`row-action chart${chartOn ? ' on' : ''}`} aria-pressed={chartOn}
+        {chart && <button type="button" className={`row-action chart${chartOn ? ' on' : ''}`} aria-pressed={chartOn}
           style={color ? { color, borderColor: color } : undefined}
-          onClick={(e) => { stop(e); actions.chart.toggle(car.id) }}
+          onClick={(e) => { stop(e); chart.toggle(car.id) }}
           title={chartOn ? 'Take off the race charts' : `Add #${car.carNumber} to the race charts`}>
           <ChartIcon />
           <span className="visually-hidden">{chartOn ? 'Remove from' : 'Add to'} the race charts</span>
-        </button>
+        </button>}
       </span>
     </>
   )

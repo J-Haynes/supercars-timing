@@ -3,13 +3,13 @@ import { isF1 } from '../series'
 import type { CarRow, TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
 import { TrackModel, type Vec } from './trackModel'
-import { carPosition, cautionPace, F1_PACING, SUPERCARS_PACING } from './carPosition'
+import { carPosition, cautionPace, place, F1_PACING, SUPERCARS_PACING } from './carPosition'
 import { useSessionClock } from './useSessionClock'
 import { cautionPeriods, flagKind, isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from './calibrate'
 import { usePositionSync } from './usePositionSync'
 import { TAU, TAU_CAUTION, smoothPosition, type Smoothed } from './smoothing'
-import { CrossingLog, knownPosition } from './crossingLog'
+import { CrossingLog, knownPosition, type Crossing } from './crossingLog'
 
 const PIT_SPACING = 70
 
@@ -98,11 +98,7 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     if (inLap && state.kind === 'track' && (state.stale || (car.lastPoint === lastPointId && state.overdue))) continue
     if (state.kind === 'track') {
       // Known from the live feed (broadcast delay): where the car really was between two crossings.
-      const around = live ? crossings.current.around(car.id, now) : undefined
-      // Just out of the pits: the stretch starts at pit-out, not at the line crossing made in the pit lane (rejoined).
-      const pair = around && car.lastPointAt > around[0].at && car.lastPoint === around[0].point
-        ? [{ point: car.lastPoint, at: car.lastPointAt }, around[1]] as const : around
-      const distance = (pair && knownPosition(model, pair[0], pair[1], now)) ?? state.distance
+      const distance = knownDistance(model, car, live ? crossings.current.around(car.id, now) : undefined, now) ?? state.distance
       const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, caution ? TAU_CAUTION : TAU)
       smoothing.current.set(car.id, sm)
       placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: state.stale })
@@ -125,6 +121,28 @@ export function rejoined(car: CarRow, now: number): CarRow {
   const out = car.pitLog?.at(-1)?.outAt ?? 0
   if (car.inPit || car.lastPoint !== 'M' || out <= car.lastPointAt || out > now) return car
   return { ...car, lastPointAt: out }
+}
+
+/**
+ * Where a car was at `now` when the crossings either side are known (`around`, from the crossing log: a broadcast
+ * delay, or a replay's lookahead), else undefined. A car just out of the pits (rejoined) runs from the pit exit to its
+ * next point from its pit-out time: from the line it had too far to go and ran at 120+ m/s for a second (rebuilt 2025
+ * Gold Coast Race 28, every frame over 100 m/s with a 90 s lookahead). Shared with tools/MapDelaySim.
+ */
+export function knownDistance(model: TrackModel, car: CarRow, around: [Crossing, Crossing] | undefined, now: number): number | undefined {
+  if (!around) return undefined
+  const [a, b] = around
+  if (car.lastPoint === a.point && car.lastPointAt > a.at && car.lastPointAt === car.pitLog?.at(-1)?.outAt) {
+    const exit = model.pitExitDistance
+    const to = model.pointDistance.get(b.point)
+    const span = b.at - car.lastPointAt
+    // Only when the exit is on the stretch the car is in (between the line and the next point).
+    if (exit !== null && to !== undefined && exit < to && span > 0) {
+      return place(model, exit, b.point, Math.min(Math.max((now - car.lastPointAt) / span, 0), 1))
+    }
+    return knownPosition(model, { point: car.lastPoint, at: car.lastPointAt }, b, now)
+  }
+  return knownPosition(model, a, b, now)
 }
 
 /** For tracks without a mapped pit lane: a row beside the control line. */

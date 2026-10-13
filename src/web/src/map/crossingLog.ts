@@ -23,14 +23,17 @@ export interface Crossing {
 export class CrossingLog {
   private cars = new Map<string, Crossing[]>()
   private session = ''
+  private now = 0
 
   add(update: TimingUpdate) {
     const { timing } = update
     const session = `${timing.session.meeting}|${timing.session.name}`
-    if (session !== this.session) {
+    // A new session, or time going backwards (a replay seeking back): the crossings we have are from later on.
+    if (session !== this.session || timing.now < this.now - 1) {
       this.cars.clear()
       this.session = session
     }
+    this.now = timing.now
     for (const car of timing.cars) {
       if (!car.lastPoint || !car.lastPointAt) continue
       let list = this.cars.get(car.id)

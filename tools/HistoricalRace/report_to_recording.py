@@ -153,6 +153,15 @@ def build(event, key):
                 pits.append((pit_out, no, 'out', n))
             t = line
 
+    # Retired cars (classified as Accident, Mechanical, ...): the report just stops. Send them to the pit lane 20 s after
+    # their last crossing, or the map kept them on track at their last timing point for the rest of the race.
+    for no, car in report.items():
+        result = (entries.get(no) or {}).get('result', '')
+        if race_seconds(result) is None and not re.fullmatch(r'\+\d+ laps?', result.strip()):
+            last = max(t for t, c, *_ in crossings if c == no)
+            pits.append((last + 20, no, 'in', len(car['laps'])))
+            notes.append(f'#{no}: retired ({result}) after lap {len(car["laps"])}: sent to the pit lane')
+
     cautions = find_cautions(report, start, med, pits)
     return report, entries, crossings, pits, cautions, start, offset, notes
 
