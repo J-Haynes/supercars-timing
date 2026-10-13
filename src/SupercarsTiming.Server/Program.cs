@@ -18,6 +18,8 @@ builder.Services.AddSingleton<ReplayService>();
 builder.Services.Configure<F1Options>(builder.Configuration.GetSection(F1Options.Section));
 builder.Services.AddSingleton<F1Store>();
 builder.Services.AddHostedService<F1FeedService>();
+builder.Services.AddSingleton<F1SessionCatalog>();
+builder.Services.AddSingleton<F1ReplayService>();
 
 builder.Services.AddSignalR()
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -53,6 +55,22 @@ app.MapHub<TimingHub>(TimingHub.Path);
 app.MapGet("/api/f1/health", (F1Store store) => Results.Ok(store.Status));
 app.MapGet("/api/f1/snapshot", (F1Store store) => Results.Ok(new TimingUpdate(store.Status, store.Snapshot())));
 app.MapGet("/api/f1/laps", (F1Store store) => Results.Ok(store.Laps()));
+// F1 results and replays: the same endpoints and shapes as the Supercars ones above (F1Sessions.cs), so the results
+// and replay pages work for both series with only the API base changed.
+app.MapGet("/api/f1/sessions", (F1SessionCatalog catalog) => Results.Ok(catalog.List()
+    .Select(s => new
+    {
+        s.Id, s.Meeting, s.Name, s.Type, s.Track, s.TrackCode, s.Start, s.End,
+        DurationSeconds = Math.Round(s.DurationSeconds), s.Messages,
+    })));
+app.MapGet("/api/f1/sessions/{id}/results", (F1SessionCatalog catalog, string id) =>
+    catalog.Results(id) is { } results ? Results.Ok(results) : Results.NotFound());
+app.MapGet("/api/f1/sessions/{id}/replay/info", (F1ReplayService replays, string id) =>
+    replays.Info(id) is { } info ? Results.Ok(new { info.Start, info.End }) : Results.NotFound());
+app.MapGet("/api/f1/sessions/{id}/replay", (F1ReplayService replays, string id, double t, string viewer) =>
+    replays.At(id, viewer, t) is { } snapshot ? Results.Ok(snapshot) : Results.NotFound());
+app.MapGet("/api/f1/sessions/{id}/laps", (F1SessionCatalog catalog, string id) =>
+    catalog.Laps(id) is { } laps ? Results.Ok(laps) : Results.NotFound());
 app.MapHub<F1Hub>(F1Hub.Path);
 
 // Production: serve the built React app from wwwroot (npm run build in src/web writes there).

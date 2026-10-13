@@ -32,7 +32,7 @@ export function RaceCharts({ timing, history: given, selection }: {
   const xMax = raceLaps(timing.session) || undefined
 
   // Selected cars and their colours (chartSelection.ts). Starts with the top four on the road.
-  const own = useChartSelection(running.slice(0, 4).map((c) => c.id))
+  const own = useChartSelection(running.slice(0, 4).map((c) => c.id), `${timing.session.meeting}|${timing.session.name}`)
   const { selected, colorOf, toggle } = selection ?? own
 
   const byId = useMemo(() => new Map((history?.cars ?? []).map((c) => [c.id, c])), [history])

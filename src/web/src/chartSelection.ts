@@ -17,10 +17,14 @@ export interface ChartSelection {
  * pages keep their own. Starts with `initial` (the top four on the road) until the viewer picks; colour follows the
  * car, not its rank.
  */
-export function useChartSelection(initial: string[]): ChartSelection {
+export function useChartSelection(initial: string[], session = ''): ChartSelection {
   const slots = useRef(new Map<string, number>())
-  const [picked, setPicked] = useState<string[] | null>(null)
-  const selected = picked ?? initial
+  const [picked, setPicked] = useState<{ session: string; ids: string[] } | null>(null)
+  // The starting cars are the ones in `initial` the first time it has any, kept from then on. (It used to be the
+  // current top four on every update, so until the viewer picked, the charts followed positions 1-4, not drivers.)
+  const start = useRef<{ session: string; ids: string[] } | null>(null)
+  if (initial.length > 0 && start.current?.session !== session) start.current = { session, ids: initial }
+  const selected = picked?.session === session ? picked.ids : start.current?.session === session ? start.current.ids : initial
   const colorOf = (id: string) => {
     if (!slots.current.has(id)) {
       const used = new Set([...slots.current.entries()].filter(([k]) => selected.includes(k)).map(([, v]) => v))
@@ -33,7 +37,7 @@ export function useChartSelection(initial: string[]): ChartSelection {
     const current = selectedKey ? selectedKey.split(',') : []
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id].slice(-MAX_CHART_CARS)
     for (const k of [...slots.current.keys()]) if (!next.includes(k)) slots.current.delete(k)
-    setPicked(next)
-  }, [selectedKey])
+    setPicked({ session, ids: next })
+  }, [selectedKey, session])
   return { selected, toggle, colorOf }
 }

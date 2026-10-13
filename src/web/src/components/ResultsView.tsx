@@ -1,4 +1,4 @@
-import { teamStyle } from '../series'
+import { teamStyle, API_BASE, isF1 } from '../series'
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { CarRow, LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
 import { useTrack } from '../tracks'
@@ -37,12 +37,12 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
   useEffect(() => {
     setResults(null); setHistory(null); setError(false); setTab('classification')
     const id = encodeURIComponent(session.id)
-    fetch(`/api/sessions/${id}/results`)
+    fetch(`${API_BASE}/sessions/${id}/results`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then(setResults)
       .catch(() => setError(true))
     // Lap history is optional (older servers don't have the endpoint): the charts and summary just get less.
-    fetch(`/api/sessions/${id}/laps`).then((r) => (r.ok ? r.json() : null)).then(setHistory).catch(() => {})
+    fetch(`${API_BASE}/sessions/${id}/laps`).then((r) => (r.ok ? r.json() : null)).then(setHistory).catch(() => {})
   }, [session.id])
 
   const race = isRace(session.type)
@@ -50,7 +50,9 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
   const title = rest.join(' - ') || series
   const when = new Date(session.start).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
   const tabs: [Tab, string][] = race
-    ? [['classification', 'Classification'], ['summary', 'Summary'], ['charts', 'Charts'], ['pits', 'Pit stops'], ['control', 'Race control'], ['championship', 'Championship']]
+    // No F1 standings yet: F1 races have no Championship tab.
+    ? [['classification', 'Classification'], ['summary', 'Summary'], ['charts', 'Charts'], ['pits', 'Pit stops'], ['control', 'Race control'],
+        ...(isF1 ? [] : [['championship', 'Championship'] as [Tab, string]])]
     : [['classification', 'Classification'], ['charts', 'Charts'], ['control', 'Race control']]
 
   return (

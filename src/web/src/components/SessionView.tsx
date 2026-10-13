@@ -1,4 +1,5 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import type { CarRow } from '../types'
 import type { LapHistory, TimingUpdate } from '../types'
 import type { Settings } from '../settings'
 import { useTrack } from '../tracks'
@@ -57,9 +58,10 @@ export function SessionView({ update, live, history, settings, updateSettings, t
   const [mobileTab, setMobileTab] = useState<MobileTab>(() => loadMobileTab())
   const towerColumn = useStickToBottom<HTMLDivElement>()
   // Cars on the race charts: shared by the charts panel and the tower's chart buttons. Starts with the top four.
-  const chart = useChartSelection(race ? raceOrder(timing).slice(0, 4).map((c) => c.id) : [])
+  const chart = useChartSelection(race ? raceOrder(timing).slice(0, 4).map((c) => c.id) : [], `${timing.session.meeting}|${timing.session.name}`)
   // The pit rejoin estimate (experimental): one for the tower and the map.
   const ghost = usePitGhost(timing, track, settings.pitGhostCar)
+  usePitGhostAutoOff(timing.cars, settings.pitGhostCar, () => updateSettings({ pitGhostCar: null }))
   // The on-track card shows automatically for Shootout sessions (by Natsoft's session name), or when forced on.
   const showCard = settings.focusCard === 'on' || (settings.focusCard === 'auto' && isShootout(timing.session.name, timing.session.type))
   const focusId = showCard ? pickFocusCar(timing.cars, timing.now)?.id ?? null : null
@@ -138,4 +140,21 @@ export function SessionView({ update, live, history, settings, updateSettings, t
       </div>
     </>
   )
+}
+
+/**
+ * Turns the pit rejoin estimate off once the car has made the stop: after it has left the pits and crossed its first
+ * timing point since (its real place in the field is known then; the undercut tags use the same moment). Not at pit
+ * entry: during the stop is when the estimate is worth comparing with what happens.
+ */
+function usePitGhostAutoOff(cars: CarRow[], carNumber: string | null, turnOff: () => void) {
+  const car = carNumber ? cars.find((c) => c.carNumber === carNumber) : undefined
+  const done = (c: CarRow) => c.pitLog.filter((s) => s.outAt > 0).length
+  // Stops the car had made when it was picked (or when this page first saw it picked).
+  const picked = useRef<{ carNumber: string; stops: number } | null>(null)
+  if (car && picked.current?.carNumber !== car.carNumber) picked.current = { carNumber: car.carNumber, stops: done(car) }
+  if (!carNumber) picked.current = null
+  const finished = !!car && !!picked.current && done(car) > picked.current.stops && !car.inPit
+    && car.lastPointAt > (car.pitLog.at(-1)?.outAt ?? Infinity)
+  useEffect(() => { if (finished) turnOff() }, [finished]) // eslint-disable-line react-hooks/exhaustive-deps -- turnOff is a fresh closure
 }

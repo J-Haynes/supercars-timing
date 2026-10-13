@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { API_BASE } from '../series'
 import type { LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
 import { useSettings } from '../settings'
 import { cautionPeriods, leaderLap } from '../session'
@@ -48,7 +49,8 @@ export function ReplayView({ session, onBack, onUpdate }: {
   // Bumped on every backwards seek, so the race feed starts again instead of keeping events from later on.
   const [epoch, setEpoch] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [speed, setSpeed] = useState(10)
+  // Real time by default (the owner's choice, Oct 2026); faster speeds are in the menu.
+  const [speed, setSpeed] = useState(1)
   const [t, setT] = useState(0)
   const [loading, setLoading] = useState(false)
   const { settings, update: updateSettings, togglePinned } = useSettings()
@@ -57,14 +59,14 @@ export function ReplayView({ session, onBack, onUpdate }: {
     // Start 20 s before the first green flag (from the session's results) to skip the pre-race wait, else at the
     // start. Set once on load, so it never overrides a seek.
     Promise.all([
-      fetch(`/api/sessions/${id}/replay/info`).then((r) => r.json()),
-      fetch(`/api/sessions/${id}/results`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch(`${API_BASE}/sessions/${id}/replay/info`).then((r) => r.json()),
+      fetch(`${API_BASE}/sessions/${id}/results`).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     ]).then(([info, results]: [{ start: number; end: number }, TimingSnapshot | null]) => {
       const green = results?.session.greenAt ?? 0
       setT(green > info.start ? Math.max(info.start, green - 20) : info.start)
       setRange(info)
     })
-    fetch(`/api/sessions/${id}/laps`).then((r) => (r.ok ? r.json() : null)).then(setLaps).catch(() => {})
+    fetch(`${API_BASE}/sessions/${id}/laps`).then((r) => (r.ok ? r.json() : null)).then(setLaps).catch(() => {})
   }, [id])
 
   // Advance the replay time while playing.
@@ -100,8 +102,8 @@ export function ReplayView({ session, onBack, onUpdate }: {
       try {
         // The snapshot ahead uses its own server cursor, so the two never make each other rebuild.
         const [res, next] = await Promise.all([
-          fetch(`/api/sessions/${id}/replay?t=${at}&viewer=${viewerId}`),
-          fetch(`/api/sessions/${id}/replay?t=${Math.min(at + LOOKAHEAD_SECONDS, range.end)}&viewer=${viewerId}-ahead`).catch(() => null),
+          fetch(`${API_BASE}/sessions/${id}/replay?t=${at}&viewer=${viewerId}`),
+          fetch(`${API_BASE}/sessions/${id}/replay?t=${Math.min(at + LOOKAHEAD_SECONDS, range.end)}&viewer=${viewerId}-ahead`).catch(() => null),
         ])
         if (res.ok) {
           const snap: TimingSnapshot = await res.json()

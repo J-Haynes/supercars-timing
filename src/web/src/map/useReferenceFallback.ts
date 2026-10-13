@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { isF1 } from '../series'
+import { isF1, API_BASE } from '../series'
 import type { RecordedSession, TimingSnapshot } from '../types'
 
 /**
@@ -35,10 +35,10 @@ function lookup(trackCode: string, order: string[]): Promise<number[] | null> {
 }
 
 async function search(trackCode: string, order: string[]): Promise<number[] | null> {
-  const sessions: RecordedSession[] = await fetch('/api/sessions').then((r) => (r.ok ? r.json() : []))
+  const sessions: RecordedSession[] = await fetch(`${API_BASE}/sessions`).then((r) => (r.ok ? r.json() : []))
   // Newest first (the API's order); a few at most, each is a replay on the server (cached there).
   for (const s of sessions.filter((x) => x.trackCode === trackCode).slice(0, 4)) {
-    const results: TimingSnapshot | null = await fetch(`/api/sessions/${encodeURIComponent(s.id)}/results`).then((r) => (r.ok ? r.json() : null))
+    const results: TimingSnapshot | null = await fetch(`${API_BASE}/sessions/${encodeURIComponent(s.id)}/results`).then((r) => (r.ok ? r.json() : null))
     const ids = results ? ['M', ...results.timingPoints.map((p) => p.id)] : []
     const ref = results?.segmentReference ?? []
     if (ids.join(',') === order.join(',') && ref.length === order.length && ref.every((x) => x > 0)) return ref

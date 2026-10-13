@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { RecordedSession } from '../types'
 import { SERIES_UPCOMING, eventEnd, eventStart, type UpcomingEvent } from '../calendar'
 import { hasScenery, trackManifest } from '../tracks'
-import { isF1 } from '../series'
+import { isF1, API_BASE } from '../series'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
 export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPreview }: {
@@ -20,8 +20,8 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
 
   // Refresh the list each time the menu opens: new sessions get recorded all weekend.
   useEffect(() => {
-    if (!open || isF1) return
-    fetch('/api/sessions').then((r) => (r.ok ? r.json() : [])).then(setSessions).catch(() => setSessions([]))
+    if (!open) return
+    fetch(`${API_BASE}/sessions`).then((r) => (r.ok ? r.json() : [])).then(setSessions).catch(() => setSessions([]))
   }, [open])
 
   useEffect(() => {
@@ -93,15 +93,15 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
           </button>
         </section>
 
-        {/* Results and replays come from our Natsoft recordings; F1 sessions aren't listed there yet. */}
-        {!isF1 && <section>
+        {/* Results and replays: our recordings (Natsoft for Supercars, F1's hub for F1) and, for F1, archive folders. */}
+        {<section>
           <h2>Results</h2>
           {sessions === null && <p className="menu-muted">Loading…</p>}
-          {sessions?.length === 0 && <p className="menu-muted">No results yet. Supercars sessions appear here once they've been recorded.</p>}
+          {sessions?.length === 0 && <p className="menu-muted">No results yet. Sessions appear here once they've been recorded.</p>}
           {current.map(([meeting, list]) => renderMeeting(meeting, list))}
         </section>}
 
-        {!isF1 && past.length > 0 && <section>
+        {past.length > 0 && <section>
           <h2>Past seasons</h2>
           {past.map(([meeting, list]) => renderMeeting(meeting, list, true))}
         </section>}
