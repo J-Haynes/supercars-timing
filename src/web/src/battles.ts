@@ -1,6 +1,7 @@
 import type { CarRow, TimingSnapshot } from './types'
 import { liveGap, parkedAtLine, raceOrder } from './liveGaps'
 import { isF1 } from './series'
+import { cautionPeriods, flagKind } from './session'
 
 /** Within this many seconds of the car ahead is a battle (and, in F1, Overtake Mode range). */
 export const BATTLE_SECONDS = 1
@@ -19,8 +20,8 @@ export interface Battle {
 
 /**
  * Battles in a race, front of the field first. Supercars: our live gap at the last timing point each car crossed
- * (liveGaps.ts). F1: F1's own interval to the car ahead, which is already live. The ticker (insights.ts) and the map
- * both use this, so they always agree.
+ * (liveGaps.ts). F1: F1's own interval to the car ahead, which is already live. The race feed (insights.ts) and the map
+ * both use notableBattles (below), so they always agree.
  */
 export function battles(timing: TimingSnapshot): Battle[] {
   const cars = raceOrder(timing)
@@ -40,6 +41,64 @@ export function battles(timing: TimingSnapshot): Battle[] {
       current.spread += interval
     } else close()
   }
+  close()
+  return out
+}
+
+/** Laps after a start or restart with no battles shown: the field is still nose to tail from the grid or the queue. */
+export const QUIET_LAPS = 2
+/** A train this long is the pack, not a fight: only its closest pairs count (PACK_SECONDS). */
+const PACK_CARS = 5
+const PACK_SECONDS = 0.5
+
+/**
+ * The battles worth showing (map and race feed): none under a caution (the queue behind the safety car), none in the
+ * first QUIET_LAPS laps after a start or restart, and packs of PACK_CARS+ cars broken down to the pairs and small groups
+ * within PACK_SECONDS of each other. Measured on the 2026 Bathurst 1000 (Race 30, every 15 s): under the safety car
+ * ~8 cars counted as battling; for ~9 laps after the start the longest train was 11-15 cars (~20 cars battling); from
+ * 10 laps on the longest averaged 2.7 and trains of 5+ were 5% of samples.
+ */
+export function notableBattles(timing: TimingSnapshot): Battle[] {
+  if (quietReason(timing)) return []
+  return battles(timing).flatMap((b) => (b.cars.length < PACK_CARS ? [b] : splitPack(b)))
+}
+
+/** Why battles are hidden right now ('caution' or 'restart'), or null. */
+export function quietReason(timing: TimingSnapshot): 'caution' | 'restart' | null {
+  if (flagKind(timing.session.flag) !== 'green') return flagKind(timing.session.flag) === 'caution' ? 'caution' : null
+  const greenAt = lastGreen(timing)
+  if (greenAt === undefined) return null
+  return timing.now - greenAt < QUIET_LAPS * typicalLap(timing) ? 'restart' : null
+}
+
+/** When the race last went green: the start, or the end of the latest caution. */
+export function lastGreen(timing: TimingSnapshot): number | undefined {
+  const history = timing.flagHistory ?? []
+  const start = timing.session.greenAt ?? history.find((f) => flagKind(f.flag) === 'green')?.time
+  const restarts = cautionPeriods(history).map((p) => p.end).filter((t): t is number => t !== undefined && t <= timing.now)
+  return restarts.length > 0 ? restarts[restarts.length - 1] : start
+}
+
+/** A green-flag lap: the field's median best lap plus 3%, or 100 s before there are any. (Not the last lap: right after
+ * a restart that's a safety car lap, which would make the quiet period half as long again.) */
+function typicalLap(timing: TimingSnapshot): number {
+  const laps = timing.cars.map((c) => c.bestLap).filter((t) => t > 0).sort((a, b) => a - b)
+  return laps.length > 0 ? laps[Math.floor(laps.length / 2)] * 1.03 : 100
+}
+
+/** The groups inside a pack where each car is within PACK_SECONDS of the one ahead (2 to PACK_CARS-1 cars). */
+function splitPack(pack: Battle): Battle[] {
+  const out: Battle[] = []
+  let current: Battle | null = null
+  const close = () => { if (current && current.cars.length >= 2 && current.cars.length < PACK_CARS) out.push(current); current = null }
+  pack.intervals.forEach((interval, i) => {
+    if (interval < PACK_SECONDS) {
+      if (!current) current = { cars: [pack.cars[i]], intervals: [], spread: 0, position: pack.position + i }
+      current.cars.push(pack.cars[i + 1])
+      current.intervals.push(interval)
+      current.spread += interval
+    } else close()
+  })
   close()
   return out
 }

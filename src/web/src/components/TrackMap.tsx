@@ -4,7 +4,7 @@ import type { CarRow, TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
 import { TrackModel, type Vec } from '../map/trackModel'
 import { useCarPlacement } from '../map/useCarPlacement'
-import { battles, battleSpans } from '../battles'
+import { notableBattles, battleSpans } from '../battles'
 import { ElevationStrip, type StripCar } from './ElevationStrip'
 import { ghostOnTrack, type PitGhost } from '../pit/usePitGhost'
 
@@ -87,7 +87,7 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
   pitGhost?: PitGhost | null
 }) {
   const { model, effective, placements, sync, awaitingCalibration, flagNow } = useCarPlacement(track, update, live)
-  const battleList = useMemo(() => (showBattles ? battles(update.timing) : []), [showBattles, update.timing])
+  const battleList = useMemo(() => (showBattles ? notableBattles(update.timing) : []), [showBattles, update.timing])
   const spans = battleSpans(battleList, new Map(placements.flatMap((p) => (p.kind === 'track' ? [[p.car.id, p.distance] as const] : []))), model.length)
   const geometry = useMemo(() => new TrackModel(track), [track])          // outline only: stable for the view
   const view = useMemo(() => makeView(geometry, rotation), [geometry, rotation])

@@ -6,7 +6,7 @@ import { TrackModel } from '../map/trackModel'
 import { useCarPlacement } from '../map/useCarPlacement'
 import { HEIGHT_SCALE, TrackScene, type CameraMode } from '../map/scene3d'
 import { ElevationStrip, type StripCar } from './ElevationStrip'
-import { battles, battleSpans } from '../battles'
+import { notableBattles, battleSpans } from '../battles'
 import { ghostOnTrack, type PitGhost } from '../pit/usePitGhost'
 
 /**
@@ -50,7 +50,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
 }) {
   const { placements, sync, awaitingCalibration, flagNow, model } = useCarPlacement(track, update, live)
   // Battles from the timing (when it changes); placed on the track every frame below, so the bands follow the cars.
-  const battleList = useMemo(() => (showBattles ? battles(update.timing) : []), [showBattles, update.timing])
+  const battleList = useMemo(() => (showBattles ? notableBattles(update.timing) : []), [showBattles, update.timing])
   const cars = update.timing.cars
   const host = useRef<HTMLDivElement>(null)
   const scene = useRef<TrackScene | null>(null)
