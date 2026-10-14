@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import type { CarRow, TimingSnapshot } from './types'
 import { notableBattles } from './battles'
 import { flagKind, isRace, raceLaps } from './session'
-import { raceFinished } from './liveGaps'
+import { raceFinished, raceOrder } from './liveGaps'
 import { estimateLoss, measuredStops } from './pit/pitLoss'
 import { progress, progressModel, type ProgressModel } from './pit/rejoin'
 
@@ -36,6 +36,9 @@ export interface Undercut {
    * real margin at the line after the target's stop. */
   margin: number
   state: 'pending' | 'worked' | 'failed'
+  /** The undercutting car's lead (+) or deficit (-) over the target on the road just before it pitted: what the
+   * undercut started from. The gain is `margin - before`. */
+  before: number
 }
 
 /** An undercut counts as one while the stop was this recent (laps of racing since pit exit). */
@@ -51,9 +54,11 @@ const UNDERCUT_MAX = 8
 const RESULT_SECONDS = 60
 /** The pit-adjusted leader shows once it has held the spot this long, leading by at least NET_MARGIN seconds. */
 const NET_STABLE_SECONDS = 15
+/** Stops this recent (laps) count towards the stop number the field is on (see `most`). */
+const RECENT_STOP_LAPS = 12
 const NET_MARGIN = 1
 
-interface Pending { attacker: string; target: string; targetStops: number; since: number; result?: Undercut; shownAt?: number }
+interface Pending { attacker: string; target: string; targetStops: number; since: number; before: number; result?: Undercut; shownAt?: number }
 
 /** Remembered between updates. */
 export interface SignalMemory {
@@ -72,9 +77,10 @@ export interface SignalMemory {
 const settled = (c: CarRow) => !c.inPit && (c.pitLog.at(-1)?.outAt ?? 0) < c.lastPointAt
 
 /** Signals for the tower; keeps a little memory to say whether undercuts worked. Empty outside a race. */
-export function useTowerSignals(timing: TimingSnapshot, fallback: number[], trackCode: string): TowerSignals {
+export function useTowerSignals(timing: TimingSnapshot, fallback: number[], trackCode: string, resetKey = 0): TowerSignals {
   const memory = useRef<{ key: string; signals: SignalMemory }>({ key: '', signals: newSignalMemory() })
-  const key = `${timing.session.meeting}|${timing.session.name}`
+  // A new session, or a replay seeking backwards (resetKey): what was remembered is from later on.
+  const key = `${timing.session.meeting}|${timing.session.name}|${resetKey}`
   if (memory.current.key !== key) memory.current = { key, signals: newSignalMemory() }
   return towerSignals(timing, fallback, trackCode, memory.current.signals)
 }
@@ -102,8 +108,19 @@ export function towerSignals(timing: TimingSnapshot, fallback: number[], trackCo
   const prog = new Map(running.map((c) => [c.id, progress(c, m, now, lossOf)]))
   const stopsDone = (c: CarRow) => c.pitLog.filter((s) => s.outAt > 0).length
 
-  // Net order: every car charged for the stops it still owes compared with the cars that have made the most.
-  const most = Math.max(0, ...running.map(stopsDone))
+  // Net order: every car charged for the stops it still owes compared with the cars that have made the most, among
+  // cars on the usual number (up to one more than the median): a car with extra stops (damage, drive-throughs, stops
+  // under every caution: 6 for Stanaway in the rebuilt 2025 Gold Coast Race 28) made everyone else "owe" stops and
+  // put three cars from the back on top of the net order.
+  // Counted against cars in the top 10 on the road or that stopped recently (an early stopper sets the stop the rest
+  // still owe: Wood from P5 at lap 6 of the rebuilt 2025 Gold Coast Race 29 is net P9, not his P23 on the road), at
+  // most one more than the median. An old extra stop further back (under a caution 30 laps ago) isn't one the leaders
+  // still need: with those, cars a lap down came out on top of the net order.
+  const counts = running.map(stopsDone).sort((a, b) => a - b)
+  const usual = (counts[Math.floor(counts.length / 2)] ?? 0) + 1
+  const top10 = new Set(raceOrder(timing).slice(0, 10).map((c) => c.id))
+  const recent = (c: CarRow) => now - (c.pitLog.at(-1)?.inAt ?? -Infinity) < RECENT_STOP_LAPS * m.lap
+  const most = Math.max(0, ...running.filter((c) => top10.has(c.id) || recent(c)).map(stopsDone).filter((n) => n <= usual))
   const owedOf = (c: CarRow) => {
     let owed = 0
     for (let s = stopsDone(c) + 1; s <= most; s++) owed += lossFor(s)
@@ -151,7 +168,7 @@ function undercuts(running: CarRow[], prog: Map<string, number | null>, m: Progr
       const d = pa - (pb - Math.max(0, now - stop.inAt)) // a's lead over b at a's pit entry (b's progress taken back to then)
       if (Math.abs(d) <= UNDERCUT_NEAR && (!best || Math.abs(d) < Math.abs(best.d))) best = { car: b, d }
     }
-    if (best) pending.set(a.id, { attacker: a.id, target: best.car.id, targetStops: stopsDone(a), since: stop.inAt })
+    if (best) pending.set(a.id, { attacker: a.id, target: best.car.id, targetStops: stopsDone(a), since: stop.inAt, before: best.d })
     else pending.delete(a.id)
   }
 
@@ -169,7 +186,7 @@ function undercuts(running: CarRow[], prog: Map<string, number | null>, m: Progr
     const pb = prog.get(b.id)
     if (stopsDone(b) > p.targetStops && settled(b) && settled(a) && pa != null && pb != null) {
       // The target has stopped and rejoined: who's ahead now?
-      p.result = { target: b, margin: pa - pb, state: pa > pb ? 'worked' : 'failed' }
+      p.result = { target: b, margin: pa - pb, state: pa > pb ? 'worked' : 'failed', before: p.before }
       p.shownAt = now
       out.set(id, p.result)
     } else if (stopsDone(b) > p.targetStops || b.inPit || !settled(a)) {
@@ -177,7 +194,7 @@ function undercuts(running: CarRow[], prog: Map<string, number | null>, m: Progr
     } else if (pa != null && pb != null && now - p.since <= UNDERCUT_WINDOW_LAPS * m.lap * 2) {
       const margin = pa - (pb - lossFor(p.targetStops + 1))
       if (Math.abs(margin) > UNDERCUT_MAX) pending.delete(id)
-      else if (Math.abs(margin) <= UNDERCUT_SHOW) out.set(id, { target: b, margin, state: 'pending' })
+      else if (Math.abs(margin) <= UNDERCUT_SHOW) out.set(id, { target: b, margin, state: 'pending', before: p.before })
     } else {
       pending.delete(id) // the target stayed out too long: not an undercut fight any more
     }

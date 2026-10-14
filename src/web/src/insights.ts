@@ -5,11 +5,14 @@ import { startPosition } from './startingGrid'
 import { cautionPeriods, flagKind, minDriverLaps, raceLaps } from './session'
 import { lapTime } from './format'
 import { isF1 } from './series'
+import type { TowerSignals } from './towerSignals'
+import { newStrategyMemory, strategyInsights, type StrategyMemory } from './strategyInsights'
 
 /** One item in the race feed. `carIds` are highlighted in the tower and on the map on hover. */
 export interface Insight {
   id: string
   kind: 'fastest' | 'lead' | 'penalty' | 'control' | 'caution' | 'battle' | 'closing' | 'minLaps' | 'mover' | 'longRun' | 'pace' | 'spread'
+    | 'undercut' | 'net' | 'pit' | 'freeStop' | 'traffic' | 'penaltyImpact' | 'falloff' | 'conditions'
   text: string
   carIds: string[]
   tone: 'purple' | 'green' | 'red' | 'yellow' | 'blue' | 'plain'
@@ -42,9 +45,13 @@ export interface InsightMemory {
   intervals: Map<string, { laps: number; aheadId: string; interval: number }[]>
   /** Per pair of cars (front id, behind id): when they were first seen battling, while they still are. */
   battleSince: Map<string, number>
+  /** Race strategy items (strategyInsights.ts). */
+  strategy: StrategyMemory
 }
 
-export const newMemory = (): InsightMemory => ({ bestLap: 0, leaderId: '', events: [], logged: new Set(), intervals: new Map(), battleSince: new Map() })
+export const newMemory = (): InsightMemory => ({
+  bestLap: 0, leaderId: '', events: [], logged: new Set(), intervals: new Map(), battleSince: new Map(), strategy: newStrategyMemory(),
+})
 
 const surname = (name: string) => name.split(' ').slice(1).join(' ') || name
 const label = (c: CarRow) => `${surname(c.driver)} (#${c.carNumber})`
@@ -54,8 +61,8 @@ const median = (xs: number[]) => {
   return s[Math.floor(s.length / 2)]
 }
 
-/** Events kept in the log. */
-const LOG_SIZE = 60
+/** Events kept in the log (pit stops of the top 10 are logged too). */
+const LOG_SIZE = 150
 /** "Pitted under caution" and "back to green" stay in the now list this long after a caution (Natsoft seconds). */
 const AFTER_CAUTION_SECONDS = 180
 /** A battle shows in the feed once the same two cars have been battling this long (passing a lapped car isn't one). */
@@ -72,7 +79,7 @@ const STINT_OFFSET_LAPS = 5
  * Ideas from commentary on full races (docs/PLANNING.md, "What commentators talk about"): who's fastest on track,
  * tyre age offsets in a battle, the spread across the top cars.
  */
-export function buildFeed(timing: TimingSnapshot, memory: InsightMemory): Feed {
+export function buildFeed(timing: TimingSnapshot, memory: InsightMemory, signals?: TowerSignals): Feed {
   const order = ['M', ...timing.timingPoints.map((p) => p.id)]
   const cars = raceOrder(timing)
   if (cars.length === 0) return { events: [], now: [] }
@@ -85,6 +92,7 @@ export function buildFeed(timing: TimingSnapshot, memory: InsightMemory): Feed {
   const battleList = notableBattles(timing)
   remember(timing, cars, memory, now, order, battleList)
   const out: Insight[] = []
+  const typicalLap = median(cars.map((c) => c.lastLap).filter((t) => t > 0)) ?? 120
 
   // Who pitted under the latest caution (a cheaper stop), while it's out and for a few minutes after.
   const periods = cautionPeriods(timing.flagHistory)
@@ -107,7 +115,10 @@ export function buildFeed(timing: TimingSnapshot, memory: InsightMemory): Feed {
     const chain = battle.cars
     const first = battle.position
     const lastPos = first + chain.length - 1
-    const offset = chain.length === 2 ? stintOffset(chain[0], chain[1]) : ''
+    // How long it has gone on: "they've been nose to tail for 6 laps".
+    const since = memory.battleSince.get(`${chain[0].id}>${chain[1].id}`) ?? now
+    const laps = Math.floor((now - since) / typicalLap)
+    const offset = (chain.length === 2 ? stintOffset(chain[0], chain[1]) : '') + (laps >= 2 ? ` · ${laps} laps` : '')
     out.push({
       id: `battle-${chain.map((c) => c.id).join('-')}`, kind: 'battle', tone: 'yellow', carIds: chain.map((c) => c.id),
       // Battles for the lead and the podium matter most.
@@ -133,8 +144,16 @@ export function buildFeed(timing: TimingSnapshot, memory: InsightMemory): Feed {
       const ahead = timing.cars.find((x) => x.id === recent[0].aheadId)
       const drop = recent[0].interval - recent[3].interval
       if (shrinking && ahead && drop >= 0.5 && recent[3].interval < 3) {
-        out.push({ id: `closing-${c.id}`, kind: 'closing', tone: 'green', priority: 55, carIds: [c.id, ahead.id],
-          text: `${surname(c.driver)} closing on ${surname(ahead.driver)}: ${recent[0].interval.toFixed(1)}s → ${recent[3].interval.toFixed(1)}s in 3 laps` })
+        // At this rate, within a second of the car ahead in this many laps.
+        const perLap = drop / 3
+        const eta = recent[3].interval > 1 ? Math.ceil((recent[3].interval - 1) / perLap) : 0
+        const when = eta > 0 && eta <= 10 ? ` · within a second in ~${eta} ${eta === 1 ? 'lap' : 'laps'}` : ''
+        // A third car catching a fight: the car ahead is the back of a battle (commentators: "the beneficiary").
+        const fight = settled.find((b) => b.cars.at(-1)?.id === ahead.id && !b.cars.some((x) => x.id === c.id))
+        out.push({ id: `closing-${c.id}`, kind: 'closing', tone: 'green', priority: fight ? 57 : 55, carIds: [c.id, ...(fight ? fight.cars.map((x) => x.id) : [ahead.id])],
+          text: fight
+            ? `${surname(c.driver)} closing on the ${fight.cars.map((x) => surname(x.driver)).join('–')} fight: ${recent[3].interval.toFixed(1)}s back, ${perLap.toFixed(1)}s a lap${when}`
+            : `${surname(c.driver)} closing on ${surname(ahead.driver)}: ${recent[0].interval.toFixed(1)}s → ${recent[3].interval.toFixed(1)}s in 3 laps${when}` })
       }
     }
   }
@@ -212,6 +231,12 @@ export function buildFeed(timing: TimingSnapshot, memory: InsightMemory): Feed {
       }
     }
   }
+
+  // Race strategy: undercuts, the order after the stops, pit stops, free stops, traffic, penalties, fall-off...
+  const log = (e: Omit<FeedEvent, 'priority'>) => memory.events.push({ ...e, priority: 0 })
+  out.push(...strategyInsights({ timing, cars, memory, signals, battles: battleList, gapToLeader, onTrack, log, lap: leader.laps + 1 }))
+  memory.events.sort((a, b) => a.at - b.at)
+  memory.events = memory.events.slice(-LOG_SIZE)
 
   return { events: [...memory.events].reverse(), now: out.sort((a, b) => b.priority - a.priority) }
 }

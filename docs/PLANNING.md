@@ -303,13 +303,56 @@ Captions only, kept out of the repo. Theme counts (Townsville / Bathurst 2023): 
 **Not measurable from the feed:** fuel loads and fuel windows (litres per stop, "can get to lap 142"), tyre compounds
 and new vs used sets in Supercars, damage, radio. Leave these to the broadcast.
 
+## Race feed: strategy insights (14 Oct 2026)
+
+The owner asked for insights that go beyond numbers: undercuts (pit-adjusted position, what they gained) and other
+timely information, from the full Natsoft data, race strategy and what commentators say. Built in
+`src/web/src/strategyInsights.ts` (see CLAUDE.md, "Race feed"). Background: the undercut is the main way places change
+at stops where old tyres have dropped off, the overcut (staying out) works when they haven't, and slow stops, traffic
+and safety cars spoil both (https://www.gpfans.com/en/f1-news/1016512/f1-undercut-overcut-explained/ ,
+https://www.formula1.com/en/latest/article/undercut-vs-overcut-why-tyre-strategy-was-so-finely-poised-in-monaco-and-why.1YYMDkEBnFols8bDWtSXiz ).
+
+Measured by running the feed code over whole races (5 s steps; "% of updates" = how often an item is up):
+
+| Item | Bathurst Race 30 | Gold Coast 2025 R28 | R29 | First version (Bathurst) |
+|---|---|---|---|---|
+| Undercut in progress | 21% | 0% | 7% | 65% (whole field) |
+| Undercut results logged | 7 | 0 | 0 | 34 (whole field, any margin) |
+| Stops logged | 72 | 20 | 23 | 107 (top 10) |
+| Net order | 7% | 0% | 8% | 6% (29% at R28, wrong: cars with extra stops on top) |
+| Traffic | 10% | 10% | 26% | 23% (59% at R29: top 5, 2 s) |
+| Tyre fall-off | 8% | 12% | 19% | 41% at R28 |
+| Conditions | 0 | 0 | 0 | 6 false alarms (restarts, an incident) |
+
+Checks on what they said: Bathurst's net order during the stops named #17, #10 and #888 at the top, the cars that
+finished 1-3 (#17, #888, #10); R29's named Feeney and Mostert (2nd and 1st). Hamilton "losing 5 s a lap" in the 2025
+Singapore GP was his brake failure. Fixes found on the way: a car parked in the pits kept "moving" in the progress
+estimate (P23 Murray topped the net order); the stop number the field is on now comes from the top 10 and recent
+stops, not old extra stops further back (an early stopper keeps its net place: Wood net P9 from P23); Payne's 32.6 s
+drive-through came up as the quickest stop. Known limit: the tower's undercut detection (unchanged) doesn't find
+Mostert's undercut on Waters in the rebuilt R29 that the broadcast talked about (it finds Kostecki's on Payne).
+
+**Caveats:** at the Gold Coast the stop cost estimate (63-75 s) looks too high: cars that stopped cheaply under a
+caution came out ahead of leaders in the net order, yet Mostert stopped on lap 61 and stayed P1. The rebuilt races'
+pit times are estimates too. Check against Race 31's real stops (CLAUDE.md, "Next round").
+
+**More ideas, not built:**
+- Pit windows: "due in ~N laps" from stint lengths so far (Bathurst: fuel; Gold Coast: 2 compulsory stops per race,
+  window rules from the event's sporting supplement).
+- Stint pace vs the car's last stint, and a pace rank per lap (who's fastest of the top 10 over the last 5 laps).
+- Mini-sector strengths in a battle ("quicker through turns 8-10, gives it back in 12-13"): the data is there.
+- Safety car winners and losers: who stopped under it and how many places it gained them, logged at the restart.
+- After the flag: how the race was won (the stop that made the difference, laps led, the biggest gainer through the
+  stops) on the results Summary and as the feed's last item.
+- Finals: when a driver's live position moves them across the elimination cut (FinalsStandings has it).
+
 ## Ideas not built yet
 
 From the Bathurst brainstorm (built: safety car mode, charts, battle graph, finals ladder, phone layout, regression
 tests, results pages, replay):
 - Pit windows: stint lengths so far → "due in ~N laps", stops remaining.
-- From the commentary study above: net order through the pit cycle, pace rank per lap, mini-sector strengths in
-  Compare, "third car closing on a battle", stint pace vs the last stint, a track-change alert.
+- From the commentary study above: pace rank per lap, mini-sector strengths in Compare, stint pace vs the last
+  stint (built since: net order through the pit cycle, third car closing on a battle, a track-change alert).
 - Follow a driver: a card with gaps ahead/behind, stint, pit window, penalties; optional browser notifications.
 - Co-driver planner: the lap by which a driver must be in the car to reach the minimum.
 - Pit stop leaderboard: fastest stops and team averages.

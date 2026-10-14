@@ -11,7 +11,7 @@ import { liveGap, parkedAtLine, raceFinished, raceOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
 import { useSessionClock } from '../map/useSessionClock'
 import type { ChartSelection } from '../chartSelection'
-import { useTowerSignals, type TowerSignals } from '../towerSignals'
+import type { TowerSignals } from '../towerSignals'
 import type { PitGhost } from '../pit/usePitGhost'
 
 /** Per-row buttons on the live race tower (shown on hover): pit rejoin estimate and the race charts. */
@@ -390,7 +390,7 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions, pitGhost = null }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions, pitGhost = null, signals }: {
   timing: TimingSnapshot
   simple: boolean
   /** The viewer's detailed-mode layout per session kind (settings panel). */
@@ -409,6 +409,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   actions?: RowActionProps
   /** The pit rejoin estimate: a tag on the car's row and a "would rejoin here" row where it would come out. */
   pitGhost?: PitGhost | null
+  /** Race signals (towerSignals.ts), worked out once in SessionView and shared with the race feed. */
+  signals: TowerSignals
 }) {
   const { best, timingPoints } = timing
   const race = isRace(timing.session.type)
@@ -430,7 +432,6 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   const minLaps = minDriverLaps(timing.session)
   // Row buttons only while racing: no pit stops or charts to add after the flag, or outside races.
   const rowActions = race && !finished ? actions : undefined
-  const signals = useTowerSignals(timing, [], timing.session.trackCode)
 
   // Where the "would rejoin here" row goes: before the car that would be just behind it (others only, in race order).
   const rejoin = race && !finished && pitGhost?.status === 'ok' ? pitGhost.rejoin : null

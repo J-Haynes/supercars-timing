@@ -12,6 +12,9 @@ import type { LossRange } from './pitLoss'
  * window" does too (docs/PLANNING.md, "Pit strategy features").
  */
 
+/** In the pits longer than this (s): parked (repairs, retired), not a stop in progress. Stops are ~30-100 s. */
+const PARKED_SECONDS = 180
+
 /** Closer than this to the car ahead after rejoining = in its dirty air (an assumption, not a measured figure). */
 export const CLEAR_AIR_SECONDS = 2
 
@@ -63,9 +66,11 @@ export function progress(car: CarRow, m: ProgressModel, now: number, lossOf: (ca
   const at = car.laps * m.lap + m.cum[i]
   if (crossed === null) return at
   if (car.inPit) {
-    // In the pit lane: where it was at pit entry, moving on at racing pace, minus what the stop costs.
+    // In the pit lane: where it was at pit entry, moving on at racing pace, minus what the stop costs. Not a car that
+    // has been in for minutes (in the garage, retired): it kept "moving" and topped the net order from P23.
     const stop = car.pitLog.at(-1)
     const inAt = stop && stop.outAt === 0 ? stop.inAt : now
+    if (now - inAt > PARKED_SECONDS) return null
     return at + clamp(inAt - crossed, 0, m.segments[i]) + Math.max(0, now - inAt) - lossOf(car)
   }
   return at + clamp(now - crossed, 0, m.segments[i])

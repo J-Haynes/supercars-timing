@@ -237,6 +237,16 @@ the server in live mode by hand.
   movers, spread across the top N) and **Log** (lead changes, fastest laps, race control, cautions/greens; newest
   first, stamped with the leader's lap, or the track time for messages from before the page loaded; NEW for 30 s).
   4 + 3 rows (2 + 2 on phones), each expands. Hover highlights the cars; click opens Focus (one car) or Compare (two).
+  **Strategy items** (`strategyInsights.ts`, Oct 2026; tuned on Bathurst Race 30 and the rebuilt 2025 Gold Coast races,
+  every 5 s of each race through the real feed code, docs/PLANNING.md "Race feed: strategy insights"): undercuts in
+  progress (the stopped car within the pit-adjusted top 8) and their result with the time gained or lost (within 5 s;
+  bigger is a slow stop); the order once the stops play out, only during a pit cycle (top 10 split k-1/k stops, k-th
+  stops within 12 laps); each stop of a top-6 car (P in → P out, pit-lane time, quickest green stop so far, drive-
+  throughs excluded); a free stop for the top 3; lapped traffic within 1.5 s of the top 3; an unserved penalty's
+  effect; tyre fall-off (0.25 s/lap worse than the field over 6 green laps, 10+ laps into a stint); a lead wiped out
+  by a caution (at the restart); lap times jumping 2.5 s+ across the field for two laps (conditions; no wet race
+  recorded to check it on). Battles say how many laps they've lasted; closing says when it'll be within a second, and
+  names a battle being caught. Tower signals (`useTowerSignals`) are worked out once in SessionView for tower and feed.
 - **Battles** (`battles.ts`): `battles()` is every chain within 1 s; the map and the feed use `notableBattles()`: none
   under a caution, none for 2 laps after a start/restart, packs of 5+ cars split to the groups within 0.5 s. Measured on
   Race 30: ~8 cars "battling" behind the safety car, 11-15-car trains for ~9 laps after the start, 2-3 cars mid-race.
