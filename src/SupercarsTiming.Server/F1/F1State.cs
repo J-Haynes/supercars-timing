@@ -132,9 +132,17 @@ public sealed partial class F1State
         if (patch["Sectors"] is JsonNode sectors)
         {
             // Mini-sectors per sector differ by circuit: learn them from any full list (the state on connecting,
-            // or the start of an archive).
-            if (sectors is JsonArray full && full.All(x => (x?["Segments"] as JsonArray)?.Count > 0))
-                _segmentsPerSector = full.Select(x => ((JsonArray)x!["Segments"]!).Count).ToArray();
+            // or the start of an archive). Archives send the sectors as an object keyed "0", "1", "2": without
+            // reading that form, the 2024 Monaco GP kept the default 8/8/8 (it has 6/10/5) and its mini-sector ids
+            // didn't match the map's.
+            // (Only every sector at once: a patch of one sector's whole list isn't the circuit's sector count.)
+            var all = sectors is JsonArray array ? array.ToList()
+                : sectors is JsonObject keyed && keyed.Count == _segmentsPerSector.Length
+                  && Enumerable.Range(0, keyed.Count).All(i => keyed.ContainsKey(i.ToString()))
+                    ? Enumerable.Range(0, keyed.Count).Select(i => keyed[i.ToString()]).ToList()
+                    : null;
+            if (all is not null && all.All(x => (x?["Segments"] as JsonArray)?.Count > 0))
+                _segmentsPerSector = all.Select(x => ((JsonArray)x!["Segments"]!).Count).ToArray();
 
             var crossed = new List<int>();
             for (var s = 0; s < _segmentsPerSector.Length; s++)

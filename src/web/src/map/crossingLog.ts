@@ -82,9 +82,15 @@ export class CrossingLog {
     return undefined
   }
 
-  /** The car's first crossing after time `t` (the green flag: its first crossing of the race), if the log has it. */
-  firstAfter(carId: string, t: number): Crossing | undefined {
-    return this.cars.get(carId)?.find((c) => c.at > t)
+  /** The car's first crossing after time `t` (the green flag: its first crossing of the race), if the log has it.
+   * `skipLine`: not the control line (a standing restart's first crossing is the line, a few metres from the grid). */
+  firstAfter(carId: string, t: number, skipLine = false): Crossing | undefined {
+    return this.cars.get(carId)?.find((c) => c.at > t && !(skipLine && c.point === 'M'))
+  }
+
+  /** Every crossing the log has for a car, oldest first (including ones after the time shown, from the feed ahead). */
+  history(carId: string): readonly Crossing[] {
+    return this.cars.get(carId) ?? []
   }
 
   /** The crossings either side of `now` for a car, if both are known. */

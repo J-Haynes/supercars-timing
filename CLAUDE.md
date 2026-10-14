@@ -75,7 +75,8 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
     year's by track and stop number, cited), `rejoin.ts` (race progress in seconds, where a car would rejoin),
     `usePitGhost.ts` + `PitGhostPanel.tsx` (the map ghost and its card).
   - Map: `map/trackModel.ts`, `map/carPosition.ts` (placement, out-lap and caution pacing), `map/smoothing.ts`,
-    `map/sessionClock.ts` + `useSessionClock.ts`, `map/calibrate.ts`, `map/usePositionSync.ts`.
+    `map/sessionClock.ts` + `useSessionClock.ts`, `map/calibrate.ts`, `map/usePositionSync.ts`, `map/startGrid.ts`
+    + `map/standingRestart.ts` (the grid at the start and after a red flag).
     `map/useCarPlacement.ts` places every car each frame (clock, calibration, crossing log, pacing, smoothing) for
     both maps: `MapView.tsx` shows the 2D `TrackMap` or the 3D `TrackMap3D` (lazy-loaded, three.js in
     `map/scene3d.ts`; the default view; 3D, Orbit, Follow and Free cameras, heights ×2, cars are dots like the 2D map
@@ -115,7 +116,8 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   Practice 5, Practice 6 (red flag), Top Ten Shootout, Warm Up (last minutes only), Race 30 (complete), plus support races.
   Also git-ignored there: `natsoft-results/` (2025 Gold Coast, Sandown and Adelaide race reports saved by hand from
   Natsoft's results site, for `tools/PitLoss`) and `f1-archive/` (topics downloaded from F1's archive: 2025 races for
-  pit loss, the 2025 Singapore GP race for the demo server).
+  pit loss, the 2025 Singapore GP race for the demo server, the 2024 Monaco GP race with `Position.z` (red flag,
+  standing restart) and the 2024 São Paulo GP race (red flag, rolling restart)).
 
 ## Endpoints
 
@@ -291,6 +293,18 @@ the server in live mode by hand.
   at Singapore). Launch distance is plain acceleration, not the flying-lap speed profile (that gave 90 m/s at 4 s).
   `StartCountdown.tsx` (in SessionView): the green flag from the recording in replays, the timetable's start live
   (`scheduledStart` in calendar.ts; before the formation lap, so it then says it's waiting for the green).
+  Grid drive-in uses the track's flying time for the last stretch (the session reference had red flag stops in it:
+  Monaco's cars sat 230 m short of their slots, then jumped at the green).
+- **Standing restart** (`map/standingRestart.ts`, from the crossing log, both series): after a red flag, a car that
+  crosses the lap's last timing point and stops there is drawn on the grid (in the order they arrived), then launched
+  at lights out like the start. Lights out = a green flag after the first car stopped, else each of the front three's
+  first crossing minus its launch time (F1 sends nothing at a restart's lights out: docs/PROTOCOL-F1.md). Race
+  control "ROLLING START" turns it off; without a "STANDING START" message only a long stop counts. Checked on the
+  2024 Monaco GP archive (map `F1-22` built from that race): grid order = race control's "ORDER FOR RESTART", lights
+  out within ~1 s (2 s late live without a delay), dots within ~30 m of the real cars. 2024 São Paulo (rolling): no
+  grid. Carrera Cup Race 2 at Bathurst (cars stopped on the straight under the red, restart behind the safety car):
+  drawn lined up behind the line during the red, leaving when they move off. No source found for Supercars' own
+  restart procedure.
 - **Ended sessions:** `useCarPlacement` puts no cars on track once the flag is Ended (F1's hub sends the last
   session's state on connecting; it looked like the field racing for ~10 s). The chequered flag still shows cars. Never place cars in the
   3D code: it draws `useCarPlacement`'s placements, so 2D, 3D and the elevation strip always agree. Follow locks
@@ -352,7 +366,9 @@ the server in live mode by hand.
 - **Gaps:** F1's `GapToLeader`/`IntervalToPositionAhead` are already live, so the tower uses them as sent.
   Flags: TrackStatus 4 = "Safety Car", 6/7 = "VSC" (both cautions in `flagKind`), 2 is a local yellow (green).
 - **Maps:** `F1-<circuit key>.json`, built by `build_track.py` from archived qualifying positions: Marina Bay (61)
-  from 2026; Austin (9), Mexico City (65), Interlagos (14), Las Vegas (152), Lusail (150), Yas Marina (70) from 2025.
+  from 2026; Austin (9), Mexico City (65), Interlagos (14), Las Vegas (152), Lusail (150), Yas Marina (70) from 2025;
+  Monaco (22) from the 2024 race (its red flag and standing restart test `standingRestart`; no corner labels yet).
+  The 2024 Monaco and São Paulo race archives are in `data/recordings/f1-archive/` (replayable from the F1 menu).
   Mini-sectors per sector differ by circuit (read from the data). Like every track file, they need the control line as timing point `M` at distance 0 (without it cars zipped a whole lap at the line). The pit lane is traced from cars' positions while
   `InPit` (Interlagos has a stray branch into the infield). Cars in the pits are drawn along it. Rebuild a circuit
   from its Practice 1 archive if the 2026 mini-sectors differ from 2025's (tower ids won't match the map's).

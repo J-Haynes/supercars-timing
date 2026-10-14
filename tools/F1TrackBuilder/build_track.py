@@ -10,8 +10,9 @@ needed:
     positions and projected onto the centreline, median over every crossing in the session.
 
 Timing messages reach the feed a little later than the moment the car crossed (positions carry their own
-timestamps), so the script tries delays from -2 to +6 s and keeps the one where all cars' crossings of a point land
-in the same place.
+timestamps), so the script tries delays from -40 to +6 s and keeps the one where all cars' crossings of a point land
+in the same place. Usually it's -2 to +6 s; in the 2024 Monaco GP race archive the positions are stamped 30 s off
+(-30 s: crossings within 3.3 m; the old -2 s limit gave 23 m and a map turned ~1.2 km round the lap).
 
 Usage (folder with Heartbeat, SessionInfo, DriverList, TimingData and Position.z .jsonStream/.json files):
   python3 tools/F1TrackBuilder/build_track.py <archive folder> [--out src/web/src/tracks]
@@ -197,7 +198,7 @@ def main():
             n += 1
         return total / max(n, 1)
 
-    delay = min((d / 10 for d in range(-20, 61, 2)), key=spread)
+    delay = min((d / 10 for d in range(-400, 61, 2)), key=spread)
     print(f'Timing delay vs positions: {delay:.1f} s (median spread {spread(delay):.1f} m; at 0 s: {spread(0):.1f} m)')
 
     # Centreline and timeline of the fastest lap (lap start/end are timing messages, so shift them too).

@@ -11,7 +11,8 @@ import { usePositionSync } from './usePositionSync'
 import { TAU, TAU_CAUTION, smoothPosition, type Smoothed } from './smoothing'
 import { CrossingLog, knownPosition, type Crossing, type MapFeed } from './crossingLog'
 import { useReferenceFallback } from './useReferenceFallback'
-import { gridPlaces, gridSlot, launchDistance, onGrid, preStartDistance } from './startGrid'
+import { gridPlaces, gridSlot, launchDistance, onGrid, preStartDistance, type GridSlot } from './startGrid'
+import { standingRestart } from './standingRestart'
 
 const PIT_SPACING = 70
 /** After the green flag, cars without a crossing yet are launched from their grid slot for this long (seconds). */
@@ -118,6 +119,22 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     const place = grid.current?.key === gridKey ? grid.current.places.get(car.id) : undefined
     return place ? gridSlot(model, place) : undefined
   }
+  // The track's flying-lap times: the session's own reference is from formation and out-laps at a start.
+  const stretches = baseline.map((b, i) => b || fallback[i])
+  const skipAfter = (isF1 ? F1_PACING : SUPERCARS_PACING).skipAfter
+  // A standing restart after a red flag (map/standingRestart.ts): the grid again, from the crossing log.
+  const restart = race && live && started
+    ? standingRestart(timing, sameSession ? live.timing : undefined, crossings.current, model, order, stretches, now)
+    : undefined
+
+  // A car launching from its grid slot `distance` along the lap, smoothed; it fans in from the two-wide grid to the
+  // racing line over the first ~150 m.
+  const launched = (car: CarRow, slot: GridSlot, distance: number): Placement => {
+    const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, TAU)
+    smoothing.current.set(car.id, sm)
+    const fan = Math.max(0, 1 - model.wrap(distance - slot.distance) / 150)
+    return { car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral * fan }
+  }
 
   // Back of the field first, so pit slots are handed out in a stable order.
   const placements: Placement[] = []
@@ -138,7 +155,7 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     // On the grid before the start, and launching from it until the car's first crossing of the race.
     const slot = race && !car.inPit ? slotOf(car) : undefined
     if (slot && preStart && onGrid(car, order, now)) {
-      const distance = preStartDistance(model, car, order, slot, fallback[order.length - 1], now)
+      const distance = preStartDistance(model, car, order, slot, stretches[order.length - 1], now)
       const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, TAU)
       smoothing.current.set(car.id, sm)
       placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral })
@@ -146,16 +163,31 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     }
     if (slot && started && now - green < LAUNCH_SECONDS && car.laps === 0 && car.lastPointAt < green) {
       const next = live ? crossings.current.firstAfter(car.id, green) : undefined
-      // The track's flying-lap times: the session's own reference is from formation and out-laps then.
-      const stretches = baseline.map((b, i) => b || fallback[i])
-      const distance = launchDistance(model, slot, green, now, order, next, stretches, (isF1 ? F1_PACING : SUPERCARS_PACING).skipAfter)
+      const distance = launchDistance(model, slot, green, now, order, next, stretches, skipAfter)
       onTrack++
       if (next) known++
-      const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, TAU)
-      smoothing.current.set(car.id, sm)
-      // Fan in from the two-wide grid to the racing line over the first ~150 m.
-      const fan = Math.max(0, 1 - model.wrap(distance - slot.distance) / 150)
-      placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral * fan })
+      placements.push(launched(car, slot, distance))
+      continue
+    }
+    // A standing restart: on the grid until the lights go out, then launched until the first crossing past the line.
+    const restartCar = !car.inPit ? restart?.cars.get(car.id) : undefined
+    const latest = restartCar ? crossings.current.latest(car.id, now) : undefined
+    const out = restart?.lightsOut
+    if (restartCar && latest && (latest.at <= restartCar.stop.at || (latest.point === 'M' && out !== undefined && latest.at >= out))) {
+      onTrack++
+      if (out === undefined || now < out) {
+        const arriving = { ...car, lastPoint: restartCar.stop.point, lastPointAt: restartCar.stop.at }
+        // The track's flying time for the stretch: the session's reference is from laps behind the safety car here
+        // (Monaco 2024: cars were still 230 m short of their slots at the lights).
+        const distance = preStartDistance(model, arriving, order, restartCar.slot, stretches[order.length - 1], now)
+        const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, TAU)
+        smoothing.current.set(car.id, sm)
+        placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: restartCar.slot.lateral })
+        continue
+      }
+      const next = crossings.current.firstAfter(car.id, out, true)
+      if (next) known++
+      placements.push(launched(car, restartCar.slot, launchDistance(model, restartCar.slot, out, now, order, next, stretches, skipAfter)))
       continue
     }
     const inLap = shootout && car.lapsSincePit >= 2

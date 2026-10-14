@@ -47,7 +47,9 @@ against the Singapore GP weekend. Update this whenever you learn something (the 
   "LAP 20"), `IntervalToPositionAhead.Value`, `NumberOfLaps`, `LastLapTime.Value`, `BestLapTime.{Value,Lap}`,
   `Sectors[0..2].Value`, `Speeds.ST`, `InPit`, `PitOut`, `NumberOfPitStops`, `Retired`, `Stopped`. In practice and
   qualifying the gaps are `TimeDiffToFastest` / `Stats[]`.
-- **Mini-sectors:** `Sectors[s].Segments[i].Status` (8 per sector at Singapore). Non-zero = the car has finished
+- **Mini-sectors:** `Sectors[s].Segments[i].Status` (8 per sector at Singapore; Monaco 6/10/5). In archive files
+  the full state's `Sectors` is an object keyed `"0"`, `"1"`, `"2"`, not an array (read both; until Oct 2026 the
+  server only read arrays and labelled Monaco's mini-sectors 8/8/8). Non-zero = the car has finished
   that mini-sector (2048 yellow, 2049 green, 2051 purple, others for the pit lane). Statuses arrive in order as the
   car goes round. At the start of a lap one message sets sector 1 segment 1 and clears the rest. **Colours of
   earlier segments are re-sent later in the lap** (2051 → 2049), so only a segment *further round the lap* is a
@@ -56,6 +58,22 @@ against the Singapore GP weekend. Update this whenever you learn something (the 
 - **TimingStats** `Lines.<car>`: `BestSectors[]`, `BestSpeeds`, `PersonalBestLapTime`.
 - **RaceControlMessages** `Messages[]`: `Utc` (UTC, no `Z`), `Lap`, `Category`, `Flag`, `Scope`, `Message`.
   Penalties look like "FIA STEWARDS: 5 SECOND TIME PENALTY FOR CAR 87 (BEA) - ...".
+
+### Red flag and restart (2024 Monaco GP race archive, checked against its car positions)
+
+- Red: TrackStatus `5` and SessionStatus `Aborted`; cars wait in the pit lane (`InPit`). Race control then sends
+  "ORDER FOR RESTART: 16, 81, ...", "RACE WILL RESUME AT 15:44", "... - STANDING START PROCEDURE" (2024 São Paulo:
+  "ROLLING START PROCEDURE"), and "STANDING START" when the cars leave.
+- SessionStatus goes back to `Started` when the **pit exit opens** for the formation lap behind the safety car, not
+  at the restart: our flag reads Green, then Safety Car (TrackStatus `4` two seconds later), then Green again when the
+  safety car goes in, 74 s before the lights. **Nothing marks the lights going out** except LapCount `CurrentLap`
+  going up (exactly then) and each car's line crossing (`NumberOfLaps` + 1) a moment later: the pole car 0.1-1 s
+  after, P16 ~5 s after. The cars stop on the grid (16 m behind the line at Monaco) after the last mini-sector, for
+  up to 64 s. The map uses that (`map/standingRestart.ts`).
+- Segment reference times include the stop: the session's time for the last stretch of the lap was 2012 s just
+  after the restart (the lap the red flag stopped).
+- The archive's `Position.z` timestamps are 31 s off its timing messages (other archives: 0-6 s);
+  `tools/F1TrackBuilder` now searches -40..+6 s.
 
 ## How the app uses it
 

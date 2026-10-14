@@ -128,14 +128,32 @@ export function launchDistance(
 /** The estimated launch towards timing point order[k] (see launchDistance), and how late the car is there (x expected). */
 function estimateTo(track: TrackModel, slot: GridSlot, green: number, now: number, order: string[], stretches: number[], k: number) {
   const to = order[k] ? track.pointDistance.get(order[k]) : undefined
-  const flying = stretches.slice(0, k).reduce((a, b) => a + b, 0)
-  if (to === undefined || to <= 0 || flying <= 0) return undefined
-  const metres = to + (track.length - slot.distance)
-  const expected = flying * (metres / to) + LAUNCH_LOSS
+  const expected = to !== undefined ? launchSeconds(track, slot, order, stretches, order[k]) : undefined
+  if (to === undefined || expected === undefined) return undefined
   // Ease in near the point when late, like carPosition under a caution: never past a point not yet crossed.
   const f = (now - green) / expected
   const shown = f < 0.85 ? f : 0.85 + 0.14 * (1 - Math.exp(-(f - 0.85) / 0.14))
   return { distance: along(track, slot.distance, to, launchFraction(Math.min(shown, 0.99))), late: f }
+}
+
+/**
+ * Expected seconds from a standing start in `slot` to timing point `point`: the flying-lap time over that distance
+ * (scaled from the stretches up to the point) plus LAUNCH_LOSS. The control line ('M') is the few metres in front of
+ * the grid, scaled from the last stretch of the lap.
+ */
+export function launchSeconds(track: TrackModel, slot: GridSlot, order: string[], stretches: number[], point: string): number | undefined {
+  const behind = track.length - slot.distance
+  if (point === 'M') {
+    const last = track.pointDistance.get(order[order.length - 1])
+    const seconds = stretches[order.length - 1]
+    if (last === undefined || !seconds) return undefined
+    return seconds * (behind / Math.max(track.length - last, behind)) + LAUNCH_LOSS
+  }
+  const k = order.indexOf(point)
+  const to = track.pointDistance.get(point)
+  const flying = stretches.slice(0, Math.max(k, 0)).reduce((a, b) => a + b, 0)
+  if (k <= 0 || to === undefined || to <= 0 || flying <= 0) return undefined
+  return flying * ((to + behind) / to) + LAUNCH_LOSS
 }
 
 /** `fraction` of the way from distance `from` to distance `to`, forwards round the lap. */

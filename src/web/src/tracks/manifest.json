@@ -61,5 +61,10 @@
       "ADELAIDE"
     ],
     "provisional": true
+  },
+  "F1-22": {
+    "name": "Monaco",
+    "match": [],
+    "provisional": false
   }
 }

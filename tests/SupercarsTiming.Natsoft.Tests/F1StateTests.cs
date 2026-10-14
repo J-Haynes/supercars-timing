@@ -44,6 +44,23 @@ public class F1StateTests
     }
 
     [Fact]
+    public void Learns_mini_sectors_per_sector_from_an_archives_keyed_sectors()
+    {
+        // 2024 Monaco GP archive: the full lists come as {"0":{...},"1":{...},"2":{...}}, 6/10/5 mini-sectors.
+        static string Segs(int n) => "{\"Segments\":[" + string.Join(",", Enumerable.Repeat("{\"Status\":0}", n)) + "]}";
+        var s = new F1State();
+        s.Apply(Msg(0, "SessionInfo", """{"Meeting":{"Name":"Monaco Grand Prix","Circuit":{"Key":22,"ShortName":"Monte Carlo"}},"Key":9523,"Type":"Race","Name":"Race","GmtOffset":"02:00:00"}"""));
+        // One sector's whole list alone isn't the circuit's sector count.
+        s.Apply(Msg(0, "TimingData", "{\"Lines\":{\"16\":{\"Sectors\":{\"2\":" + Segs(5) + "}}}}"));
+        Assert.Equal(23, s.Snapshot().TimingPoints.Count);
+        s.Apply(Msg(0, "TimingData", "{\"Lines\":{\"16\":{\"Sectors\":{\"0\":" + Segs(6) + ",\"1\":" + Segs(10) + ",\"2\":" + Segs(5) + "}}}}"));
+        var points = s.Snapshot().TimingPoints.Select(p => p.Id).ToList();
+        Assert.Equal(20, points.Count);
+        Assert.Equal(["1.6", "2.1"], points[5..7]);
+        Assert.Equal("3.4", points[^1]);
+    }
+
+    [Fact]
     public void A_new_session_drops_the_old_sessions_timing()
     {
         // Singapore 2026: the race's lines arrived fresh (no lap count, no pit stops yet) but were merged onto
