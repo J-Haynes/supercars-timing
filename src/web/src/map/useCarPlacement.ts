@@ -9,7 +9,7 @@ import { cautionPeriods, flagKind, isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from './calibrate'
 import { usePositionSync } from './usePositionSync'
 import { TAU, TAU_CAUTION, smoothPosition, type Smoothed } from './smoothing'
-import { CrossingLog, knownPosition, type Crossing } from './crossingLog'
+import { CrossingLog, knownPosition, type Crossing, type MapFeed } from './crossingLog'
 import { useReferenceFallback } from './useReferenceFallback'
 import { gridPlaces, gridSlot, launchDistance, onGrid, preStartDistance } from './startGrid'
 
@@ -30,7 +30,7 @@ export type Placement =
  * broadcast delay, pacing and smoothing. Shared by the 2D map (TrackMap) and the 3D map (TrackMap3D), so both show
  * cars in the same place. Re-renders every animation frame (the session clock ticks).
  */
-export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, live?: TimingUpdate | null) {
+export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, live?: MapFeed | null) {
   const { timing, feed } = update
   const now = useSessionClock(timing.now, feed.state === 'live' || feed.state === 'replaying' ? feed.clockRate ?? 1 : 0)
   const order = useMemo(() => ['M', ...timing.timingPoints.map((p) => p.id)], [timing.timingPoints])
@@ -63,6 +63,11 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
   useEffect(() => {
     if (live) crossings.current.add(live)
   }, [live])
+  // A replay's fill of a jump in its lookahead (MapFeed): the crossings polling skipped.
+  const between = live?.between
+  useEffect(() => {
+    for (const timing of between ?? []) crossings.current.addPast({ feed: update.feed, timing })
+  }, [between]) // eslint-disable-line react-hooks/exhaustive-deps -- only when a new fill arrives
   // The snapshot on screen too: every car's crossing at or before the time shown is then known straight away.
   useEffect(() => {
     if (live) crossings.current.addPast(update)
@@ -141,18 +146,17 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     }
     if (slot && started && now - green < LAUNCH_SECONDS && car.laps === 0 && car.lastPointAt < green) {
       const next = live ? crossings.current.firstAfter(car.id, green) : undefined
-      // The track's flying-lap time to the first point: the session's own reference is from formation and out-laps then.
-      const distance = launchDistance(model, slot, green, now, order, next, baseline[0] || fallback[0])
-      if (distance !== undefined) {
-        onTrack++
-        if (next) known++
-        const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, TAU)
-        smoothing.current.set(car.id, sm)
-        // Fan in from the two-wide grid to the racing line over the first ~150 m.
-        const fan = Math.max(0, 1 - model.wrap(distance - slot.distance) / 150)
-        placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral * fan })
-        continue
-      }
+      // The track's flying-lap times: the session's own reference is from formation and out-laps then.
+      const stretches = baseline.map((b, i) => b || fallback[i])
+      const distance = launchDistance(model, slot, green, now, order, next, stretches, (isF1 ? F1_PACING : SUPERCARS_PACING).skipAfter)
+      onTrack++
+      if (next) known++
+      const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, TAU)
+      smoothing.current.set(car.id, sm)
+      // Fan in from the two-wide grid to the racing line over the first ~150 m.
+      const fan = Math.max(0, 1 - model.wrap(distance - slot.distance) / 150)
+      placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral * fan })
+      continue
     }
     const inLap = shootout && car.lapsSincePit >= 2
     // In-laps are slow: don't cap them at racing pace.

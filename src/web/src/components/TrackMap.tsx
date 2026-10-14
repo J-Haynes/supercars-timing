@@ -2,6 +2,7 @@ import { teamStyle } from '../series'
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { CarRow, TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
+import type { MapFeed } from '../map/crossingLog'
 import { TrackModel, type Vec } from '../map/trackModel'
 import { useCarPlacement } from '../map/useCarPlacement'
 import { notableBattles, battleSpans } from '../battles'
@@ -64,7 +65,7 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
   update: TimingUpdate
   /** The live (undelayed) update. With a broadcast delay it's ahead of `update`: cars are placed between the
    * crossings either side of the time shown instead of estimated (map/crossingLog.ts). */
-  live?: TimingUpdate | null
+  live?: MapFeed | null
   hoverId: string | null
   /** Cars named by the insight under the mouse. */
   highlightIds?: string[]

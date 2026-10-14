@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { CarRow } from '../types'
 import type { LapHistory, TimingUpdate } from '../types'
+import type { MapFeed } from '../map/crossingLog'
 import type { Settings } from '../settings'
 import { useTrack } from '../tracks'
 import { isRace, isShootout } from '../session'
@@ -37,7 +38,7 @@ export function SessionView({ update, live, history, settings, updateSettings, t
   /** What's shown (the delayed update live; the replay's moment in a replay). */
   update: TimingUpdate
   /** The map's view of what comes next: the live feed ahead of a broadcast delay, or a replay's lookahead. */
-  live: TimingUpdate | null
+  live: MapFeed | null
   /** Lap history for the charts and the driver dialog: undefined = fetch the live one; a replay passes its laps up to
    * the replay time. */
   history?: LapHistory | null

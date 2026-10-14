@@ -100,27 +100,42 @@ export function launchFraction(f: number): number {
 /**
  * Where a car is between the green flag and its first crossing after it: from its grid slot to that crossing.
  * - `next` known (a replay's lookahead or a broadcast delay): exactly on time.
- * - else estimated: its flying-lap time from the slot to the first timing point (`firstStretch` seconds from the line,
- *   scaled for the extra distance behind it) plus LAUNCH_LOSS, holding just short of the point if it's late.
- * Returns undefined when this isn't the launch (no slot, or the next crossing doesn't look like one).
+ * - else estimated: its flying-lap time from the slot to the first timing point (`stretches`: seconds per stretch
+ *   from the line, scaled for the extra distance behind it) plus LAUNCH_LOSS, holding just short of the point if it's
+ *   late. With `skipAfter` (F1: its first mini-sector is rarely sent at a start, 1 car of 18 at Singapore 2026), a car
+ *   that late is assumed past it and carries on towards the second point, like carPosition.
  */
 export function launchDistance(
-  track: TrackModel, slot: GridSlot, green: number, now: number, order: string[], next: Crossing | undefined, firstStretch: number,
-): number | undefined {
-  if (next && next.at > green) {
-    const to = track.pointDistance.get(next.point)
-    if (to === undefined || to > track.length / 2) return undefined
-    return along(track, slot.distance, to, launchFraction((now - green) / (next.at - green)))
+  track: TrackModel, slot: GridSlot, green: number, now: number, order: string[], next: Crossing | undefined, stretches: number[],
+  skipAfter?: number,
+): number {
+  // Only a crossing within the first two points: further on (a hole in the crossing log, e.g. a live page loaded
+  // mid-launch with a broadcast delay), aiming at it put cars hundreds of metres short of point 1. F1 often skips
+  // its first mini-sector (1.2 is the first crossing), so the second point is allowed.
+  const reach = track.pointDistance.get(order[2] ?? order[1] ?? '') ?? 0
+  const nextAt = next && next.at > green ? track.pointDistance.get(next.point) : undefined
+  if (next && nextAt !== undefined && nextAt > 0 && nextAt <= reach) {
+    return along(track, slot.distance, nextAt, launchFraction((now - green) / (next.at - green)))
   }
-  const firstPoint = order[1]
-  const to = firstPoint ? track.pointDistance.get(firstPoint) : undefined
-  if (to === undefined || to <= 0 || firstStretch <= 0) return slot.distance
+  const first = estimateTo(track, slot, green, now, order, stretches, 1)
+  if (!first) return slot.distance
+  if (skipAfter === undefined || first.late <= 1 + skipAfter) return first.distance
+  // Past the first point by now: whichever is further on (the second estimate starts behind the first one).
+  const second = estimateTo(track, slot, green, now, order, stretches, 2)
+  return second && track.wrap(second.distance - slot.distance) > track.wrap(first.distance - slot.distance) ? second.distance : first.distance
+}
+
+/** The estimated launch towards timing point order[k] (see launchDistance), and how late the car is there (x expected). */
+function estimateTo(track: TrackModel, slot: GridSlot, green: number, now: number, order: string[], stretches: number[], k: number) {
+  const to = order[k] ? track.pointDistance.get(order[k]) : undefined
+  const flying = stretches.slice(0, k).reduce((a, b) => a + b, 0)
+  if (to === undefined || to <= 0 || flying <= 0) return undefined
   const metres = to + (track.length - slot.distance)
-  const expected = firstStretch * (metres / to) + LAUNCH_LOSS
+  const expected = flying * (metres / to) + LAUNCH_LOSS
   // Ease in near the point when late, like carPosition under a caution: never past a point not yet crossed.
   const f = (now - green) / expected
   const shown = f < 0.85 ? f : 0.85 + 0.14 * (1 - Math.exp(-(f - 0.85) / 0.14))
-  return along(track, slot.distance, to, launchFraction(Math.min(shown, 0.99)))
+  return { distance: along(track, slot.distance, to, launchFraction(Math.min(shown, 0.99))), late: f }
 }
 
 /** `fraction` of the way from distance `from` to distance `to`, forwards round the lap. */

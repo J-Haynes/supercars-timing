@@ -4,6 +4,7 @@ import type { LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '
 import { useSettings } from '../settings'
 import { flagKind, flagPeriods, leaderLap } from '../session'
 import { SessionView } from './SessionView'
+import type { MapFeed } from '../map/crossingLog'
 
 const SPEEDS = [1, 2, 5, 10, 20, 60]
 /** The skip buttons either side of play/pause (session seconds). */
@@ -16,6 +17,12 @@ const POLL_MS = 250
  * pace (map/crossingLog.ts). Longer than the slowest stretch (Bathurst under a safety car, ~60 s).
  */
 const LOOKAHEAD_SECONDS = 90
+/**
+ * When the lookahead jumps (loading, seeking, the skip buttons), the snapshots in between are fetched this far apart
+ * (session seconds) for the map's crossing log (map/crossingLog.ts, MapFeed). Supercars stretches take 10 s+; F1
+ * mini-sectors 2-5 s (a skipped one is placed across, knownPosition). A 90 s fill: ~30 snapshots of 25-40 KB, 0.6 s.
+ */
+const FILL_STEP = 3
 
 /** Natsoft time is track-local wall-clock time encoded as Unix seconds: format as UTC to get track time. */
 const trackTime = (t: number) => new Date(t * 1000).toISOString().slice(11, 19)
@@ -51,6 +58,8 @@ export function ReplayView({ session, onBack, onUpdate }: {
   const [laps, setLaps] = useState<LapHistory | null>(null)
   const [timing, setTiming] = useState<TimingSnapshot | null>(null)
   const [ahead, setAhead] = useState<TimingSnapshot | null>(null)
+  // Snapshots filling the latest jump in the lookahead, for the map's crossing log.
+  const [between, setBetween] = useState<TimingSnapshot[] | undefined>(undefined)
   // Bumped on every backwards seek, so the race feed starts again instead of keeping events from later on.
   const [epoch, setEpoch] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -93,10 +102,33 @@ export function ReplayView({ session, onBack, onUpdate }: {
     return () => cancelAnimationFrame(frame)
   }, [playing, speed, range])
 
+  // Fill a jump in the lookahead: the snapshots every FILL_STEP from `from` to `to`, on their own server cursor.
+  // A newer fill replaces one still running (its first snapshots are in already: the log keeps them).
+  const fillRun = useRef(0)
+  const backfill = async (from: number, to: number) => {
+    const run = ++fillRun.current
+    const got: TimingSnapshot[] = []
+    for (let at = from + FILL_STEP; at < to && run === fillRun.current; at += FILL_STEP) {
+      const res = await fetch(`${API_BASE}/sessions/${id}/replay?t=${at}&viewer=${viewerId}-fill`).catch(() => null)
+      if (!res?.ok) break
+      const snap: TimingSnapshot = await res.json()
+      snap.now = Math.max(snap.now, at)
+      got.push(snap)
+      // Hand them over in batches, so the earliest crossings (the ones needed first) arrive in a fraction of a second.
+      if (got.length % 5 === 0 && run === fillRun.current) setBetween([...got])
+    }
+    if (run === fillRun.current) setBetween([...got])
+  }
+  const speedRef = useRef(speed)
+  speedRef.current = speed
+  const playingRef = useRef(playing)
+  playingRef.current = playing
+
   // Ask for the snapshot at the current time, at most every POLL_MS, and straight away after a seek.
   const inFlight = useRef(false)
   const shownNow = useRef(0)
   const lastAsked = useRef(-1)
+  const lastAhead = useRef(Number.NEGATIVE_INFINITY)
   useEffect(() => {
     if (!range) return
     const ask = async () => {
@@ -122,9 +154,16 @@ export function ReplayView({ session, onBack, onUpdate }: {
           setTiming(snap)
         }
         if (next?.ok) {
+          const aheadAt = Math.min(at + LOOKAHEAD_SECONDS, range.end)
           const ahead: TimingSnapshot = await next.json()
-          ahead.now = Math.max(ahead.now, Math.min(at + LOOKAHEAD_SECONDS, range.end))
+          ahead.now = Math.max(ahead.now, aheadAt)
           setAhead(ahead)
+          // More than playing would move it between two polls: a load or a seek, and the crossings in the jump were
+          // never seen. Backwards, the log starts again (CrossingLog.add), so fill from the replay time.
+          const from = aheadAt < lastAhead.current - 1 ? at : Math.max(lastAhead.current, at)
+          const playStep = playingRef.current ? (speedRef.current * POLL_MS) / 1000 : 0
+          if (aheadAt - from > Math.max(FILL_STEP, 3 * playStep)) void backfill(from, aheadAt)
+          lastAhead.current = aheadAt
         }
       } finally {
         clearTimeout(slow)
@@ -142,7 +181,9 @@ export function ReplayView({ session, onBack, onUpdate }: {
     timing,
   }
   // The map's "live feed": the snapshot LOOKAHEAD_SECONDS ahead, so it knows every car's next crossing.
-  const aheadUpdate: TimingUpdate | null = ahead && { feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 }, timing: ahead }
+  const aheadUpdate: MapFeed | null = useMemo(
+    () => ahead && { feed: { mode: 'Replay', state: 'replaying', detail: session.name, clockRate: playing ? speed : 0 }, timing: ahead, between },
+    [ahead, between, playing, speed, session.name])
   // Lap history up to the replay time (charts, driver dialog): nothing from later in the race.
   const shownLaps = useMemo(() => laps && timing && { ...laps, cars: laps.cars.map((c) => ({ ...c, laps: c.laps.filter((l) => l.at <= timing.now) })) },
     [laps, timing])

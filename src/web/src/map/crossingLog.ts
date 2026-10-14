@@ -1,7 +1,16 @@
-import type { TimingUpdate } from '../types'
+import type { TimingSnapshot, TimingUpdate } from '../types'
 import type { TrackModel } from './trackModel'
 import { place } from './carPosition'
 import { MAX_DELAY_SECONDS } from '../useDelayedUpdate'
+
+/**
+ * What the map gets as its view ahead: the live feed (ahead of a broadcast delay) or a replay's lookahead, plus, in a
+ * replay, `between`: snapshots the replay fetched to fill a jump in the lookahead (loading, seeking, skipping). Polls
+ * only see each car's latest crossing, so a jump of 90 s lost every crossing in it: opened 20 s before the Bathurst
+ * start, the first crossing the log had was point 3 at +55 s, and cars launched towards it jumped ~300 m when their
+ * real point 1 crossing came.
+ */
+export type MapFeed = TimingUpdate & { between?: TimingSnapshot[] }
 
 export interface Crossing {
   point: string

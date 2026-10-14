@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
+import type { MapFeed } from '../map/crossingLog'
 import { useScenery } from '../tracks'
 import { TrackModel } from '../map/trackModel'
 import { useCarPlacement } from '../map/useCarPlacement'
@@ -19,7 +20,7 @@ import { ghostOnTrack, type PitGhost } from '../pit/usePitGhost'
 export default function TrackMap3D({ track, update, live, hoverId, highlightIds = [], pinned, camera, followCar, views, cornerLabels, cornersButton, showBattles, flatBuildings, onFlatBuildings, showLandmarks, onShowLandmarks, ghostPicker, pitGhost, onFollowCar, onHover, onTogglePin, note }: {
   track: TrackDefinition
   update: TimingUpdate
-  live?: TimingUpdate | null
+  live?: MapFeed | null
   hoverId: string | null
   highlightIds?: string[]
   pinned: string[]

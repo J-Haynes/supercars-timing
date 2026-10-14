@@ -286,7 +286,8 @@ the server in live mode by hand.
   approximation) in grid order (`startPosition`, else the order before the start). Natsoft sends no crossings before
   the green (Bathurst Race 30); F1's formation lap ends with an `M` crossing, and cars drive into their slot. After
   the green each car launches from its slot to its first crossing: timed exactly when the crossing log knows it
-  (replay lookahead, broadcast delay), else flying-lap time + 1.5 s (measured: pole loses 1.8 s at Bathurst, 2.8 s
+  (replay lookahead, broadcast delay; only a crossing within the first two points is trusted), else flying-lap time + 1.5 s
+  (F1: past the first mini-sector once 30 % late, F1 rarely sends it at a start) (measured: pole loses 1.8 s at Bathurst, 2.8 s
   at Singapore). Launch distance is plain acceleration, not the flying-lap speed profile (that gave 90 m/s at 4 s).
   `StartCountdown.tsx` (in SessionView): the green flag from the recording in replays, the timetable's start live
   (`scheduledStart` in calendar.ts; before the formation lap, so it then says it's waiting for the green).
@@ -319,7 +320,10 @@ the server in live mode by hand.
   Gold Coast Race 28: 0 % -> 100 % of positions known); the crossing log and the feed reset on a backwards seek. Play/
   pause, skip ±10 s / 30 s / 1 min, 1-60×, scrubber with lap ticks, start and chequered marks, and safety car / red
   flag bands with a clickable ⚑ from the whole session's flag history (the results), so they show before the replay
-  reaches them; starts 20 s before the first green. A replay snapshot's `now` is set to the replay time (it was the
+  reaches them; starts 20 s before the first green. When the lookahead jumps (load, seek, skip buttons; not normal
+  play) the page also fetches the snapshots every 3 s in the jump (`backfill`, `viewer=<id>-fill`) and passes them as
+  `MapFeed.between`: polls only see each car's latest crossing, so after loading the log's first crossing was point 3
+  and the launch aimed there (cars then jumped ~300 m at point 1; with the fill: 1 m). A replay snapshot's `now` is set to the replay time (it was the
   last message's time: 4 min behind before the Bathurst start, when the feed was quiet). The page moves the
   time and polls `/replay?t=` every 250 ms; the server keeps a cursor per viewer.
 - **Upcoming events** (`EventPreview.tsx`, from the menu): session timetable from `calendar.ts` (local track time,
