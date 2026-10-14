@@ -68,7 +68,7 @@ const SUPERCARS_EVENTS: Omit<UpcomingEvent, 'startDate' | 'endDate' | 'utcOffset
     format: 'Finals round 1 · two 250 km races',
     info: {
       round: 'Round 12 of 14 · Finals round 1 of 3',
-      stakes: 'The top 10 in the championship start the Finals. Points reset, with a bonus for the top four going in (150, 120, 96, 78) and 25 for the Sprint and Enduro Cup winners. After the two races the bottom three are eliminated: "only 7 drivers will remain in the title fight".',
+      stakes: 'The top 10 in the championship start the Finals. Points reset to 3000 plus a bonus by position after Bathurst (150, 120, 96 and 78 for the top four, then 66 down to 21) and 25 for the Sprint and Enduro Cup winners. After the two races the bottom three are eliminated: "only 7 drivers will remain in the title fight".',
       facts: [
         { label: 'Circuit', value: 'Surfers Paradise street circuit, 2.96 km, 14 numbered turns' },
         { label: 'Races', value: '2 × 250 km, 85 laps each (Races 31 and 32)' },
@@ -84,6 +84,7 @@ const SUPERCARS_EVENTS: Omit<UpcomingEvent, 'startDate' | 'endDate' | 'utcOffset
         { label: 'Supercars: event page (length, laps, lap record, Finals)', url: 'https://www.supercars.com/events/2026-gold-coast' },
         { label: 'Supercars: official track map (turns, support, TV)', url: 'https://assets.ctfassets.net/xd502h20t7lh/6r1B8LCvMh9bvEOWzbDPZ9/3ede3611fcaca36e4790c1f10bb1018c/SC26-GC-Track_Map-5_compressed.pdf' },
         FORMATS, FINALS_RULES, ELIMINATIONS, CUP_BONUS, SEASON,
+        { label: 'Supercars: 2026 Finals field and starting points', url: 'https://www.supercars.com/news/supercars-news-2026-finals-drivers-field-bathurst-1000-qualified-set-payne-feeney-kostecki-brown' },
         { label: 'Wikipedia: 2025 Gold Coast 500', url: 'https://en.wikipedia.org/wiki/2025_Gold_Coast_500' },
       ],
     },

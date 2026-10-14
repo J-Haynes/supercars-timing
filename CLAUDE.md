@@ -243,7 +243,11 @@ the server in live mode by hand.
   The feed also waits 20 s before showing a battle and shows the front 3 (the rest as one "more battles" line).
 - **Championship ladder** (`Ladder.tsx`, data in `championship.ts`: standings after Round 10 + Enduro scale, cited)
   with the top 10 Finals cut in gold. **Finals ladder** (`FinalsLadder.tsx`, rules in `finals.ts`) for the Gold
-  Coast: 3000 + 150/120/96/78 bonus, +25 cup winners, top 7 advance, bottom 3 eliminated.
+  Coast: top 7 advance, bottom 3 eliminated (then 4 to the Grand Final). Starting points are Supercars' official
+  ones (`FinalsRound.field`: 3000 + 150/120/96/78 for the top four, 66/57/48/39/30/21 for 5th-10th, +25 per cup);
+  our own sum from the recorded Bathurst result had Allen and Brown swapped. Only this season's races count as
+  earlier races of the round (`racesOf`: last year's rebuilt Gold Coast races matched too). The event page shows the
+  same field before the weekend (`FinalsField.tsx`: seeds, starting points, the cut).
 - **Charts** (`RaceCharts.tsx`, `LineChart.tsx`, `ChartLab.tsx` large view; colours validated with the dataviz palette
   script against #12161b): gap, lap times, position, battle (trend only over laps since either car's last stop).
   Lap axis runs to the race distance.
@@ -390,9 +394,10 @@ the server in live mode by hand.
   the app). Last year's races are replayable: menu → Past seasons (rebuilt with `tools/HistoricalRace`).
 
 - Sessions and sources are in `calendar.ts` (Supercars schedule "correct as of 16 Sep"). Races 31 and 32, 85 laps.
-- **Before the weekend:** set `FINALS_ROUNDS[0].cupWinners.enduro` in `finals.ts` (Enduro Cup winner, +25) and check the
-  Bathurst result our Finals seeding uses against the official one (post-race penalties aren't in the feed). Add a
-  `startingGrid.ts` entry for each race once the grid is known (or send grid positions from the server).
+- **Before the weekend:** done: the Enduro Cup winner (Brown, #888) and the official starting points are in
+  `finals.ts`. Optional: a `startingGrid.ts` entry for each race once the grid is known (without one, positions
+  gained count from Natsoft's order before the start). For Sandown, add a `FINALS_ROUNDS` entry with its official
+  field after the Gold Coast.
 - **After Practice 1:** rebuild the `SURF` map from the recording (keep `--elevation none --scenery 900 --official ...`;
   command in the TrackBuilder README) (checklist in `tools/TrackBuilder/README.md`;
   Natsoft's track code there is still a guess). Check that the Gold Coast feed behaves like Bathurst (flags, `<E L>`).

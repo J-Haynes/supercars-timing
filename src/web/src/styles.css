@@ -662,6 +662,10 @@ main { flex: 1; padding: 0 16px 24px; }
 .ladder-elimination { --elim: var(--red); border: 2px dashed var(--elim); border-radius: 8px; padding: 2px 0 4px; margin: 0 0 8px; background: rgba(255, 77, 79, .06); }
 .ladder-elimination-label { color: var(--elim); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px 2px; }
 .finals-row.out .ladder-pos { color: var(--red); }
+.finals-field { margin-top: 20px; }
+.event-preview .finals-field h2 { margin: 0 0 6px; font-size: 11px; }
+.finals-explain { margin: 4px 2px 10px; line-height: 1.5; font-size: 13px; }
+.ladder-today.behind { color: var(--red); }
 .ladder-others summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 4px 8px; }
 
 /* Phone layout (< 760 px): a tab bar picks one section; everything else stays mounted but hidden. */
@@ -795,6 +799,12 @@ button.upcoming:hover { border-color: var(--muted); }
 .event-table .event-until { color: var(--muted); text-align: right; }
 .event-table tr.next .event-until { color: var(--text); }
 .event-laps { color: var(--muted); font-weight: 400; }
+/* Phones: the timetable's no-wrap day, time and countdown columns ran 11 px past a 390 px screen. */
+@media (max-width: 480px) {
+  .event-sessions { padding: 10px; }
+  .event-table { font-size: 13px; }
+  .event-table td { padding: 6px 4px; }
+}
 /* A note on the map (e.g. work in progress) sits along the bottom so the circuit stays visible. */
 .map-overlay.map-note { top: 46px; left: 12px; transform: none; max-width: min(340px, 70%); font-size: 11px; padding: 6px 10px; text-align: left; }
 

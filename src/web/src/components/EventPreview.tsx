@@ -8,6 +8,7 @@ import { browserTimeZone, formatSessionTime, useTimeZoneChoice } from '../timeZo
 import { ColumnSplitter } from './ColumnSplitter'
 import { ErrorBoundary } from './ErrorBoundary'
 import { isF1, SERIES_LABEL, SERIES } from '../series'
+import { FinalsField } from './FinalsField'
 
 /** "3d 4h", "2h 10m", "5m"; past times as "Done". */
 function until(ms: number): string {
@@ -90,6 +91,7 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
           {event.sessionsSource && (
             <p className="chart-note">Times from <a href={event.sessionsSource} target="_blank" rel="noreferrer">{new URL(event.sessionsSource).hostname.replace(/^www\./, '')}</a>; they can change before the weekend.{isF1 && event.trackCode ? ' The map was built from F1\'s recorded car positions at this circuit.' : ''} Live timing appears automatically when a session starts.</p>
           )}
+          {!isF1 && <FinalsField meeting={event.name} />}
           {event.info && <EventInfoPanel info={event.info} />}
         </section>
         <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />

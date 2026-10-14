@@ -54,9 +54,11 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
         </details>
       )}
       <p className="ladder-note">
-        Start: {round.reset} + bonus {round.bonus.join('/')} by position after Bathurst
-        {round.cupBonus ? `, +${round.cupBonus} for the Sprint and Enduro Cup winners` : ''}. Race points {round.points.slice(0, 3).join('/')}…
-        Bathurst result from our recording (post-race penalties not included).
+        {round.field
+          ? <>Start: Supercars' official Finals standings ({round.reset} + a bonus by position going in, +{round.cupBonus} for the Sprint and Enduro Cup winners). </>
+          : <>Start: {round.reset} + bonus {round.bonus.join('/')} by position after Bathurst{round.cupBonus ? `, +${round.cupBonus} for the Sprint and Enduro Cup winners` : ''}. </>}
+        Race points {round.points.slice(0, 3).join('/')}…
+        {round.field ? ' Drivers outside the Finals: our recorded Bathurst result' : ' Bathurst result from our recording'} (post-race penalties not included).
         {!round.cupWinners.enduro && ' Enduro Cup winner not set yet.'}
       </p>
     </section>
