@@ -23,7 +23,35 @@ interface RaceChampionship {
   finalsCut: number
 }
 
-export const ENDURO_POINTS = [300, 276, 258, 240, 222, 204, 192, 180, 168, 156, 144, 138, 132, 126, 120, 114, 108, 102, 96, 90, 84, 78, 72, 66, 60]
+/** Enduro race points (The Bend 500, Bathurst 1000), 2026 season page's points table. Until Oct 2026 this held
+ * 300/276/258/240/222/..., wrong from 3rd down: the standings after Bathurst (below) confirm this scale for every
+ * finisher. */
+export const ENDURO_POINTS = [300, 276, 254, 234, 215, 198, 182, 167, 154, 142, 130, 120, 110, 101, 93, 86, 79, 73, 67, 62, 57, 52, 48, 44, 41]
+
+/**
+ * Drivers' standings after the Bathurst 1000 (Round 11), the end of the regular season: Speedcafe's championship
+ * table (https://speedcafe.com/bathurst-1000-race/, read 14 Oct 2026). Checked: each full-time driver's gain over the
+ * standings after Round 10 (above) is exactly ENDURO_POINTS for where our Race 30 recording has them finishing
+ * (Kostecki 1st +300 ... Wood 24th +44; De Pasquale and Mostert, 25th and 26th, +0). `car` for the 24 full-time
+ * entries (car numbers from the timing feed); co-drivers and wildcards have points but no car of their own.
+ */
+export const STANDINGS_AFTER_BATHURST: { driver: string; car?: string; points: number }[] = [
+  { car: '19', driver: 'Matt Payne', points: 2490 }, { car: '88', driver: 'Broc Feeney', points: 2285 },
+  { car: '17', driver: 'Brodie Kostecki', points: 2271 }, { car: '888', driver: 'Will Brown', points: 2146 },
+  { car: '26', driver: 'Kai Allen', points: 2131 }, { car: '6', driver: 'Cam Waters', points: 2055 },
+  { car: '18', driver: 'Anton De Pasquale', points: 1879 }, { car: '1', driver: 'Chaz Mostert', points: 1713 },
+  { car: '2', driver: 'Ryan Wood', points: 1638 }, { car: '4', driver: 'Jack Le Brocq', points: 1547 },
+  { car: '8', driver: 'André Heimgartner', points: 1433 }, { car: '55', driver: 'Thomas Randle', points: 1404 },
+  { car: '7', driver: 'James Golding', points: 1393 }, { car: '31', driver: 'Jayden Ojeda', points: 1363 },
+  { car: '48', driver: 'David Reynolds', points: 1114 }, { car: '10', driver: 'Zach Bates', points: 1069 },
+  { car: '14', driver: 'Cameron Hill', points: 1045 }, { car: '99', driver: 'Cooper Murray', points: 972 },
+  { car: '38', driver: 'Rylan Gray', points: 968 }, { car: '3', driver: 'Aaron Cameron', points: 873 },
+  { car: '777', driver: 'Declan Fraser', points: 788 }, { car: '96', driver: 'Macauley Jones', points: 767 },
+  { car: '9', driver: 'Jobe Stewart', points: 725 }, { car: '11', driver: 'Jackson Walls', points: 711 },
+  { driver: 'Todd Hazelwood', points: 441 }, { driver: 'Aaron Seton', points: 438 }, { driver: 'Reuben Goodall', points: 328 },
+  { driver: 'Bayley Hall', points: 309 }, { driver: 'Craig Lowndes', points: 262 }, { driver: 'Mark Winterbottom', points: 224 },
+  { driver: 'Ben Gomersall', points: 105 }, { driver: 'James Moffat', points: 67 },
+]
 
 /** Drivers' standings after Round 10 (car number -> [driver, points]); see the sources in the comment above. */
 export const STANDINGS_AFTER_R10: Record<string, [string, number]> = {

@@ -242,12 +242,17 @@ the server in live mode by hand.
   Race 30: ~8 cars "battling" behind the safety car, 11-15-car trains for ~9 laps after the start, 2-3 cars mid-race.
   The feed also waits 20 s before showing a battle and shows the front 3 (the rest as one "more battles" line).
 - **Championship ladder** (`Ladder.tsx`, data in `championship.ts`: standings after Round 10 + Enduro scale, cited)
-  with the top 10 Finals cut in gold. **Finals ladder** (`FinalsLadder.tsx`, rules in `finals.ts`) for the Gold
-  Coast: top 7 advance, bottom 3 eliminated (then 4 to the Grand Final). Starting points are Supercars' official
-  ones (`FinalsRound.field`: 3000 + 150/120/96/78 for the top four, 66/57/48/39/30/21 for 5th-10th, +25 per cup);
-  our own sum from the recorded Bathurst result had Allen and Brown swapped. Only this season's races count as
-  earlier races of the round (`racesOf`: last year's rebuilt Gold Coast races matched too). The event page shows the
-  same field before the weekend (`FinalsField.tsx`: seeds, starting points, the cut).
+  with the top 10 Finals cut in gold (Bathurst only). The Enduro scale was wrong from 3rd down until Oct 2026.
+- **Finals rounds: championship standings** (`FinalsStandings.tsx`, maths in `finals.ts` `roundStandings`), the same
+  table on the event page and in the live tab (every Supercars Championship session of the round, live and replay):
+  the 10 finalists on Supercars' official Finals points (`FinalsRound.field`: 3000 + 150/120/96/78 for the top four,
+  66/57/48/39/30/21 for 5th-10th, +25 per cup), the cut (gold: through, red dashed: eliminated if it ended now;
+  "N clear" / "N behind"), then everyone else on the championship after Bathurst (`STANDINGS_AFTER_BATHURST`,
+  Speedcafe, checked against our Race 30 result), plus points from races already run at the round (our recordings,
+  `useFinalsData`, only races before the session shown). **Provisional points only during the round's two races,
+  from the green flag** (owner's rule): their own "Race" column, ▲/▼ against the standings now, running position;
+  otherwise only earned points. Points on offer per finishing place (`PointsOnOffer`). Top 7 advance, then 4 to the
+  Grand Final. Only this season's races count (`racesOf`: last year's rebuilt Gold Coast races matched too).
 - **Charts** (`RaceCharts.tsx`, `LineChart.tsx`, `ChartLab.tsx` large view; colours validated with the dataviz palette
   script against #12161b): gap, lap times, position, battle (trend only over laps since either car's last stop).
   Lap axis runs to the race distance.

@@ -85,6 +85,7 @@ const SUPERCARS_EVENTS: Omit<UpcomingEvent, 'startDate' | 'endDate' | 'utcOffset
         { label: 'Supercars: official track map (turns, support, TV)', url: 'https://assets.ctfassets.net/xd502h20t7lh/6r1B8LCvMh9bvEOWzbDPZ9/3ede3611fcaca36e4790c1f10bb1018c/SC26-GC-Track_Map-5_compressed.pdf' },
         FORMATS, FINALS_RULES, ELIMINATIONS, CUP_BONUS, SEASON,
         { label: 'Supercars: 2026 Finals field and starting points', url: 'https://www.supercars.com/news/supercars-news-2026-finals-drivers-field-bathurst-1000-qualified-set-payne-feeney-kostecki-brown' },
+        { label: 'Speedcafe: championship standings after Bathurst', url: 'https://speedcafe.com/bathurst-1000-race/' },
         { label: 'Wikipedia: 2025 Gold Coast 500', url: 'https://en.wikipedia.org/wiki/2025_Gold_Coast_500' },
       ],
     },

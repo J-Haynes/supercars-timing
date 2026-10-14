@@ -8,7 +8,7 @@ import { browserTimeZone, formatSessionTime, useTimeZoneChoice } from '../timeZo
 import { ColumnSplitter } from './ColumnSplitter'
 import { ErrorBoundary } from './ErrorBoundary'
 import { isF1, SERIES_LABEL, SERIES } from '../series'
-import { FinalsField } from './FinalsField'
+import { FinalsField } from './FinalsStandings'
 
 /** "3d 4h", "2h 10m", "5m"; past times as "Done". */
 function until(ms: number): string {

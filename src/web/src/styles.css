@@ -662,6 +662,32 @@ main { flex: 1; padding: 0 16px 24px; }
 .ladder-elimination { --elim: var(--red); border: 2px dashed var(--elim); border-radius: 8px; padding: 2px 0 4px; margin: 0 0 8px; background: rgba(255, 77, 79, .06); }
 .ladder-elimination-label { color: var(--elim); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px 2px; }
 .finals-row.out .ladder-pos { color: var(--red); }
+/* Championship standings at a Finals round (FinalsStandings.tsx): event page and live tab. */
+.standings-row { display: grid; grid-template-columns: 26px 1fr 84px 52px; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; }
+.standings.live .standings-row { grid-template-columns: 26px 30px 1fr 44px 40px 48px; }
+.standings-row:not(.standings-head):hover { background: #1f2a36; }
+.standings-head { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.standings-head span:nth-last-child(-n + 2), .standings.live .standings-head span:nth-last-child(-n + 3) { text-align: right; }
+.standings-pos { font-weight: 700; text-align: right; }
+.ladder-finals .standings-pos { color: var(--gold); }
+.standings-row.out .standings-pos { color: var(--red); }
+.standings-move { font-size: 11px; font-weight: 700; }
+.standings-move.up { color: var(--green); }
+.standings-move.down { color: var(--red); }
+.standings-car, .standings-tag { color: var(--muted); font-size: 11px; }
+.standings-now, .standings-extra, .standings-points { text-align: right; font-variant-numeric: tabular-nums; }
+.standings-now { color: var(--muted); }
+.standings.live .standings-extra { color: var(--green); }
+.standings-extra .clear { color: var(--muted); font-size: 12px; }
+.standings-extra .behind { color: var(--red); font-size: 12px; }
+.standings-points { font-weight: 700; }
+.standings-row.plain .standings-pos { color: var(--muted); font-weight: 600; }
+.standings-row.absent { opacity: .6; }
+.standings-rest summary, .points-offer summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 4px 8px; }
+.points-offer { margin-top: 8px; }
+.points-offer-grid { list-style: none; margin: 4px 0 0; padding: 0 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 4px; }
+.points-offer-grid li { display: flex; justify-content: space-between; gap: 6px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.points-offer-grid li span { color: var(--muted); }
 .finals-field { margin-top: 20px; }
 .event-preview .finals-field h2 { margin: 0 0 6px; font-size: 11px; }
 .finals-explain { margin: 4px 2px 10px; line-height: 1.5; font-size: 13px; }

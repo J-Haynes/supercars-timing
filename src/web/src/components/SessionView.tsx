@@ -21,7 +21,7 @@ import { PitLog } from './PitLog'
 import { RaceControl } from './RaceControl'
 import { RaceFeed } from './RaceFeed'
 import { Ladder } from './Ladder'
-import { FinalsLadder } from './FinalsLadder'
+import { FinalsLadder } from './FinalsStandings'
 import { RaceCharts } from './RaceCharts'
 import { SafetyCarBanner } from './SafetyCarBanner'
 import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './MobileTabs'
@@ -133,7 +133,7 @@ export function SessionView({ update, live, history, settings, updateSettings, t
           <div className="panel-race">
             {/* Supercars championship and Finals ladders (this season's only): no F1 standings yet. */}
             {!isF1 && <Ladder timing={timing} onHighlight={setHighlightIds} />}
-            {!isF1 && race && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
+            {!isF1 && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
           </div>
           <div className="panel-charts">
             {race && <RaceCharts timing={timing} history={history} selection={chart} />}

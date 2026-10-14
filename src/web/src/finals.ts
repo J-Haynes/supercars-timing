@@ -1,5 +1,5 @@
 import type { RecordedSession, TimingSnapshot } from './types'
-import { ENDURO_POINTS, STANDINGS_AFTER_R10, inPointsSeason, projectedFinish } from './championship'
+import { STANDINGS_AFTER_BATHURST, inPointsSeason } from './championship'
 
 /**
  * Finals rounds (2026): the top 10 after Bathurst go to the Finals. At each Finals round their points reset and
@@ -74,67 +74,65 @@ function scored(order: string[], scale: number[]): Map<string, number> {
   return new Map(order.map((car, i) => [car, scale[i] ?? 0]))
 }
 
-export interface FinalsRow {
-  carNumber: string
+export interface StandingRow {
+  /** Car number at this round (undefined: a co-driver or wildcard with points but no car here). */
+  carNumber?: string
   carId?: string
   driver: string
-  seed: number
-  start: number
-  banked: number
-  today: number
+  finalist: boolean
+  /** Seed going into the Finals (1-10), finalists only. */
+  seed?: number
+  /** Sprint/Enduro Cup winner (finalists' 25-point bonus). */
+  cup?: string
+  /** Points now: Finals starting points (finalists) or points after Bathurst, plus races already run at the round. */
+  points: number
+  /** Provisional points for the race on now, if it finished now (0 outside a race). */
+  live: number
+  /** Projected finishing position in the race on now (0 = not running / no race). */
+  finish: number
   total: number
+  /** Position in the standings now, and with the provisional points. */
+  rankNow: number
   rank: number
 }
 
-export interface OtherRow {
-  carNumber: string
-  carId?: string
-  driver: string
-  total: number
-  today: number
-}
-
 /**
- * The live Finals ladder for a round.
- * @param bathurstOrder official finishing order of the Bathurst 1000 (car numbers), to get standings after it
- * @param earlierRaces finishing orders of races already completed at this round (car numbers)
+ * Championship standings at a Finals round: the finalists on their Finals points, then everyone else on ordinary
+ * points (eliminated and non-finalist drivers race on for 11th and below), each plus the points from races already
+ * run at the round. With `live` (a finishing order, car numbers, while a race of the round is on) each driver also
+ * gets that race's points for where they are now: provisional, shown apart from what's earned. Undefined for a round
+ * without its official field (finals.ts `field`).
  */
-export function finalsLadder(timing: TimingSnapshot, round: FinalsRound, bathurstOrder: string[], earlierRaces: string[][]) {
-  const bathurst = scored(bathurstOrder, ENDURO_POINTS)
-  const ordinary = Object.entries(STANDINGS_AFTER_R10)
-    .map(([car, [driver, points]]) => ({ car, driver, points: points + (bathurst.get(car) ?? 0) }))
-    .sort((a, b) => b.points - a.points)
+export function roundStandings(round: FinalsRound, earlierRaces: string[][], live?: string[]) {
+  const field = round.field
+  if (!field) return undefined
+  const earned = (car?: string) => (car ? earlierRaces.reduce((s, r) => s + (scored(r, round.points).get(car) ?? 0), 0) : 0)
+  const today = live ? scored(live, round.points) : new Map<string, number>()
+  const finishOf = (car?: string) => (car && live ? live.indexOf(car) + 1 : 0)
+  const cupOf = (car: string) => [car === round.cupWinners.sprint && 'Sprint Cup', car === round.cupWinners.enduro && 'Enduro Cup'].filter(Boolean).join(', ') || undefined
 
-  // Finalists: the official field when we have it, else the cup winners and then the rest of the top of the table.
-  const winners = [round.cupWinners.sprint, round.cupWinners.enduro].filter((c): c is string => !!c)
-  const official = round.field?.map((f) => ordinary.find((d) => d.car === f.car) ?? { car: f.car, driver: STANDINGS_AFTER_R10[f.car]?.[0] ?? `#${f.car}`, points: 0 })
-  const finalists = official ?? [...ordinary.filter((d) => winners.includes(d.car)), ...ordinary.filter((d) => !winners.includes(d.car))]
-    .slice(0, round.finalists)
-  const seedOf = (car: string) => (round.field ? round.field.findIndex((f) => f.car === car) : ordinary.findIndex((d) => d.car === car)) + 1
-  const startOf = (car: string) => round.field?.find((f) => f.car === car)?.start
-    ?? round.reset + (round.bonus[seedOf(car) - 1] ?? 0) + (winners.includes(car) ? round.cupBonus : 0)
-
-  const earlier = earlierRaces.map((r) => scored(r, round.points))
-  const live = scored(projectedFinish(timing).map((c) => c.carNumber), round.points)
-  const carId = (n: string) => timing.cars.find((c) => c.carNumber === n)?.id
-
-  const rows: FinalsRow[] = finalists.map((d) => {
-    const seed = seedOf(d.car)
-    const start = startOf(d.car)
-    const banked = earlier.reduce((s, r) => s + (r.get(d.car) ?? 0), 0)
-    const today = live.get(d.car) ?? 0
-    return { carNumber: d.car, carId: carId(d.car), driver: d.driver, seed, start, banked, today, total: start + banked + today, rank: 0 }
+  const finalists: StandingRow[] = field.map((f, i) => {
+    const driver = STANDINGS_AFTER_BATHURST.find((d) => d.car === f.car)?.driver ?? `Car ${f.car}`
+    const points = f.start + earned(f.car)
+    const l = today.get(f.car) ?? 0
+    return { carNumber: f.car, driver, finalist: true, seed: i + 1, cup: cupOf(f.car), points, live: l, finish: finishOf(f.car), total: points + l, rankNow: 0, rank: 0 }
   })
-  rows.sort((a, b) => b.total - a.total || a.seed - b.seed).forEach((r, i) => { r.rank = i + 1 })
-
-  // Everyone else keeps ordinary points (the fight for 5th and below stays open from 2026).
-  const others: OtherRow[] = ordinary.filter((d) => !finalists.some((f) => f.car === d.car)).map((d) => {
-    const banked = earlier.reduce((s, r) => s + (r.get(d.car) ?? 0), 0)
-    const today = live.get(d.car) ?? 0
-    return { carNumber: d.car, carId: carId(d.car), driver: d.driver, today, total: d.points + banked + today }
-  }).sort((a, b) => b.total - a.total)
-
-  return { rows, others, advance: round.finalists - round.eliminate }
+  const rest: StandingRow[] = STANDINGS_AFTER_BATHURST.filter((d) => !field.some((f) => f.car === d.car)).map((d) => {
+    const points = d.points + earned(d.car)
+    const l = (d.car && today.get(d.car)) || 0
+    return { carNumber: d.car, driver: d.driver, finalist: false, points, live: l, finish: finishOf(d.car), total: points + l, rankNow: 0, rank: 0 }
+  })
+  // Finalists always rank above everyone else (Finals points start at 3000, ordinary points end below 2500 here, but
+  // rank them as groups anyway).
+  const rankBy = (key: 'points' | 'total', set: 'rankNow' | 'rank') => {
+    const tie = (a: StandingRow, b: StandingRow) => (a.seed ?? 99) - (b.seed ?? 99)
+    const group = (rows: StandingRow[]) => [...rows].sort((a, b) => b[key] - a[key] || tie(a, b))
+    ;[...group(finalists), ...group(rest)].forEach((r, i) => { r[set] = i + 1 })
+  }
+  rankBy('points', 'rankNow')
+  rankBy('total', 'rank')
+  const rows = [...finalists, ...rest].sort((a, b) => a.rank - b.rank)
+  return { rows, advance: round.finalists - round.eliminate }
 }
 
 /** Finishing order (car numbers) from a recorded session's results (GET /api/sessions/{id}/results). */
