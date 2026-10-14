@@ -38,16 +38,12 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
   const meetings = Object.entries(byMeeting)
   const current = meetings.filter(([m]) => yearOf(m) === 0 || yearOf(m) === season)
   const past = meetings.filter(([m]) => yearOf(m) !== 0 && yearOf(m) !== season)
-  // Each meeting's sessions are folded under its name; the meeting on screen starts unfolded.
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  // Each meeting's sessions are folded under its name; the meeting on screen starts unfolded. A click overrides that
+  // either way (it used to only add to the open set, so the meeting on screen could never be folded).
+  const [folded, setFolded] = useState<Map<string, boolean>>(new Map())
   const activeMeeting = sessions?.find((s) => s.id === resultsId)?.meeting
-  const isOpen = (meeting: string) => expanded.has(meeting) || meeting === activeMeeting
-  const toggle = (meeting: string) => setExpanded((prev) => {
-    const next = new Set(prev)
-    if (isOpen(meeting)) next.delete(meeting)
-    else next.add(meeting)
-    return next
-  })
+  const isOpen = (meeting: string) => folded.get(meeting) ?? meeting === activeMeeting
+  const toggle = (meeting: string) => setFolded((prev) => new Map(prev).set(meeting, !isOpen(meeting)))
 
   const renderMeeting = (meeting: string, list: RecordedSession[], withYear = false) => (
             <div key={meeting} className="menu-group">
