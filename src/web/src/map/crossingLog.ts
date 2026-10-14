@@ -73,6 +73,11 @@ export class CrossingLog {
     return undefined
   }
 
+  /** The car's first crossing after time `t` (the green flag: its first crossing of the race), if the log has it. */
+  firstAfter(carId: string, t: number): Crossing | undefined {
+    return this.cars.get(carId)?.find((c) => c.at > t)
+  }
+
   /** The crossings either side of `now` for a car, if both are known. */
   around(carId: string, now: number): [Crossing, Crossing] | undefined {
     const list = this.cars.get(carId)

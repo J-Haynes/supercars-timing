@@ -823,9 +823,26 @@ button.upcoming:hover { border-color: var(--muted); }
 .replay-controls select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; font: inherit; }
 .replay-time { font-variant-numeric: tabular-nums; font-size: 13px; min-width: 170px; }
 .replay-loading { color: var(--muted); font-size: 12px; }
-.replay-scrubber { position: relative; flex: 1 1 320px; min-width: 240px; height: 34px; }
+.replay-scrubber { position: relative; flex: 1 1 100%; min-width: 240px; height: 44px; }
 .replay-scrubber input[type="range"] { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; margin: 0; }
-.replay-band { position: absolute; bottom: 4px; height: 10px; background: rgba(255, 210, 63, .35); border-radius: 2px; pointer-events: none; }
+.replay-band { position: absolute; bottom: 3px; height: 12px; background: rgba(255, 210, 63, .45); border-radius: 2px; pointer-events: none; }
+.replay-band.red { background: rgba(255, 77, 79, .5); }
+/* A flag above each safety car / red flag period: always shown, ahead of the replay too; click to jump there. */
+.replay-flag { position: absolute; top: 12px; transform: translateX(-2px); padding: 0 2px; border: 0; background: none; color: var(--yellow); font-size: 13px; line-height: 14px; cursor: pointer; z-index: 2; }
+.replay-flag.red { color: var(--red); }
+.replay-flag:hover, .replay-flag:focus-visible { filter: brightness(1.3); transform: translateX(-2px) scale(1.25); }
+.replay-mark { position: absolute; top: 12px; bottom: 2px; width: 2px; margin-left: -1px; pointer-events: none; }
+.replay-mark.start { background: var(--green); }
+.replay-mark.finish { background: repeating-linear-gradient(to bottom, #fff 0 3px, #111 3px 6px); }
+.replay-transport { display: flex; align-items: center; gap: 4px; }
+.replay-skip { min-width: 40px; height: 32px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; font-size: 12px; font-variant-numeric: tabular-nums; }
+.replay-skip:hover:not(:disabled), .replay-play:hover:not(:disabled) { border-color: var(--muted); }
+@media (max-width: 520px) { .replay-skip { min-width: 0; padding: 0 5px; font-size: 11px; } }
+/* Countdown to a race's start (StartCountdown), above the layout in live and replay. */
+.start-countdown { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 13px; }
+.start-countdown strong { text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
+.start-countdown-clock { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.start-countdown-note, .start-countdown.waiting span { color: var(--muted); font-size: 12px; }
 .replay-tick { position: absolute; top: 0; bottom: 14px; width: 1px; background: var(--line); pointer-events: none; }
 .replay-tick span { position: absolute; top: 0; left: 3px; font-size: 9px; color: var(--muted); }
 

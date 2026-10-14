@@ -502,8 +502,10 @@ export class TrackScene {
         c.body.needsUpdate = true
       }
       if (pl.kind === 'track') {
-        c.group.position.copy(this.at(pl.distance, 1.5))
-        c.group.lookAt(this.at(pl.distance + 6, 1.5))
+        // Beside the centreline on the starting grid (two-wide), else on it.
+        const lateral = pl.lateral ?? 0
+        c.group.position.copy(this.toWorld(this.model.pointBeside(pl.distance, lateral), this.heightAt(pl.distance) + 1.5))
+        c.group.lookAt(this.toWorld(this.model.pointBeside(pl.distance + 6, lateral), this.heightAt(pl.distance + 6) + 1.5))
       } else {
         // Pit lane: at the height of the nearest bit of track, facing along the pit straight.
         const d = this.model.wrap(nearestDistance(this.model, pl.point))

@@ -161,7 +161,7 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
         })()}
         {drawn.map((pl) => {
           const { car } = pl
-          const p = pl.kind === 'track' ? s(pl.distance) : view.toScreen(pl.point)
+          const p = view.toScreen(pl.kind === 'track' ? model.pointBeside(pl.distance, pl.lateral ?? 0) : pl.point)
           return (
             <CarDot key={car.id} car={car} p={p} dim={pl.dim} scale={1 / Math.sqrt(zoom)}
               hovered={car.id === hoverId || highlightIds.includes(car.id)} focused={car.id === focusId} pinned={pinned.includes(car.carNumber)}

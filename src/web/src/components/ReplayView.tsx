@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE } from '../series'
 import type { LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
 import { useSettings } from '../settings'
-import { cautionPeriods, leaderLap } from '../session'
+import { flagKind, flagPeriods, leaderLap } from '../session'
 import { SessionView } from './SessionView'
 
 const SPEEDS = [1, 2, 5, 10, 20, 60]
+/** The skip buttons either side of play/pause (session seconds). */
+const SKIPS = [60, 30, 10]
 /** How often the page asks the server for the snapshot at the current replay time (real time). */
 const POLL_MS = 250
 /**
@@ -43,6 +45,9 @@ export function ReplayView({ session, onBack, onUpdate }: {
 }) {
   const id = encodeURIComponent(session.id)
   const [range, setRange] = useState<{ start: number; end: number } | null>(null)
+  // The whole session from its results: the green flag (the start countdown) and every flag change (the scrubber
+  // shows safety cars and red flags before the replay reaches them).
+  const [whole, setWhole] = useState<{ greenAt: number; flagHistory: { time: number; flag: string }[] } | null>(null)
   const [laps, setLaps] = useState<LapHistory | null>(null)
   const [timing, setTiming] = useState<TimingSnapshot | null>(null)
   const [ahead, setAhead] = useState<TimingSnapshot | null>(null)
@@ -65,6 +70,7 @@ export function ReplayView({ session, onBack, onUpdate }: {
       const green = results?.session.greenAt ?? 0
       setT(green > info.start ? Math.max(info.start, green - 20) : info.start)
       setRange(info)
+      setWhole({ greenAt: green, flagHistory: results?.flagHistory ?? [] })
     })
     fetch(`${API_BASE}/sessions/${id}/laps`).then((r) => (r.ok ? r.json() : null)).then(setLaps).catch(() => {})
   }, [id])
@@ -107,11 +113,19 @@ export function ReplayView({ session, onBack, onUpdate }: {
         ])
         if (res.ok) {
           const snap: TimingSnapshot = await res.json()
+          // The snapshot is the state at the replay time, but its `now` is the last message's time: minutes earlier
+          // where the feed went quiet (Bathurst Race 30: none from 4 min to 7 s before the start), which held the
+          // session clock (map, start countdown, pit timers) back. Nothing happened in between, so it's the replay time.
+          snap.now = Math.max(snap.now, at)
           if (snap.now < shownNow.current - 1) setEpoch((e) => e + 1)
           shownNow.current = snap.now
           setTiming(snap)
         }
-        if (next?.ok) setAhead(await next.json())
+        if (next?.ok) {
+          const ahead: TimingSnapshot = await next.json()
+          ahead.now = Math.max(ahead.now, Math.min(at + LOOKAHEAD_SECONDS, range.end))
+          setAhead(ahead)
+        }
       } finally {
         clearTimeout(slow)
         setLoading(false)
@@ -138,13 +152,19 @@ export function ReplayView({ session, onBack, onUpdate }: {
     [timing, playing, speed, session.name])
   useEffect(() => () => onUpdate?.(null), []) // eslint-disable-line react-hooks/exhaustive-deps -- on leaving only
 
-  // Scrubber marks: every 10th lap of the leader, and safety car periods.
-  const lapMarks = useMemo(() => {
-    const leader = laps?.cars.flatMap((c) => c.laps.filter((l) => l.position === 1)).sort((a, b) => a.at - b.at) ?? []
-    return leader.filter((l) => l.lap % 10 === 0).map((l) => ({ lap: l.lap, at: l.at }))
-  }, [laps])
-  const cautions = cautionPeriods(timing?.flagHistory)
+  // Scrubber marks: every 10th lap of the leader, the start and finish, and safety car and red flag periods (from the
+  // whole session, so they show before the replay gets there).
+  const leaderLaps = useMemo(() => laps?.cars.flatMap((c) => c.laps.filter((l) => l.position === 1)).sort((a, b) => a.at - b.at) ?? [], [laps])
+  const lapMarks = leaderLaps.filter((l) => l.lap % 10 === 0).map((l) => ({ lap: l.lap, at: l.at }))
+  const lapAt = (time: number) => leaderLaps.filter((l) => l.at <= time).length + 1
+  const history = whole?.flagHistory ?? timing?.flagHistory
+  const bands = [
+    ...flagPeriods(history, 'caution').map((p) => ({ ...p, kind: 'caution', label: 'Safety car / FCY' })),
+    ...flagPeriods(history, 'red').map((p) => ({ ...p, kind: 'red', label: 'Red flag' })),
+  ]
+  const finishAt = history?.find((f) => flagKind(f.flag) === 'finished')?.time
   const pct = (time: number) => (range ? ((time - range.start) / (range.end - range.start || 1)) * 100 : 0)
+  const seek = (seconds: number) => range && setT((now) => Math.min(Math.max(now + seconds, range.start), range.end))
   // The lap the leader is on (laps completed + 1), as the live header shows it; nothing before the start.
   const started = !!timing && (timing.session.greenAt ?? 0) > 0 && timing.now >= (timing.session.greenAt ?? 0)
   const shownLap = timing && started ? leaderLap(timing).lap : 0
@@ -161,7 +181,15 @@ export function ReplayView({ session, onBack, onUpdate }: {
       </div>
 
       <div className="replay-controls">
-        <button type="button" className="replay-play" onClick={() => setPlaying((p) => !p)} disabled={!range} aria-label={playing ? 'Pause' : 'Play'}>{playing ? '❚❚' : '▶'}</button>
+        <div className="replay-transport">
+          {SKIPS.map((s) => (
+            <button key={-s} type="button" className="replay-skip" onClick={() => seek(-s)} disabled={!range} aria-label={`Back ${skipLabel(s)}`} title={`Back ${skipLabel(s)}`}>−{skipLabel(s)}</button>
+          ))}
+          <button type="button" className="replay-play" onClick={() => setPlaying((p) => !p)} disabled={!range} aria-label={playing ? 'Pause' : 'Play'}>{playing ? '❚❚' : '▶'}</button>
+          {[...SKIPS].reverse().map((s) => (
+            <button key={s} type="button" className="replay-skip" onClick={() => seek(s)} disabled={!range} aria-label={`Forward ${skipLabel(s)}`} title={`Forward ${skipLabel(s)}`}>+{skipLabel(s)}</button>
+          ))}
+        </div>
         <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Replay speed">
           {SPEEDS.map((s) => <option key={s} value={s}>{s}×</option>)}
         </select>
@@ -169,9 +197,21 @@ export function ReplayView({ session, onBack, onUpdate }: {
         <span className="replay-time">{range ? trackTime(t) : '--:--:--'}{shownLap ? ` · lap ${shownLap}` : ''}{timing?.session.scheduledLaps ? ` / ${timing.session.scheduledLaps}` : ''}</span>
         {loading && <span className="replay-loading">loading…</span>}
         <div className="replay-scrubber">
-          {cautions.map((c) => (
-            <span key={c.start} className="replay-band" style={{ left: `${pct(c.start)}%`, width: `${pct(c.end ?? range?.end ?? c.start) - pct(c.start)}%` }} title="Safety car / FCY" />
-          ))}
+          {bands.map((b) => {
+            const end = b.end ?? range?.end ?? b.start
+            const title = `${b.label} · ${trackTime(b.start)}–${trackTime(end)}${leaderLaps.length ? ` · from lap ${lapAt(b.start)}` : ''}`
+            // A tint over the scrubber's track (under the slider, so dragging still works) and a flag above it that
+            // jumps to 10 s before the flag came out.
+            return (
+              <span key={`${b.kind}${b.start}`}>
+                <span className={`replay-band ${b.kind}`} style={{ left: `${pct(b.start)}%`, width: `max(${pct(end) - pct(b.start)}%, 3px)` }} />
+                <button type="button" className={`replay-flag ${b.kind}${b.start > t ? ' ahead' : ''}`} style={{ left: `${pct(b.start)}%` }}
+                  title={`${title} · click to go there`} aria-label={`${title}: go there`} onClick={() => setT(Math.max(range?.start ?? b.start, b.start - 10))}>⚑</button>
+              </span>
+            )
+          })}
+          {whole && whole.greenAt > 0 && <span className="replay-mark start" style={{ left: `${pct(whole.greenAt)}%` }} title={`Start · ${trackTime(whole.greenAt)}`} />}
+          {finishAt && <span className="replay-mark finish" style={{ left: `${pct(finishAt)}%` }} title={`Chequered flag · ${trackTime(finishAt)}`} />}
           {lapMarks.map((m) => <span key={m.lap} className="replay-tick" style={{ left: `${pct(m.at)}%` }} title={`Lap ${m.lap}`}><span>{m.lap}</span></span>)}
           <input type="range" min={range?.start ?? 0} max={range?.end ?? 1} step={1} value={t} disabled={!range}
             onChange={(e) => setT(Number(e.target.value))} aria-label="Replay position" />
@@ -181,8 +221,13 @@ export function ReplayView({ session, onBack, onUpdate }: {
       {!update ? <p className="menu-muted">Loading replay…</p> : (
         // The same view as live timing (SessionView), so every feature is in both. Laps up to the replay time only.
         <SessionView update={update} live={aheadUpdate} settings={settings} updateSettings={updateSettings} togglePinned={togglePinned}
-          history={shownLaps} resetKey={epoch} />
+          history={shownLaps} resetKey={epoch} startAt={whole?.greenAt || undefined} />
       )}
     </section>
   )
+}
+
+/** 60 -> "1m", 30 -> "30s" */
+function skipLabel(seconds: number): string {
+  return seconds % 60 === 0 ? `${seconds / 60}m` : `${seconds}s`
 }

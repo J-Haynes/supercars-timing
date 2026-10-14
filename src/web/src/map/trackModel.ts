@@ -52,6 +52,14 @@ export class TrackModel {
     return { x: path[i][0] + t * (path[j][0] - path[i][0]), y: path[i][1] + t * (path[j][1] - path[i][1]) }
   }
 
+  /** Position at distance d, `lateral` metres left of the centreline (right if negative). */
+  pointBeside(d: number, lateral: number): Vec {
+    const p = this.pointAt(d)
+    if (!lateral) return p
+    const n = this.normalAt(d)
+    return { x: p.x + n.x * lateral, y: p.y + n.y * lateral }
+  }
+
   /** Unit normal (pointing left of race direction) at distance d. */
   normalAt(d: number): Vec {
     const a = this.pointAt(d - 15)

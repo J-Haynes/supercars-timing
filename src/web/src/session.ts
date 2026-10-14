@@ -83,9 +83,14 @@ export function flagKind(flag: string): FlagKind {
 
 /** Caution periods (SC/FCY) from the flag history, oldest first; `end` is undefined while one is still out. */
 export function cautionPeriods(history: { time: number; flag: string }[] | undefined): { start: number; end?: number }[] {
+  return flagPeriods(history, 'caution')
+}
+
+/** Periods under one kind of flag (caution, red...) from the flag history, oldest first; `end` undefined while it's out. */
+export function flagPeriods(history: { time: number; flag: string }[] | undefined, kind: FlagKind): { start: number; end?: number }[] {
   const out: { start: number; end?: number }[] = []
   for (const f of history ?? []) {
-    const caution = flagKind(f.flag) === 'caution'
+    const caution = flagKind(f.flag) === kind
     const open = out.length > 0 && out[out.length - 1].end === undefined
     if (caution && !open) out.push({ start: f.time })
     else if (!caution && open) out[out.length - 1].end = f.time

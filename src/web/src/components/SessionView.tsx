@@ -24,6 +24,8 @@ import { FinalsLadder } from './FinalsLadder'
 import { RaceCharts } from './RaceCharts'
 import { SafetyCarBanner } from './SafetyCarBanner'
 import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './MobileTabs'
+import { StartCountdown } from './StartCountdown'
+import { scheduledStart } from '../calendar'
 
 /**
  * A session on screen, live or replayed: the race feed, tower, map, ladders, charts, race control and pit log, with
@@ -31,7 +33,7 @@ import { MobileTabs, loadMobileTab, saveMobileTab, type MobileTab } from './Mobi
  * and the map, the chart selection, the phone tabs). The live page (App) and the replay page (ReplayView) both use
  * it, so a feature added here is in both: they used to be built separately and kept drifting apart.
  */
-export function SessionView({ update, live, history, settings, updateSettings, togglePinned, resetKey, tips = false }: {
+export function SessionView({ update, live, history, settings, updateSettings, togglePinned, resetKey, tips = false, startAt }: {
   /** What's shown (the delayed update live; the replay's moment in a replay). */
   update: TimingUpdate
   /** The map's view of what comes next: the live feed ahead of a broadcast delay, or a replay's lookahead. */
@@ -46,6 +48,8 @@ export function SessionView({ update, live, history, settings, updateSettings, t
   resetKey?: number
   /** The tips panel under the tower (live page). */
   tips?: boolean
+  /** The race's green flag time when it's known in advance (a replay); live uses the timetable's start. */
+  startAt?: number
 }) {
   const { timing } = update
   const race = isRace(timing.session.type)
@@ -70,6 +74,7 @@ export function SessionView({ update, live, history, settings, updateSettings, t
   return (
     <>
       {showCard && <ShootoutCard timing={timing} track={track} clockRate={rate} />}
+      {race && <StartCountdown timing={timing} clockRate={rate} startAt={startAt ?? scheduledStart(timing.session)} exact={startAt !== undefined} />}
       <MobileTabs tab={mobileTab} race={race} onTab={(t) => { setMobileTab(t); saveMobileTab(t) }} />
       <div className={`layout${settings.simple ? ' simple' : ''}${settings.mapWidth ? ' sized' : ''}`} data-tab={mobileTab}
         style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>

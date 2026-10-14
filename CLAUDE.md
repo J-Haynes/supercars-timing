@@ -281,6 +281,15 @@ the server in live mode by hand.
   "3D" (a still 3D view you can drag) is the default. Settings were renamed (`mapMode` -> `mapView`, `mapCamera` ->
   `camera3d`) each time the default changed, because settings are saved whole and old values would win. Tracks with
   scenery have a Buildings toggle (`flatBuildings`: footprints only). Event pages use it too.
+- **Race start** (`map/startGrid.ts`, used by `useCarPlacement`, so 2D/3D, live/replay, both series): before the green
+  flag cars are drawn on a staggered grid behind the line (pole 10 m back, 8 m per place, ±3.5 m: a drawing
+  approximation) in grid order (`startPosition`, else the order before the start). Natsoft sends no crossings before
+  the green (Bathurst Race 30); F1's formation lap ends with an `M` crossing, and cars drive into their slot. After
+  the green each car launches from its slot to its first crossing: timed exactly when the crossing log knows it
+  (replay lookahead, broadcast delay), else flying-lap time + 1.5 s (measured: pole loses 1.8 s at Bathurst, 2.8 s
+  at Singapore). Launch distance is plain acceleration, not the flying-lap speed profile (that gave 90 m/s at 4 s).
+  `StartCountdown.tsx` (in SessionView): the green flag from the recording in replays, the timetable's start live
+  (`scheduledStart` in calendar.ts; before the formation lap, so it then says it's waiting for the green).
 - **Ended sessions:** `useCarPlacement` puts no cars on track once the flag is Ended (F1's hub sends the last
   session's state on connecting; it looked like the field racing for ~10 s). The chequered flag still shows cars. Never place cars in the
   3D code: it draws `useCarPlacement`'s placements, so 2D, 3D and the elevation strip always agree. Follow locks
@@ -308,7 +317,10 @@ the server in live mode by hand.
   feed + map + banner + race control at any time. The map also gets the snapshot 90 s ahead (its own server cursor,
   `viewer=<id>-ahead`) as its "live" feed (default speed 1×), so it knows each car's next crossing like with a broadcast delay (rebuilt
   Gold Coast Race 28: 0 % -> 100 % of positions known); the crossing log and the feed reset on a backwards seek. Play/
-  pause, 1-60×, scrubber with lap ticks and safety car bands; starts 20 s before the first green. The page moves the
+  pause, skip ±10 s / 30 s / 1 min, 1-60×, scrubber with lap ticks, start and chequered marks, and safety car / red
+  flag bands with a clickable ⚑ from the whole session's flag history (the results), so they show before the replay
+  reaches them; starts 20 s before the first green. A replay snapshot's `now` is set to the replay time (it was the
+  last message's time: 4 min behind before the Bathurst start, when the feed was quiet). The page moves the
   time and polls `/replay?t=` every 250 ms; the server keeps a cursor per viewer.
 - **Upcoming events** (`EventPreview.tsx`, from the menu): session timetable from `calendar.ts` (local track time,
   provisional, source linked), "About the event" (`UpcomingEvent.info`: round, stakes, facts, last year, official

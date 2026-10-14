@@ -11,12 +11,18 @@ import { usePositionSync } from './usePositionSync'
 import { TAU, TAU_CAUTION, smoothPosition, type Smoothed } from './smoothing'
 import { CrossingLog, knownPosition, type Crossing } from './crossingLog'
 import { useReferenceFallback } from './useReferenceFallback'
+import { gridPlaces, gridSlot, launchDistance, onGrid, preStartDistance } from './startGrid'
 
 const PIT_SPACING = 70
+/** After the green flag, cars without a crossing yet are launched from their grid slot for this long (seconds). */
+const LAUNCH_SECONDS = 120
 
-/** Where a car is drawn this frame. Track cars have a distance along the lap; pit cars a point (track metres). */
+/**
+ * Where a car is drawn this frame. Track cars have a distance along the lap (and, on the starting grid, a sideways
+ * offset in metres, left of race direction); pit cars a point (track metres).
+ */
 export type Placement =
-  | { car: CarRow; kind: 'track'; distance: number; dim: boolean }
+  | { car: CarRow; kind: 'track'; distance: number; dim: boolean; lateral?: number }
   | { car: CarRow; kind: 'pit'; point: Vec; dim: true }
 
 /**
@@ -88,6 +94,26 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
   const shootout = isShootout(timing.session.name, timing.session.type)
   const lastPointId = order[order.length - 1]
 
+  // The start of a race (map/startGrid.ts): cars on the grid in grid order before the green flag, then each one
+  // launched from its slot to its first crossing. The green flag's time from the snapshot, or from the live feed /
+  // replay lookahead when it's ahead (it then knows the start to the second, before the snapshot shows it).
+  const race = isRace(timing.session.type)
+  const sameSession = live && live.timing.session.meeting === timing.session.meeting && live.timing.session.name === timing.session.name
+  const green = timing.session.greenAt || (sameSession ? live.timing.session.greenAt : 0) || 0
+  const started = green > 0 && now >= green
+  const preStart = race && !started && flagNow === 'other'
+  const grid = useRef<{ key: string; places: Map<string, number> } | null>(null)
+  const gridKey = `${timing.session.meeting}|${timing.session.name}`
+  // Kept up to date while waiting for the start (cars join from the pit lane), then kept as it was once racing:
+  // positions change at the first crossings. Opening a replay mid-launch takes the order at that moment.
+  if (race && (preStart || (started && now - green < LAUNCH_SECONDS && grid.current?.key !== gridKey))) {
+    grid.current = { key: gridKey, places: gridPlaces(timing.session, mapCars) }
+  }
+  const slotOf = (car: CarRow) => {
+    const place = grid.current?.key === gridKey ? grid.current.places.get(car.id) : undefined
+    return place ? gridSlot(model, place) : undefined
+  }
+
   // Back of the field first, so pit slots are handed out in a stable order.
   const placements: Placement[] = []
   let pitIndex = 0
@@ -104,6 +130,30 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     const crossed = seen && seen.at > row.lastPointAt ? { ...row, lastPoint: seen.point, lastPointAt: seen.at } : row
     const car = rejoined(crossed, now)
     if (shootout && car.inPit) continue
+    // On the grid before the start, and launching from it until the car's first crossing of the race.
+    const slot = race && !car.inPit ? slotOf(car) : undefined
+    if (slot && preStart && onGrid(car, order, now)) {
+      const distance = preStartDistance(model, car, order, slot, fallback[order.length - 1], now)
+      const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, TAU)
+      smoothing.current.set(car.id, sm)
+      placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral })
+      continue
+    }
+    if (slot && started && now - green < LAUNCH_SECONDS && car.laps === 0 && car.lastPointAt < green) {
+      const next = live ? crossings.current.firstAfter(car.id, green) : undefined
+      // The track's flying-lap time to the first point: the session's own reference is from formation and out-laps then.
+      const distance = launchDistance(model, slot, green, now, order, next, baseline[0] || fallback[0])
+      if (distance !== undefined) {
+        onTrack++
+        if (next) known++
+        const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, TAU)
+        smoothing.current.set(car.id, sm)
+        // Fan in from the two-wide grid to the racing line over the first ~150 m.
+        const fan = Math.max(0, 1 - model.wrap(distance - slot.distance) / 150)
+        placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral * fan })
+        continue
+      }
+    }
     const inLap = shootout && car.lapsSincePit >= 2
     // In-laps are slow: don't cap them at racing pace.
     const state = carPosition(car, model, order, fallback, now, inLap ? undefined : cap, baseline, caution, isF1 ? F1_PACING : SUPERCARS_PACING)

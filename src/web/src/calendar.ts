@@ -281,3 +281,17 @@ export function eventEnd(e: UpcomingEvent): Date {
 export function sessionTime(e: UpcomingEvent, local: string): Date {
   return new Date(`${local}:00${e.utcOffset}`)
 }
+
+/**
+ * A live race's scheduled start from the timetable above, in the feeds' session time (track-local wall-clock time
+ * encoded as Unix seconds, like Natsoft's T and F1's timestamps), or undefined if it isn't there. Matched by event
+ * name inside the meeting ("2026 Boost Mobile Gold Coast 500") and session name ("... - Race 31" / F1's "Race").
+ * The timetable's time is when the session starts, before the formation lap: the 2026 Singapore GP's green flag came
+ * at 20:03:39 for a 20:00 start.
+ */
+export function scheduledStart(session: { meeting: string; name: string }): number | undefined {
+  const name = session.name.split(' - ').at(-1)?.trim().toLowerCase()
+  const event = SERIES_UPCOMING.find((e) => session.meeting.toLowerCase().includes(e.name.toLowerCase()))
+  const race = event?.sessions?.find((s) => s.name.toLowerCase() === name)
+  return race ? Date.parse(`${race.start}:00Z`) / 1000 : undefined
+}
