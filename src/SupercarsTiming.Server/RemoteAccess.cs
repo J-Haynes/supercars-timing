@@ -15,7 +15,15 @@ public sealed class RemoteAccess(IConfiguration config)
     /// <summary>The tunnel's local port; null when remote access isn't configured (every request is local).</summary>
     public int? Port { get; } = config.GetValue<int?>($"{Section}:Port");
 
-    public bool IsRemote(HttpContext context) => Port is int port && context.Connection.LocalPort == port;
+    /// <summary>
+    /// Through the tunnel: on its port, or carrying the header Cloudflare adds to every request it forwards. The header
+    /// catches a tunnel pointed at the local port by mistake (19 Oct 2026: the dashboard had localhost:5080, and
+    /// replays worked remotely). Visitors can't remove it; sending it locally only turns replays off for that request.
+    /// </summary>
+    public bool IsRemote(HttpContext context) =>
+        (Port is int port && context.Connection.LocalPort == port) || context.Request.Headers.ContainsKey(CloudflareHeader);
+
+    const string CloudflareHeader = "CF-Connecting-IP";
 }
 
 public static class RemoteAccessExtensions

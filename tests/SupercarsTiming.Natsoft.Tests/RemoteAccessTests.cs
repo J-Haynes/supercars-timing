@@ -22,6 +22,16 @@ public class RemoteAccessTests
     }
 
     [Fact]
+    public void Cloudflare_requests_are_remote_on_any_port()
+    {
+        // A tunnel pointed at the local port by mistake still can't use replays.
+        var context = On(5080);
+        context.Request.Headers["CF-Connecting-IP"] = "203.0.113.7";
+        Assert.True(WithPort("5082").IsRemote(context));
+        Assert.True(WithPort(null).IsRemote(context));
+    }
+
+    [Fact]
     public void Without_a_tunnel_port_everything_is_local()
     {
         var remote = WithPort(null);

@@ -36,6 +36,8 @@ How the server tells them apart: `cloudflared` connects from this machine, like 
 address can't. The tunnel uses its own port instead, **5082** (`Remote:Port`, set in the service file); requests on
 it get `403` from every replay endpoint (both series), and `GET /api/features` answers `{"replay":false}` there, so
 the results page hides the Replay button (`src/web/src/features.ts`, `src/SupercarsTiming.Server/RemoteAccess.cs`).
+A request carrying Cloudflare's `CF-Connecting-IP` header counts as remote on any port too, so a tunnel pointed at
+5080 by mistake (it happened on the first setup) still can't replay. Point it at 5082 anyway.
 
 Set up (once, dashboard-managed tunnel):
 

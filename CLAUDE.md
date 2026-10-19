@@ -453,7 +453,7 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
 - **Never commit recordings or `.har` files** (git-ignored; recordings are Natsoft's data, HAR files contain login tokens).
 - **Remote access (owner's decision, 19 Oct 2026):** the laptop serves everything; a Cloudflare Tunnel to
   `localhost:5082` gives live timing, results and upcoming events remotely, **never replays** (`RemoteAccess.cs`:
-  replay endpoints are `.LocalOnly()`, 403 on `Remote:Port`; the frontend hides Replay via `/api/features`). Any new
+  replay endpoints are `.LocalOnly()`, 403 on `Remote:Port` or with Cloudflare's `CF-Connecting-IP` header; the frontend hides Replay via `/api/features`). Any new
   heavy or per-viewer endpoint should be `.LocalOnly()` too. Replays stay on localhost and the tailnet (port 5080).
   Setup in `deploy/README.md`. Wider publicity still needs permission for the data (docs/PLANNING.md).
 - Keep the Natsoft library free of ASP.NET dependencies.
