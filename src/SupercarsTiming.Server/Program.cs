@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using SupercarsTiming.Server;
 using SupercarsTiming.Server.Feed;
 using SupercarsTiming.Server.Hubs;
 using SupercarsTiming.Natsoft;
@@ -14,6 +15,8 @@ builder.Services.AddHostedService<TimingFeedService>();
 builder.Services.AddHostedService<SnapshotBroadcaster>();
 builder.Services.AddSingleton<SessionCatalog>();
 builder.Services.AddSingleton<ReplayService>();
+// Requests through the Cloudflare Tunnel arrive on their own port and can't use replays (RemoteAccess.cs).
+builder.Services.AddSingleton<RemoteAccess>();
 // F1: a second, separate feed (F1's live timing hub) with its own store, hub and endpoints under /api/f1.
 builder.Services.Configure<F1Options>(builder.Configuration.GetSection(F1Options.Section));
 builder.Services.AddSingleton<F1Store>();
@@ -28,6 +31,8 @@ builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Ad
 var app = builder.Build();
 
 app.MapGet("/api/health", (TimingStore store) => Results.Ok(store.Status));
+// What this viewer may use, for both series: replays only locally and on the tailnet, not through the tunnel.
+app.MapGet("/api/features", (RemoteAccess remote, HttpContext context) => Results.Ok(new { Replay = !remote.IsRemote(context) }));
 app.MapGet("/api/snapshot", (TimingStore store) => Results.Ok(new TimingUpdate(store.Status, store.Snapshot())));
 // Lap history for the charts: large, so it's fetched on its own every few seconds rather than pushed with each update.
 app.MapGet("/api/laps", (TimingStore store) => Results.Ok(store.Laps()));
@@ -44,9 +49,9 @@ app.MapGet("/api/sessions/{id}/results", (SessionCatalog catalog, string id) =>
     catalog.Results(id) is { } results ? Results.Ok(results) : Results.NotFound());
 // Replay of a recorded session: its time range, and the snapshot at Natsoft time t for one viewer (a cursor each).
 app.MapGet("/api/sessions/{id}/replay/info", (ReplayService replays, string id) =>
-    replays.Info(id) is { } info ? Results.Ok(new { info.Start, info.End }) : Results.NotFound());
+    replays.Info(id) is { } info ? Results.Ok(new { info.Start, info.End }) : Results.NotFound()).LocalOnly();
 app.MapGet("/api/sessions/{id}/replay", (ReplayService replays, string id, double t, string viewer) =>
-    replays.At(id, viewer, t) is { } snapshot ? Results.Ok(snapshot) : Results.NotFound());
+    replays.At(id, viewer, t) is { } snapshot ? Results.Ok(snapshot) : Results.NotFound()).LocalOnly();
 // Lap history of a recorded session (charts on the results page).
 app.MapGet("/api/sessions/{id}/laps", (SessionCatalog catalog, string id) =>
     catalog.Laps(id) is { } laps ? Results.Ok(laps) : Results.NotFound());
@@ -66,9 +71,9 @@ app.MapGet("/api/f1/sessions", (F1SessionCatalog catalog) => Results.Ok(catalog.
 app.MapGet("/api/f1/sessions/{id}/results", (F1SessionCatalog catalog, string id) =>
     catalog.Results(id) is { } results ? Results.Ok(results) : Results.NotFound());
 app.MapGet("/api/f1/sessions/{id}/replay/info", (F1ReplayService replays, string id) =>
-    replays.Info(id) is { } info ? Results.Ok(new { info.Start, info.End }) : Results.NotFound());
+    replays.Info(id) is { } info ? Results.Ok(new { info.Start, info.End }) : Results.NotFound()).LocalOnly();
 app.MapGet("/api/f1/sessions/{id}/replay", (F1ReplayService replays, string id, double t, string viewer) =>
-    replays.At(id, viewer, t) is { } snapshot ? Results.Ok(snapshot) : Results.NotFound());
+    replays.At(id, viewer, t) is { } snapshot ? Results.Ok(snapshot) : Results.NotFound()).LocalOnly();
 app.MapGet("/api/f1/sessions/{id}/laps", (F1SessionCatalog catalog, string id) =>
     catalog.Laps(id) is { } laps ? Results.Ok(laps) : Results.NotFound());
 app.MapHub<F1Hub>(F1Hub.Path);

@@ -15,6 +15,7 @@ import { SettingsPanel } from './components/SettingsPanel'
 import { flagKind, isRace, isSupercarsSession } from './session'
 import type { RecordedSession, TimingUpdate } from './types'
 import { isF1 } from './series'
+import { useFeatures } from './features'
 
 export default function App() {
   const { update: latest, connection } = useTiming()
@@ -31,6 +32,8 @@ export default function App() {
   const [replaying, setReplaying] = useState(false)
   // The replay's current moment, reported by ReplayView, for the header.
   const [replayUpdate, setReplayUpdate] = useState<TimingUpdate | null>(null)
+  // Replays are local only: not offered through the Cloudflare Tunnel (features.ts).
+  const { replay: replayAllowed } = useFeatures()
 
   const timing = update?.timing
   // Support categories share the feed: only show Supercars Championship sessions.
@@ -54,10 +57,10 @@ export default function App() {
       />
       {preview ? (
         <main><EventPreview event={preview} onLive={() => setPreview(null)} /></main>
-      ) : results && replaying ? (
+      ) : results && replaying && replayAllowed ? (
         <main><ReplayView session={results} onBack={() => setReplaying(false)} onUpdate={setReplayUpdate} /></main>
       ) : results ? (
-        <main><ResultsView session={results} onLive={() => setResults(null)} onReplay={() => setReplaying(true)} /></main>
+        <main><ResultsView session={results} onLive={() => setResults(null)} onReplay={replayAllowed ? () => setReplaying(true) : undefined} /></main>
       ) : (
         <>
           <Controls

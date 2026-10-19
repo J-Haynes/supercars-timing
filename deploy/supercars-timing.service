@@ -2,7 +2,8 @@
 #   systemctl --user link ~/Dev/supercars-timing/deploy/supercars-timing.service
 #   systemctl --user daemon-reload && systemctl --user enable --now supercars-timing
 # Logs: journalctl --user -u supercars-timing -f
-# The site is shared on the tailnet with `tailscale serve --bg 5080` (see deploy/README.md).
+# The site is shared on the tailnet with `tailscale serve --bg 5080`, and remotely through a Cloudflare Tunnel to
+# port 5082, which can't use replays (see deploy/README.md).
 [Unit]
 Description=Supercars live timing server (Natsoft feed -> http://localhost:5080)
 After=network-online.target
@@ -12,7 +13,9 @@ Wants=network-online.target
 WorkingDirectory=%h/Dev/supercars-timing
 # Release build in its own output folder, so development builds don't fight over the same files.
 ExecStart=/usr/lib/dotnet/dotnet run --project src/SupercarsTiming.Server -c Release --no-launch-profile
-Environment=ASPNETCORE_URLS=http://localhost:5080
+# 5080: this machine and the tailnet. 5082: the Cloudflare Tunnel only (Remote:Port; no replays there).
+Environment="ASPNETCORE_URLS=http://localhost:5080;http://localhost:5082"
+Environment=Remote__Port=5082
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
 # Natsoft rule: one connection. Restarting after a crash is fine; the client keeps its own 30 s retry.

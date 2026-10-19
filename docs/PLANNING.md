@@ -44,6 +44,13 @@ We haven't found published terms for the feed. If Natsoft or Supercars ask us to
 
 ## Deployment (not planned yet; personal app for now)
 
+**Built (19 Oct 2026):** remote access from this laptop through a Cloudflare Tunnel (`deploy/README.md`): live timing,
+results and upcoming events, no replays (they cost the laptop CPU per viewer and ~3 Mbit/s each; measured on Race 30:
+a new cursor near the end 0.55 s, a backwards seek 0.2 s, a snapshot 56 KB, 11 KB gzipped). Still worth doing before
+many remote viewers: response compression (the server sends JSON uncompressed) and a slower or delta live feed for
+remote viewers (~1.6 Mbit/s each today). racinglive.app, for comparison, polls a compact snapshot every 2 s.
+Vercel, Oracle Cloud and Cloudflare Workers/Containers were looked at and not chosen (always-on process, disk).
+
 - **Frontend:** a static site (Vite build), fits Vercel/Netlify/Cloudflare Pages.
 - **Live backend:** needs an always-on process holding the Natsoft WebSocket and pushing updates (SignalR). Not a fit
   for serverless functions. Options: a small container/VPS (Fly.io, Railway, ~$5/month), or this machine behind a
