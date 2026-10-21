@@ -152,6 +152,32 @@ main { flex: 1; padding: 0 16px 24px; }
 
 .empty { color: var(--muted); padding: 64px 16px; text-align: center; font-size: 15px; }
 
+/* Between sessions (NextSession): the track turning in 3D, with the next session and a big countdown over it. */
+.next-session { max-width: 1280px; margin: 8px auto 40px; }
+.next-hero { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); min-height: 320px; }
+.next-hero .track-map.bare { border: 0; border-radius: 0; padding: 0; background: none; }
+.next-hero .m3d-host { height: min(62vh, 600px); border-radius: 0; }
+.next-hero .map-caption { position: absolute; top: 8px; right: 12px; margin: 0; font-size: 10px; opacity: .7; }
+/* The text sits on a fade to the panel colour so it reads over buildings and water. Clicks pass through to the map. */
+.next-over { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+  padding: 72px 28px 24px; background: linear-gradient(to top, var(--panel) 25%, transparent); pointer-events: none; }
+.next-what h2.next-event { margin: 0; font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight);
+  font-size: clamp(30px, 4.4vw, 60px); line-height: 1; text-shadow: 0 2px 18px rgba(0, 0, 0, .55); }
+.next-venue { color: var(--muted); font-size: 14px; margin: 4px 0 14px; }
+.next-name { font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: calc(var(--display-size) * 1.1); line-height: 1.1; }
+.next-when { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 4px; color: var(--text); font-size: 15px; }
+.next-zone { color: var(--muted); font-size: 13px; }
+.next-when .segmented { pointer-events: auto; }
+.next-when .segmented button { white-space: nowrap; } /* the overlay lets clicks through to the map; the switch takes them */
+.next-countdown { font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(44px, 8vw, 112px); line-height: .9;
+  font-variant-numeric: tabular-nums; letter-spacing: -.01em; text-align: right; white-space: nowrap; text-shadow: 0 2px 24px rgba(0, 0, 0, .5); }
+.next-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 12px; }
+.next-detail { color: var(--muted); font-size: 12px; max-width: 72ch; }
+@media (max-width: 640px) {
+  .next-over { flex-direction: column; align-items: flex-start; padding: 48px 16px 16px; }
+  .next-countdown { text-align: left; }
+}
+
 @media (max-width: 700px) {
   .session { flex-direction: column; align-items: flex-start; }
   .session-status { justify-content: flex-start; }
