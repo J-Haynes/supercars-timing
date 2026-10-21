@@ -335,6 +335,13 @@ main { flex: 1; padding: 0 16px 24px; }
   padding: 1px 4px; border-radius: 3px; translate: -50% -100%; }
 .track-map.syncing .m3d-host { opacity: .35; filter: grayscale(1); transition: opacity .4s, filter .4s; }
 @media (max-width: 760px) { .m3d-host { height: 56vh; } }
+/* The viewer's map height (MapHeightHandle, settings.mapHeight): both maps' surfaces, over the defaults above. */
+.map-view.sized .m3d-host { height: var(--map-height); }
+.map-view.sized .track-map svg { height: var(--map-height); max-height: none; }
+.map-height-handle { display: flex; justify-content: center; align-items: center; height: 14px; margin-top: 2px; cursor: row-resize; touch-action: none; outline: none; border-radius: 4px; }
+.map-height-grip { width: 44px; height: 4px; border-radius: 2px; background: var(--line-strong); transition: background .15s, width .15s; }
+.map-height-handle:hover .map-height-grip, .map-height-handle:focus-visible .map-height-grip, .map-height-handle.dragging .map-height-grip { background: var(--accent); width: 72px; }
+body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 @media (max-width: 760px) { .elev-strip { height: 72px; } }
 .m3d-label.m3d-ghost { color: #1b0b33; background: #b98cff; border-radius: 4px; padding: 1px 5px; font-weight: 600; font-size: 11px; }
 .map-tools select.pit-ghost-pick.active { border-color: #b98cff; color: #d9c4ff; }
