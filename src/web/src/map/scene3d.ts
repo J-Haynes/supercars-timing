@@ -25,7 +25,12 @@ const DOT_MIN = 4
 const DOT_MAX = 32
 /** Metres of camera distance per metre of dot radius (between the limits). */
 const DOT_PER_DISTANCE = 100
-const BG = 0x12161b // --panel
+/** A colour token from styles.css (each series has its own), so the 3D scene matches the panel it sits in. */
+function cssColour(name: string, fallback: number) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return /^#[0-9a-f]{6}$/i.test(value) ? parseInt(value.slice(1), 16) : fallback
+}
+const BG = cssColour('--panel', 0x12161b)
 const MAKER_COLOURS: Record<string, number> = { ford: 0x2f6fdf, chevrolet: 0xf28c1b, toyota: 0xe5172f }
 // Track colours: a light surface with near-white edges, like painted track lines, so the circuit stands out from the
 // darker slate buildings (they were the same mid grey, and the track vanished among the Las Vegas casinos).

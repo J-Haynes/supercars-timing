@@ -18,7 +18,54 @@
   --accent-fill: rgba(232, 236, 241, .10);
   --accent-ink: #0f1216;
   --gold: #c9a24a; /* Finals: darker and less saturated than the caution yellow */
+  --hover: #1f2a36;
+  --raise: #1a2027;       /* controls and cards a step above the panel */
+  --line-strong: #3a4552; /* control borders */
+  --brand: #8a96a3;       /* the series' colour: the header rule only, never in timing data */
+  --display: "Inter Variable", system-ui, sans-serif; /* the header's title and lap count */
+  --display-style: normal;
+  --display-weight: 650;
+  --display-size: 20px;
   color-scheme: dark;
+}
+
+/* Two apps, one layout: each series has its own neutrals, header type and brand rule (data-series on <html>, from
+   series.ts). Supercars: warm asphalt greys and a condensed italic like its TV graphics. F1: cooler blue-black and
+   Titillium Web (F1's own typeface for years). Brand red only in the header: in the data red means places lost. */
+:root[data-series="v8"] {
+  --bg: #121211;
+  --panel: #1a1a19;
+  --row-alt: #1f1f1d;
+  --line: #2c2c29;
+  --text: #edece8;
+  --muted: #9b988f;
+  --hover: #2b2b28;
+  --raise: #232321;
+  --line-strong: #44433f;
+  --accent: #edece8;
+  --accent-fill: rgba(237, 236, 232, .10);
+  --accent-ink: #141412;
+  --brand: #e4002b;
+  --display: "Barlow Condensed", "Inter Variable", sans-serif;
+  --display-style: italic;
+  --display-weight: 700;
+  --display-size: 27px;
+}
+:root[data-series="f1"] {
+  --bg: #0d1016;
+  --panel: #141920;
+  --row-alt: #181e27;
+  --line: #242c37;
+  --text: #e8edf3;
+  --muted: #8b97a6;
+  --hover: #212b38;
+  --raise: #1b222c;
+  --line-strong: #39434f;
+  --brand: #e10600;
+  --display: "Titillium Web", "Inter Variable", sans-serif;
+  --display-style: normal;
+  --display-weight: 700;
+  --display-size: 23px;
 }
 
 * { box-sizing: border-box; }
@@ -27,7 +74,8 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.4 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 14px/1.4 "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-feature-settings: "cv11"; /* Inter's single-storey a: a little quieter in dense tables */
 }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; }
@@ -41,10 +89,12 @@ main { flex: 1; padding: 0 16px 24px; }
   gap: 16px;
   padding: 20px 16px 16px;
   border-bottom: 1px solid var(--line);
+  box-shadow: inset 0 3px 0 var(--brand);
   margin-bottom: 12px;
 }
 .meeting { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-.session h1 { margin: 2px 0; font-size: 20px; font-weight: 650; }
+.session h1 { margin: 2px 0; font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight);
+  font-size: var(--display-size); line-height: 30px; letter-spacing: .005em; } /* same height in both apps */
 .track { color: var(--muted); font-size: 13px; }
 .session-status { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
 .clock { font: 600 28px/1 ui-monospace, "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
@@ -119,11 +169,11 @@ main { flex: 1; padding: 0 16px 24px; }
   .col-splitter { display: block; position: relative; z-index: 3; align-self: stretch; cursor: col-resize; touch-action: none; outline: none; }
   .col-splitter::before { content: ''; position: absolute; top: 0; bottom: 0; left: 7px; width: 2px; border-radius: 1px; background: var(--line); transition: background .15s; }
   .col-grip { position: sticky; top: calc(50vh - 36px); left: 0; width: 22px; margin-left: -3px; height: 72px; margin-top: 120px; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 3px; border: 1px solid #34404c; border-radius: 8px; background: #1a2027;
+    align-items: center; justify-content: center; gap: 3px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--raise);
     color: var(--muted); font-size: 12px; line-height: 1; box-shadow: 0 2px 8px rgba(0, 0, 0, .35); transition: background .15s, border-color .15s, color .15s; }
   .col-grip-dots { width: 6px; height: 16px; background: radial-gradient(circle, currentColor 1.2px, transparent 1.6px) 0 0 / 3px 4px; }
   .col-splitter:hover::before, .col-splitter:focus-visible::before, .col-splitter.dragging::before { background: var(--accent); }
-  .col-splitter:hover .col-grip, .col-splitter:focus-visible .col-grip, .col-splitter.dragging .col-grip { border-color: var(--accent); background: #232a32; color: var(--text); }
+  .col-splitter:hover .col-grip, .col-splitter:focus-visible .col-grip, .col-splitter.dragging .col-grip { border-color: var(--accent); background: var(--raise); color: var(--text); }
   .col-hint { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); white-space: nowrap; display: flex; align-items: center; gap: 6px;
     padding: 5px 6px 5px 10px; border-radius: 6px; background: var(--accent); color: var(--accent-ink); font-size: 12px; cursor: default; box-shadow: 0 4px 14px rgba(0, 0, 0, .4); }
   .col-hint::before { content: ''; position: absolute; left: -5px; top: 50%; margin-top: -5px; border: 5px solid transparent; border-left: 0; border-right-color: var(--accent); }
@@ -142,7 +192,7 @@ main { flex: 1; padding: 0 16px 24px; }
 }
 .tower tbody { user-select: none; } /* double-click highlights a driver; don't select text */
 .tower tbody tr { cursor: default; }
-.tower tbody tr.hovered { background: #1f2a36; }
+.tower tbody tr.hovered { background: var(--hover); }
 .tower tbody tr.pinned { background: rgba(232, 236, 241, .06); box-shadow: inset 4px 0 0 var(--accent); }
 .tower tbody tr.pinned td.driver { color: #fff; }
 .tower th.primary { color: var(--text); }
@@ -167,21 +217,21 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-car .focus-ring { fill: none; stroke: #fff; stroke-width: 10; stroke-dasharray: 18 12; }
 .track-map svg { display: block; width: 100%; height: auto; max-height: calc(100vh - 140px); }
 @media (max-width: 999px) { .track-map svg { max-height: 520px; } }
-.track-outline { fill: none; stroke: #2b3540; stroke-width: 34; stroke-linejoin: round; }
-.track-surface { fill: none; stroke: #46525f; stroke-width: 14; stroke-linejoin: round; }
-.pit-lane { fill: none; stroke: #46525f; stroke-width: 8; stroke-dasharray: 22 16; }
+.track-outline { fill: none; stroke: var(--line-strong); stroke-width: 34; stroke-linejoin: round; }
+.track-surface { fill: none; stroke: var(--line-strong); stroke-width: 14; stroke-linejoin: round; }
+.pit-lane { fill: none; stroke: var(--line-strong); stroke-width: 8; stroke-dasharray: 22 16; }
 .control-line { stroke: #fff; stroke-width: 12; }
 .timing-point { fill: #8a96a3; }
 .corner-label { fill: var(--muted); font-family: system-ui, sans-serif; font-weight: 500; pointer-events: none; }
 .map-battle path { fill: none; stroke: #2fd3ff; stroke-opacity: .5; stroke-width: 120; stroke-linecap: round; stroke-linejoin: round; }
-.map-battle text { fill: #2fd3ff; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #0b0d10; stroke-width: 8px; }
+.map-battle text { fill: #2fd3ff; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: var(--bg); stroke-width: 8px; }
 .map-car { cursor: pointer; transition: opacity .3s; }
 /* Pit rejoin ghost (pit/): violet, a colour no team, flag or battle uses; hollow, as it's a "what if". */
 .map-ghost > path { fill: none; stroke: #b98cff; stroke-opacity: .35; stroke-width: 90; stroke-linecap: round; stroke-linejoin: round; }
 .map-ghost circle { fill: rgba(11, 13, 16, .6); stroke: #b98cff; stroke-width: 9; stroke-dasharray: 16 10; }
 .map-ghost text { fill: #d9c4ff; font: 700 40px ui-monospace, monospace; text-anchor: middle; pointer-events: none; }
-.map-ghost text.map-ghost-label { font: 700 36px system-ui, sans-serif; paint-order: stroke; stroke: #0b0d10; stroke-width: 8px; }
-.map-car circle { fill: #5a6573; stroke: #0b0d10; stroke-width: 7; }
+.map-ghost text.map-ghost-label { font: 700 36px system-ui, sans-serif; paint-order: stroke; stroke: var(--bg); stroke-width: 8px; }
+.map-car circle { fill: #5a6573; stroke: var(--bg); stroke-width: 7; }
 .map-car text { fill: #fff; font: 700 44px ui-monospace, monospace; text-anchor: middle; pointer-events: none; }
 .map-car.mfr-ford circle { fill: var(--ford); }
 .map-car.mfr-chevrolet circle { fill: var(--chevrolet); }
@@ -218,11 +268,11 @@ main { flex: 1; padding: 0 16px 24px; }
 .track-map.syncing .elev-strip { opacity: .35; filter: grayscale(1); }
 
 /* 3D map (TrackMap3D, map/scene3d.ts): a WebGL canvas with HTML labels on top. */
-.map-tools button.active { border-color: var(--muted); background: #222a33; }
+.map-tools button.active { border-color: var(--muted); background: var(--line); }
 .map-tools .map-views { display: flex; height: 28px; border-color: var(--line); background: rgba(18, 22, 27, .85); }
 .map-tools .map-views button { flex: none; min-width: 0; height: auto; border: 0; border-radius: 0; background: none; color: var(--muted); padding: 0 9px; font-size: 12px; }
 .map-tools .map-views button + button { border-left: 1px solid var(--line); }
-.map-tools .map-views button.active { background: #222a33; color: var(--text); }
+.map-tools .map-views button.active { background: var(--line); color: var(--text); }
 .map-tools select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; font: inherit; font-size: 12px; max-width: 170px; }
 .m3d-host { position: relative; height: min(68vh, 640px); border-radius: 6px; overflow: hidden; touch-action: none; }
 .m3d-host canvas { display: block; }
@@ -232,7 +282,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .m3d-label.m3d-battle { color: #04212b; background: #2fd3ff; border-radius: 4px; padding: 1px 5px; font-weight: 600; font-size: 11px; }
 .m3d-ot { position: absolute; left: 0; top: 0; will-change: transform; translate: 6px -100%; font: 700 9px ui-monospace, monospace;
   color: #04212b; background: #2fd3ff; border-radius: 3px; padding: 0 3px; }
-.m3d-label.m3d-corner { color: var(--text); font: 600 10px ui-monospace, monospace; background: rgba(11, 13, 16, .8); border: 1px solid #34404c; border-radius: 4px; padding: 0 3px; }
+.m3d-label.m3d-corner { color: var(--text); font: 600 10px ui-monospace, monospace; background: rgba(11, 13, 16, .8); border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 3px; }
 .m3d-label.m3d-landmark { color: #c9d2dc; font-size: 10px; opacity: .85; }
 .m3d-label { font-size: 11px; color: var(--muted); margin: -7px 0 0 0; translate: -50% 0; text-shadow: 0 0 3px var(--bg); }
 .m3d-tag { font: 700 11px ui-monospace, monospace; color: var(--text); background: rgba(11, 13, 16, .85); border-left: 3px solid var(--muted);
@@ -286,7 +336,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .shootout-driver .sub { color: var(--muted); font-size: 12px; }
 .phase { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 4px; background: var(--line); color: var(--muted); }
 .phase.phase-flying { background: #2f6fdf; color: #fff; }
-.phase.phase-in { background: #3a4552; color: var(--text); }
+.phase.phase-in { background: var(--line-strong); color: var(--text); }
 .shootout-time { margin-left: auto; font: 700 30px/1 ui-monospace, "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
 .shootout-time .target { font-size: 16px; color: var(--muted); font-weight: 600; }
 .shootout-summary { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 110px; }
@@ -296,7 +346,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .delta.behind, .splits li.behind .split-delta { color: var(--red); }
 .splits { list-style: none; margin: 14px 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
 .splits li { background: #0e1216; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-height: 52px; display: flex; flex-direction: column; justify-content: space-between; }
-.splits li.reached { border-color: #3a4552; }
+.splits li.reached { border-color: var(--line-strong); }
 .splits li.ahead { box-shadow: inset 0 -3px 0 var(--green); }
 .splits li.behind { box-shadow: inset 0 -3px 0 var(--red); }
 .split-name { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -346,7 +396,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .menu h3 { font-size: 14px; margin: 12px 0 4px; }
 .menu-meeting { display: flex; align-items: baseline; gap: 6px; width: 100%; padding: 6px 4px; background: none; border: 0; border-radius: 6px;
   color: var(--text); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
-.menu-meeting:hover { background: #1a2129; }
+.menu-meeting:hover { background: var(--raise); }
 .menu-chevron { width: 12px; color: var(--muted); }
 .menu-tag { margin-left: 6px; font: 600 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; vertical-align: 1px; }
 .menu-count { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; white-space: nowrap; }
@@ -356,7 +406,7 @@ main { flex: 1; padding: 0 16px 24px; }
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; cursor: pointer;
   background: none; border: 1px solid transparent; border-radius: 6px; padding: 8px 10px; color: var(--text); font: inherit;
 }
-.menu-item:hover { background: #1a2129; }
+.menu-item:hover { background: var(--raise); }
 .menu-item.active { border-color: var(--accent); background: var(--accent-fill); }
 .menu-item:first-of-type { flex-direction: row; align-items: center; gap: 8px; }
 .menu-item.session { flex-direction: column; align-items: flex-start; gap: 2px; }
@@ -367,7 +417,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .upcoming-top, .upcoming-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .upcoming-bottom { margin-top: 6px; }
 .upcoming-name { font-weight: 600; }
-.soon { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text); border: 1px solid #46525f; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.soon { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text); border: 1px solid var(--line-strong); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
 .countdown { font: 600 14px ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 .map-status { font-size: 11px; color: var(--muted); }
 .map-status.mapped { color: var(--green); }
@@ -432,7 +482,8 @@ main { flex: 1; padding: 0 16px 24px; }
 
 /* Race distance next to the live indicator. */
 .laps-to-go { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
-.laps-to-go .lap-of { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 15px; }
+.laps-to-go .lap-of { font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight);
+  font-variant-numeric: tabular-nums; font-size: calc(var(--display-size) * .8); line-height: 1.05; }
 .laps-to-go .to-go { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
 
 /* Laps per driver (co-driver events). */
@@ -557,7 +608,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .feed-item { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; border-left: 3px solid var(--line); border-radius: 0 4px 4px 0; line-height: 1.35; }
 .feed-item + .feed-item { margin-top: 2px; }
 .feed-item[role="button"] { cursor: pointer; }
-.feed-item:hover, .feed-item:focus-visible { background: #1f2a36; outline: none; }
+.feed-item:hover, .feed-item:focus-visible { background: var(--hover); outline: none; }
 .feed-icon { flex: none; width: 16px; text-align: center; font-size: 12px; }
 .feed-text { flex: 1; min-width: 0; }
 .feed-when { flex: none; min-width: 36px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -577,10 +628,10 @@ main { flex: 1; padding: 0 16px 24px; }
 /* Tower row buttons (TimingTower RowActions): over the end of the driver cell on hover/focus, no layout shift. */
 .tower td.col-driver { position: relative; }
 .row-actions { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); display: flex; gap: 4px; padding-left: 18px;
-  background: linear-gradient(90deg, transparent, #1f2a36 16px); opacity: 0; pointer-events: none; }
+  background: linear-gradient(90deg, transparent, var(--hover) 16px); opacity: 0; pointer-events: none; }
 .tower tbody tr:hover .row-actions, .tower tbody tr:focus-within .row-actions { opacity: 1; pointer-events: auto; }
 .row-action { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 22px; padding: 0; border-radius: 5px;
-  border: 1px solid #3a4654; background: var(--bg); color: var(--muted); cursor: pointer; }
+  border: 1px solid var(--line-strong); background: var(--bg); color: var(--muted); cursor: pointer; }
 /* Hover only lights the border; "on" is filled. (They used to look the same, so a button just turned off, still under
    the mouse or tapped on a phone, looked on.) Hover styles only where there's a real pointer. */
 @media (hover: hover) { .row-action:hover { color: var(--text); border-color: var(--text); } }
@@ -605,7 +656,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .ladder-head { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
 .ladder-head span:nth-child(n + 4), .ladder-today, .ladder-total { text-align: right; font-variant-numeric: tabular-nums; }
 .ladder-row { position: relative; border-radius: 4px; }
-.ladder-row:hover { background: #1f2a36; }
+.ladder-row:hover { background: var(--hover); }
 .ladder-pos { font-weight: 700; text-align: right; }
 .ladder-move { font-size: 11px; font-weight: 700; color: var(--muted); }
 .ladder-move.up { color: var(--green); }
@@ -671,7 +722,7 @@ main { flex: 1; padding: 0 16px 24px; }
 /* Championship standings at a Finals round (FinalsStandings.tsx): event page and live tab. */
 .standings-row { display: grid; grid-template-columns: 26px 1fr 84px 52px; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; }
 .standings.live .standings-row { grid-template-columns: 26px 30px 1fr 44px 40px 48px; }
-.standings-row:not(.standings-head):hover { background: #1f2a36; }
+.standings-row:not(.standings-head):hover { background: var(--hover); }
 .standings-head { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
 .standings-head span:nth-last-child(-n + 2), .standings.live .standings-head span:nth-last-child(-n + 3) { text-align: right; }
 .standings-pos { font-weight: 700; text-align: right; }
