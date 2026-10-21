@@ -116,6 +116,8 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
         <button type="button" onClick={() => zoomBy(1 / 1.4)} title="Zoom out">−</button>
         <button type="button" onClick={() => { reset(); onRotate(0) }} title="Reset view" className="wide">Reset</button>
       </div>
+      {/* The map surface and what sits over it: overlays are placed on the map itself, never over the toolbar or caption. */}
+      <div className="map-stage">
       <svg ref={svgRef} viewBox={viewBox} role="img" aria-label={`${track.name} track map`} {...handlers}
         className={zoom > 1 ? 'zoomed' : ''}>
         <path d={view.path} className="track-outline" />
@@ -170,10 +172,6 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
           )
         })}
       </svg>
-      {track.elevation && track.elevation.length > 0 && (
-        <ElevationStrip track={track} elevation={track.elevation} cars={stripCars} caution={flagNow === 'caution'}
-          hoverId={hoverId} pinned={pinned} onHover={onHover} />
-      )}
       {!awaitingCalibration && !sync.synced && (
         <div className="map-sync" role="status">
           <span className="map-sync-dot" aria-hidden />
@@ -182,6 +180,11 @@ export function TrackMap({ track, update, live, hoverId, highlightIds = [], focu
       )}
       {awaitingCalibration && (
         <div className={`map-overlay${note ? ' map-note' : ''}`}>{note ?? 'Learning where the timing points are from live pace. Cars appear after a lap or two.'}</div>
+      )}
+      </div>
+      {track.elevation && track.elevation.length > 0 && (
+        <ElevationStrip track={track} elevation={track.elevation} cars={stripCars} caution={flagNow === 'caution'}
+          hoverId={hoverId} pinned={pinned} onHover={onHover} />
       )}
       <div className="map-caption">
         {track.name} · positions estimated between timing points

@@ -9,6 +9,7 @@ import { HEIGHT_SCALE, TrackScene, type CameraMode } from '../map/scene3d'
 import { ElevationStrip, type StripCar } from './ElevationStrip'
 import { notableBattles, battleSpans } from '../battles'
 import { ghostOnTrack, type PitGhost } from '../pit/usePitGhost'
+import { MapLayers } from './MapLayers'
 
 /**
  * The 3D map: the same car placements as the 2D map (useCarPlacement), drawn by map/scene3d.ts. Loaded lazily by
@@ -111,6 +112,7 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
             {byPosition.map((c) => <option key={c.id} value={c.carNumber}>P{c.position} #{c.carNumber} {c.driver}</option>)}
           </select>
         )}
+        <MapLayers>
         {(track.labels.length > 0 || (scenery?.corners?.length ?? 0) > 0) && cornersButton}
         {scenery && scenery.buildings.length > 0 && (
           <button type="button" className={`wide${flatBuildings ? '' : ' active'}`} aria-pressed={!flatBuildings}
@@ -120,15 +122,14 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
           <button type="button" className={`wide${showLandmarks ? ' active' : ''}`} aria-pressed={showLandmarks}
             onClick={() => onShowLandmarks(!showLandmarks)} title={showLandmarks ? 'Hide landmark names' : 'Show landmark names'}>Landmarks</button>
         )}
+        </MapLayers>
         {ghostPicker}
       </div>
+      {/* The map surface and what sits over it: overlays are placed on the map itself, never over the toolbar or caption. */}
+      <div className="map-stage">
       <div ref={host} className="m3d-host">
         {failed && <div className="map-overlay">The 3D map needs WebGL, which this browser has turned off. Switch back to 2D.</div>}
       </div>
-      {track.elevation && track.elevation.length > 0 && (
-        <ElevationStrip track={track} elevation={track.elevation} cars={stripCars} caution={flagNow === 'caution'}
-          hoverId={hoverId} pinned={pinned} onHover={onHover} />
-      )}
       {!awaitingCalibration && !sync.synced && (
         <div className="map-sync" role="status">
           <span className="map-sync-dot" aria-hidden />
@@ -137,6 +138,11 @@ export default function TrackMap3D({ track, update, live, hoverId, highlightIds 
       )}
       {awaitingCalibration && (
         <div className={`map-overlay${note ? ' map-note' : ''}`}>{note ?? 'Learning where the timing points are from live pace. Cars appear after a lap or two.'}</div>
+      )}
+      </div>
+      {track.elevation && track.elevation.length > 0 && (
+        <ElevationStrip track={track} elevation={track.elevation} cars={stripCars} caution={flagNow === 'caution'}
+          hoverId={hoverId} pinned={pinned} onHover={onHover} />
       )}
       <div className="map-caption">
         {track.name} · 3D · positions estimated between timing points

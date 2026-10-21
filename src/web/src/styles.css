@@ -216,6 +216,22 @@ main { flex: 1; padding: 0 16px 24px; }
   background: rgba(18, 22, 27, .85); color: var(--text); border: 1px solid var(--line); font-size: 15px; line-height: 1;
 }
 .map-tools button.wide { font-size: 12px; }
+/* Layers menu (MapLayers): the on/off layers in a dropdown, each a row with a tick when on. */
+.map-layers { position: relative; }
+.map-layers > summary { list-style: none; display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; cursor: pointer;
+  background: rgba(18, 22, 27, .85); color: var(--text); border: 1px solid var(--line); font-size: 12px; user-select: none; }
+.map-layers > summary::-webkit-details-marker { display: none; }
+.map-layers > summary::after { content: '▾'; color: var(--muted); font-size: 10px; }
+.map-layers > summary:hover, .map-layers[open] > summary { border-color: var(--muted); }
+.map-layers > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.map-layers-menu { position: absolute; right: 0; /* left: 0 above narrow maps, where Layers is on the left */ top: calc(100% + 4px); z-index: 5; min-width: 150px; display: flex; flex-direction: column; padding: 4px;
+  background: var(--raise); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .45); }
+.map-tools .map-layers-menu button { display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; text-align: left; background: none; border: 0; border-radius: 4px; padding: 0 8px; color: var(--muted); }
+.map-tools .map-layers-menu button::before { content: ''; width: 12px; height: 12px; flex: none; border: 1.5px solid var(--line-strong); border-radius: 3px; }
+.map-tools .map-layers-menu button.active { color: var(--text); background: none; }
+.map-tools .map-layers-menu button.active::before { background: var(--accent); border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--raise); }
+.map-tools .map-layers-menu button:hover { background: var(--hover); }
 .map-tools button:hover { border-color: var(--muted); }
 .map-car .focus-ring { fill: none; stroke: #fff; stroke-width: 10; stroke-dasharray: 18 12; }
 .track-map svg { display: block; width: 100%; height: auto; max-height: calc(100vh - 140px); }
@@ -277,6 +293,7 @@ main { flex: 1; padding: 0 16px 24px; }
 .map-tools .map-views button + button { border-left: 1px solid var(--line); }
 .map-tools .map-views button.active { background: var(--line); color: var(--text); }
 .map-tools select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; font: inherit; font-size: 12px; max-width: 170px; }
+.map-stage { position: relative; }
 .m3d-host { position: relative; height: min(68vh, 640px); border-radius: 6px; overflow: hidden; touch-action: none; }
 .m3d-host canvas { display: block; }
 .m3d-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -909,7 +926,7 @@ button.upcoming:hover { border-color: var(--muted); }
   .event-table td { padding: 6px 4px; }
 }
 /* A note on the map (e.g. work in progress) sits along the bottom so the circuit stays visible. */
-.map-overlay.map-note { top: 46px; left: 12px; transform: none; max-width: min(340px, 70%); font-size: 11px; padding: 6px 10px; text-align: left; }
+.map-overlay.map-note { top: 12px; left: 12px; transform: none; max-width: min(340px, 70%); font-size: 11px; padding: 6px 10px; text-align: left; }
 
 /* Results pages: tabs, summary cards. */
 .results-actions { display: flex; gap: 8px; }
@@ -1037,12 +1054,14 @@ html { scrollbar-gutter: stable; }
 
 /* Narrow maps (the map column at its narrowest, phones): the toolbar leaves the map and becomes a tidy bar above it,
    instead of ragged right-aligned rows over a third of the map. By the map's own width (container query), so it works
-   wherever the map is. Row 1: the view switch, full width; then the toggles sharing a row; the pit rejoin picker full
-   width. */
+   wherever the map is. Row 1: the view switch, full width; row 2: the Layers menu and the pit rejoin (or follow) picker. */
 @container (max-width: 560px) {
   .track-map .map-tools { position: static; justify-content: stretch; margin-bottom: 8px; }
   .track-map .map-tools > * { flex: 1 1 auto; }
   .track-map .map-tools .map-views { flex: 1 1 100%; }
   .track-map .map-tools .map-views button { flex: 1 1 0; }
-  .track-map .map-tools select { flex: 1 1 100%; max-width: none; height: 28px; }
+  .track-map .map-tools select { flex: 1 1 0; min-width: 0; max-width: none; height: 28px; }
+  .track-map .map-tools .map-layers { flex: none; }
+  .track-map .map-tools .map-layers-menu { right: auto; left: 0; }
+  .track-map .map-tools .map-layers > summary { justify-content: space-between; }
 }

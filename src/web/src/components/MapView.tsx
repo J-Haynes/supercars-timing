@@ -5,6 +5,7 @@ import { isF1 } from '../series'
 import type { Settings } from '../settings'
 import type { PitGhost } from '../pit/usePitGhost'
 import { PitGhostPanel } from '../pit/PitGhostPanel'
+import { MapLayers } from './MapLayers'
 
 // three.js is large (~0.5 MB): only fetched when a viewer switches to 3D.
 const TrackMap3D = lazy(() => import('./TrackMap3D'))
@@ -63,7 +64,7 @@ export function MapView({ settings, onSettings, ghost = null, ...props }: Compon
   if (view === '2d') {
     return (
       <>
-        <TrackMap {...props} extraTools={<>{views}{corners}{battlesButton}{ghostPicker}</>} showLabels={settings.cornerLabels} showBattles={showBattles} pitGhost={ghost} />
+        <TrackMap {...props} extraTools={<>{views}<MapLayers>{corners}{battlesButton}</MapLayers>{ghostPicker}</>} showLabels={settings.cornerLabels} showBattles={showBattles} pitGhost={ghost} />
         {panel}
       </>
     )
