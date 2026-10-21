@@ -55,33 +55,27 @@ export default function App() {
         onResults={(s) => { setResults(s); setPreview(null); setReplaying(false) }}
         onPreview={(e) => { setPreview(e); setResults(null) }}
       />
+      {/* Settings: live and replay (same settings; opens on the layout of the session on screen). */}
+      <SettingsPanel
+        // Re-mount on open so it starts on the layout for the session on screen.
+        key={settingsOpen ? 'open' : 'closed'}
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        kind={isRace((replaying ? results?.type : timing?.session.type) ?? '') ? 'race' : 'timed'}
+        columns={settings.columns}
+        onColumns={(columns) => updateSettings({ columns })}
+        focusCard={settings.focusCard}
+        onFocusCard={(focusCard) => updateSettings({ focusCard })}
+      />
       {preview ? (
         <main><EventPreview event={preview} onLive={() => setPreview(null)} /></main>
       ) : results && replaying && replayAllowed ? (
-        <main><ReplayView session={results} onBack={() => setReplaying(false)} onUpdate={setReplayUpdate} /></main>
+        <main><ReplayView session={results} onBack={() => setReplaying(false)} onUpdate={setReplayUpdate} onSettings={() => setSettingsOpen(true)} /></main>
       ) : results ? (
         <main><ResultsView session={results} onLive={() => setResults(null)} onReplay={replayAllowed ? () => setReplaying(true) : undefined} /></main>
       ) : (
         <>
-          <Controls
-            simple={settings.simple}
-            delay={settings.delay}
-            buffered={buffered}
-            onSimple={(simple) => updateSettings({ simple })}
-            onDelay={(delay) => updateSettings({ delay })}
-            focusCard={settings.focusCard}
-            onFocusCard={(focusCard) => updateSettings({ focusCard })}
-            onSettings={() => setSettingsOpen(true)}
-          />
-          <SettingsPanel
-            // Re-mount on open so it starts on the layout for the session on screen.
-            key={settingsOpen ? 'open' : 'closed'}
-            open={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-            kind={timing && isRace(timing.session.type) ? 'race' : 'timed'}
-            columns={settings.columns}
-            onColumns={(columns) => updateSettings({ columns })}
-          />
+          <Controls simple={settings.simple} onSimple={(simple) => updateSettings({ simple })} delay={settings.delay} buffered={buffered} onDelay={(delay) => updateSettings({ delay })} onSettings={() => setSettingsOpen(true)} />
           <main>
             {hasCars && update ? (
               <SessionView update={update} live={latest} settings={settings} updateSettings={updateSettings} togglePinned={togglePinned} tips />

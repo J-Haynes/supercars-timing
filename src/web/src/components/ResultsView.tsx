@@ -46,8 +46,7 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
   }, [session.id])
 
   const race = isRace(session.type)
-  const [series, ...rest] = session.name.replace(/^\d{4}\s+/, '').split(' - ')
-  const title = rest.join(' - ') || series
+  const [series] = session.name.replace(/^\d{4}\s+/, '').split(' - ')
   const when = new Date(session.start).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
   const tabs: [Tab, string][] = race
     // No F1 standings yet: F1 races have no Championship tab.
@@ -57,12 +56,9 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
 
   return (
     <section className="results">
-      <div className="results-head">
-        <div>
-          <div className="meeting">{session.meeting.replace(/^\d{4}\s+/, '')} · {series}</div>
-          <h2>{title} <span className="results-tag">Results</span></h2>
-          <div className="track">{session.track} · {when}</div>
-        </div>
+      {/* The page header names the meeting, session and track: this line only adds what it doesn't say. */}
+      <div className="results-head slim">
+        <div className="results-when">{series} · {when}</div>
         <div className="results-actions">
           {onReplay && <button type="button" className="back-button" onClick={onReplay}>▶ Replay</button>}
           <button type="button" className="back-button" onClick={onLive}>Back to live</button>

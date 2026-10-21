@@ -3,17 +3,21 @@ import { COLUMN_LABELS, LOCKED_COLUMNS, columnPrefs, type ColumnPrefs, type Sess
 
 const KIND_LABELS: Record<SessionKind, string> = { timed: 'Practice & qualifying', race: 'Race' }
 
+export type FocusCard = 'auto' | 'on' | 'off'
+
 /**
- * Settings drawer. For now: which tower columns show in detailed mode, and in what order, separately for
- * practice/qualifying and races. Drag a row or use the arrows to move it; untick to hide it.
+ * Settings drawer (live and replay): the on-track card, and which tower columns show in detailed mode,
+ * in what order, separately for practice/qualifying and races. Drag a row or use the arrows to move it; untick to hide it.
  */
-export function SettingsPanel({ open, onClose, kind: initialKind, columns, onColumns }: {
+export function SettingsPanel({ open, onClose, kind: initialKind, columns, onColumns, focusCard, onFocusCard }: {
   open: boolean
   onClose: () => void
   /** Session kind on screen, so the panel opens on the layout the viewer is looking at. */
   kind: SessionKind
   columns: Partial<Record<SessionKind, ColumnPrefs>>
   onColumns: (columns: Partial<Record<SessionKind, ColumnPrefs>>) => void
+  focusCard: FocusCard
+  onFocusCard: (value: FocusCard) => void
 }) {
   const [kind, setKind] = useState<SessionKind>(initialKind)
   const [dragging, setDragging] = useState<number | null>(null)
@@ -42,6 +46,16 @@ export function SettingsPanel({ open, onClose, kind: initialKind, columns, onCol
           <span>Settings</span>
           <button type="button" onClick={onClose} aria-label="Close settings">×</button>
         </div>
+
+        <h2>Timing tower</h2>
+        <label className="focus-select" title="Card showing the car on its run vs provisional pole. Auto = Shootout sessions only.">
+          On-track card
+          <select value={focusCard} onChange={(e) => onFocusCard(e.target.value as FocusCard)}>
+            <option value="auto">Auto (Top Ten Shootout)</option>
+            <option value="on">On</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
 
         <h2>Tower columns (detailed mode)</h2>
         <div className="segmented" role="tablist">

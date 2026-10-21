@@ -1,5 +1,5 @@
 import { isF1 } from './series'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import type { ColumnPrefs, SessionKind } from './towerLayout'
 
 /** Per-viewer preferences, remembered in this browser. */
@@ -52,24 +52,36 @@ function load(): Settings {
   }
 }
 
+// One copy of the settings for the whole page. Each component used to keep its own (App, the replay, results, event
+// pages): a change made in one never reached the others (Settings opened from a replay didn't change the replay's
+// tower), and each saved its whole copy, so a stale one could undo another's change.
+let current: Settings = load()
+const listeners = new Set<() => void>()
+
+function save(next: Settings) {
+  current = next
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next))
+  } catch {
+    /* ignore */
+  }
+  listeners.forEach((l) => l())
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => { listeners.delete(listener) }
+}
+
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(load)
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(settings))
-    } catch {
-      /* ignore */
-    }
-  }, [settings])
-
-  const update = useCallback((patch: Partial<Settings>) => setSettings((s) => ({ ...s, ...patch })), [])
+  const settings = useSyncExternalStore(subscribe, () => current)
+  const update = useCallback((patch: Partial<Settings>) => save({ ...current, ...patch }), [])
   const togglePinned = useCallback(
     (carNumber: string) =>
-      setSettings((s) => ({
-        ...s,
-        pinned: s.pinned.includes(carNumber) ? s.pinned.filter((n) => n !== carNumber) : [...s.pinned, carNumber],
-      })),
+      save({
+        ...current,
+        pinned: current.pinned.includes(carNumber) ? current.pinned.filter((n) => n !== carNumber) : [...current.pinned, carNumber],
+      }),
     [],
   )
 

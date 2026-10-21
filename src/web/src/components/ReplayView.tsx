@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE } from '../series'
 import type { LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
 import { useSettings } from '../settings'
+import { SimpleSwitch } from './Controls'
 import { flagKind, flagPeriods, leaderLap } from '../session'
 import { SessionView } from './SessionView'
 import type { MapFeed } from '../map/crossingLog'
@@ -44,11 +45,13 @@ const viewerId = (() => {
  * speed and a scrubber (laps and safety cars marked). The server keeps a cursor per viewer (ReplayService); the page
  * moves the replay time itself and asks for the snapshot at that time a few times a second.
  */
-export function ReplayView({ session, onBack, onUpdate }: {
+export function ReplayView({ session, onBack, onUpdate, onSettings }: {
   session: RecordedSession
   onBack: () => void
   /** The replay's moment, for the header (App shows the replay there instead of live timing). */
   onUpdate?: (update: TimingUpdate | null) => void
+  /** Opens the Settings drawer (same settings as live timing). */
+  onSettings?: () => void
 }) {
   const id = encodeURIComponent(session.id)
   const [range, setRange] = useState<{ start: number; end: number } | null>(null)
@@ -212,16 +215,9 @@ export function ReplayView({ session, onBack, onUpdate }: {
 
   return (
     <section className="replay">
-      <div className="results-head">
-        <div>
-          <div className="meeting">{session.meeting.replace(/^\d{4}\s+/, '')}</div>
-          <h2>{session.name.split(' - ').slice(1).join(' - ') || session.name} <span className="results-tag">Replay</span></h2>
-          <div className="track">{session.track}</div>
-        </div>
-        <button type="button" className="back-button" onClick={onBack}>Back to results</button>
-      </div>
-
+      {/* The page header already names the session ("Replay · 1×"): no second title here, the controls go straight in. */}
       <div className="replay-controls">
+        <button type="button" className="back-button" onClick={onBack}>‹ Results</button>
         <div className="replay-transport">
           {SKIPS.map((s) => (
             <button key={-s} type="button" className="replay-skip" onClick={() => seek(-s)} disabled={!range} aria-label={`Back ${skipLabel(s)}`} title={`Back ${skipLabel(s)}`}>−{skipLabel(s)}</button>
@@ -237,6 +233,11 @@ export function ReplayView({ session, onBack, onUpdate }: {
         {timing?.session.flag && <span className={`flag flag-${timing.session.flag.toLowerCase()}`}>{timing.session.flag}</span>}
         <span className="replay-time">{range ? trackTime(t) : '--:--:--'}{shownLap ? ` · lap ${shownLap}` : ''}{timing?.session.scheduledLaps ? ` / ${timing.session.scheduledLaps}` : ''}</span>
         {loading && <span className="replay-loading">loading…</span>}
+        {/* Same as the live toolbar: Simple mode up front, the rest in Settings. */}
+        <span className="replay-view-options">
+          <SimpleSwitch simple={settings.simple} onSimple={(simple) => updateSettings({ simple })} />
+          {onSettings && <button type="button" className="settings-button" onClick={onSettings}>⚙ Settings</button>}
+        </span>
         <div className="replay-scrubber">
           {bands.map((b) => {
             const end = b.end ?? range?.end ?? b.start
