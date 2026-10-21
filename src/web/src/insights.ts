@@ -15,7 +15,8 @@ export interface Insight {
     | 'undercut' | 'net' | 'pit' | 'freeStop' | 'traffic' | 'penaltyImpact' | 'falloff' | 'conditions'
   text: string
   carIds: string[]
-  tone: 'purple' | 'green' | 'red' | 'yellow' | 'blue' | 'plain'
+  /** The item's rail colour. Yellow is cautions only; cyan battles (as on the map and tower); blue strategy. */
+  tone: 'purple' | 'green' | 'red' | 'yellow' | 'blue' | 'cyan' | 'plain'
   /** Higher shows first among the "now" items (situations). */
   priority: number
 }
@@ -120,7 +121,7 @@ export function buildFeed(timing: TimingSnapshot, memory: InsightMemory, signals
     const laps = Math.floor((now - since) / typicalLap)
     const offset = (chain.length === 2 ? stintOffset(chain[0], chain[1]) : '') + (laps >= 2 ? ` · ${laps} laps` : '')
     out.push({
-      id: `battle-${chain.map((c) => c.id).join('-')}`, kind: 'battle', tone: 'yellow', carIds: chain.map((c) => c.id),
+      id: `battle-${chain.map((c) => c.id).join('-')}`, kind: 'battle', tone: 'cyan', carIds: chain.map((c) => c.id),
       // Battles for the lead and the podium matter most.
       priority: (first <= 3 ? 65 : 50) - n,
       text: chain.length === 2
@@ -297,7 +298,7 @@ function remember(timing: TimingSnapshot, cars: CarRow[], memory: InsightMemory,
     const named = [...m.text.matchAll(/(?:\bcars?|&|-|,)\s*(\d{1,3})\b(?!\s*sec)/gi)].map((x) => byNumber.get(x[1])).filter((c): c is CarRow => !!c)
     const penalty = /penalty/i.test(m.text)
     log({
-      at: m.time, lap: fresh(m.time), id: `rc-${m.time}-${memory.events.length}`, kind: penalty ? 'penalty' : 'control', tone: penalty ? 'red' : 'yellow',
+      at: m.time, lap: fresh(m.time), id: `rc-${m.time}-${memory.events.length}`, kind: penalty ? 'penalty' : 'control', tone: penalty ? 'red' : 'plain',
       text: m.text.replace(/^(Race Control|Stewards):\s*/i, penalty ? 'Penalty: ' : '').replace(/^Penalty: Penalty /i, 'Penalty: '),
       carIds: [...new Set(named.map((c) => c.id))],
     })

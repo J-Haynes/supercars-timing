@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { TimingSnapshot } from '../types'
 import { buildFeed, newMemory, type FeedEvent, type Insight } from '../insights'
 import type { TowerSignals } from '../towerSignals'
+import { leaderLap } from '../session'
 
 const ICONS: Record<Insight['kind'], string> = {
   fastest: '⏱', lead: '🏁', penalty: '⚠', control: '📣', caution: '🚨', battle: '⚔', closing: '↗', minLaps: '⛽', mover: '⇅',
@@ -9,8 +10,10 @@ const ICONS: Record<Insight['kind'], string> = {
   falloff: '📉', conditions: '🌧',
 }
 
-/** Events newer than this (Natsoft seconds) are marked NEW. */
+/** Events newer than this (Natsoft seconds) are marked NEW; after that each shows its age. */
 const NEW_SECONDS = 30
+/** Log entries older than this (seconds) are dimmed: still there, but clearly not news. */
+const OLD_SECONDS = 600
 /** Rows of each list shown before "more" (fewer on phones, where the feed sits above the leaderboard). */
 const SHOWN = { wide: { now: 4, events: 3 }, narrow: { now: 2, events: 2 } }
 const NARROW = '(max-width: 760px)'
@@ -19,8 +22,9 @@ const NARROW = '(max-width: 760px)'
  * The race feed above the tower (insights.ts), replacing the scrolling ticker: moving text was hard to read and
  * everything looked equally important. Two parts, both still:
  * - **Log**: what happened (penalties, race control, lead changes, fastest laps, cautions), newest first, with the lap
- *   it happened on. New entries are marked NEW for 30 s.
- * - **Now**: what's going on (battles, cars closing in, fastest on track, minimum laps, movers), most important first.
+ *   it happened on and how long ago (NEW for the first 30 s), older ones dimmed.
+ * - **Now**: what's going on (battles, cars closing in, fastest on track, minimum laps, movers), most important first,
+ *   with the lap and track time it's as of (it stops moving if the data does).
  * Each list shows a few rows and expands. Hover highlights the cars in the tower and on the map; click opens the
  * driver's Focus view, or Compare for two cars.
  */
@@ -60,10 +64,15 @@ export function RaceFeed({ timing, signals, onHighlight, onOpen }: {
 
   return (
     <section className="race-feed" aria-label="Race feed" onMouseLeave={() => onHighlight([])}>
+      {/* Now and Log stack, or sit side by side when the feed is wide (a container query in styles.css). */}
+      <div className="feed-cols">
       {feed.now.length > 0 && (
         <div className="feed-block">
           <div className="feed-head">
             <span className="feed-title">Now</span>
+            <span className="feed-asof" title="The moment these are worked out from: the leader's lap and track time. If it stops moving, so has the data.">
+              {asOf(timing)}
+            </span>
             {feed.now.length > NOW_SHOWN && (
               <button type="button" className="feed-more" onClick={() => setAllNow(!allNow)}>
                 {allNow ? 'Fewer' : `+${feed.now.length - NOW_SHOWN} more`}
@@ -92,16 +101,17 @@ export function RaceFeed({ timing, signals, onHighlight, onOpen }: {
           </div>
           <ul className={`feed-log${allEvents ? ' all' : ''}`}>
             {events.map((e) => (
-              <li key={e.id} className={`feed-item tone-${e.tone}${timing.now - e.at < NEW_SECONDS ? ' new' : ''}`} {...itemProps(e)}>
+              <li key={e.id} className={`feed-item tone-${e.tone}${timing.now - e.at < NEW_SECONDS ? ' new' : timing.now - e.at > OLD_SECONDS ? ' old' : ''}`} {...itemProps(e)}>
                 <span className="feed-when" title={stampTitle(e)}>{e.lap > 0 ? `L${e.lap}` : clock(e.at)}</span>
                 <span className="feed-icon" aria-hidden>{ICONS[e.kind]}</span>
                 <span className="feed-text">{e.text}</span>
-                {timing.now - e.at < NEW_SECONDS && <span className="feed-new">NEW</span>}
+                {timing.now - e.at < NEW_SECONDS ? <span className="feed-new">NEW</span> : <span className="feed-age">{ago(timing.now - e.at)}</span>}
               </li>
             ))}
           </ul>
         </div>
       )}
+      </div>
     </section>
   )
 }
@@ -122,6 +132,21 @@ function useMediaQuery(query: string): boolean {
 /** Track time of day: Natsoft times are track-local wall clock encoded as Unix seconds, so format them as UTC. */
 function clock(t: number): string {
   return new Date(t * 1000).toISOString().slice(11, 16)
+}
+
+/** "lap 59 · 13:43:03" (track time; the lap the leader is on, once the race has started). */
+function asOf(timing: TimingSnapshot): string {
+  const time = new Date(timing.now * 1000).toISOString().slice(11, 19)
+  const started = (timing.session.greenAt ?? 0) > 0 && timing.now >= (timing.session.greenAt ?? 0)
+  return started ? `lap ${leaderLap(timing).lap} · ${time}` : time
+}
+
+/** 45 -> "45 s ago", 400 -> "6 min ago", 4000 -> "1 h 6 min ago". */
+function ago(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds))
+  if (s < 60) return `${s} s ago`
+  const m = Math.floor(s / 60)
+  return m < 60 ? `${m} min ago` : `${Math.floor(m / 60)} h ${m % 60} min ago`
 }
 
 function stampTitle(e: FeedEvent): string {

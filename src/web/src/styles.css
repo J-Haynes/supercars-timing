@@ -605,10 +605,20 @@ main { flex: 1; padding: 0 16px 24px; }
 
 /* Race feed above the tower (RaceFeed): still text, "Now" (ranked situations) then "Log" (events, newest first). */
 .tower-column { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.race-feed { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 6px 10px 8px; font-size: 13px; }
+.race-feed { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 6px 10px 8px; font-size: 13px; container-type: inline-size; }
 .feed-block + .feed-block { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+/* Wide enough: Now and Log side by side, so the feed takes half the height above the tower (each item is short). */
+@container (min-width: 760px) {
+  .feed-cols:has(.feed-block + .feed-block) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; align-items: start; }
+  .feed-block + .feed-block { margin-top: 0; padding-top: 0; border-top: 0; padding-left: 20px; margin-left: -20px; border-left: 1px solid var(--line); }
+}
 .feed-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
 .feed-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+/* How fresh the feed is: Now's "as of" stamp, each Log entry's age; old entries dimmed. */
+.feed-asof { margin-left: 8px; margin-right: auto; color: var(--muted); font-size: 11px; }
+.feed-age { flex: none; color: var(--muted); font-size: 11px; }
+.feed-item.old { opacity: .55; }
+.feed-item.old:hover { opacity: 1; }
 .feed-more { background: none; border: 0; padding: 0; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .feed-more:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .race-feed ul { list-style: none; margin: 0; padding: 0; }
@@ -625,7 +635,8 @@ main { flex: 1; padding: 0 16px 24px; }
 .feed-item.tone-green { border-left-color: var(--green); }
 .feed-item.tone-red { border-left-color: var(--red); }
 .feed-item.tone-yellow { border-left-color: var(--yellow); }
-.feed-item.tone-blue { border-left-color: #2f6fdf; }
+.feed-item.tone-blue { border-left-color: #8fa3b8; } /* steel: strategy, not Ford's blue */
+.feed-item.tone-cyan { border-left-color: #2fd3ff; }
 /* Penalties and race control matter most in the log: bolder text. */
 .feed-log .feed-item.tone-red .feed-text { font-weight: 600; }
 /* New events: a tinted background that fades over the 30 s they're marked NEW. */
