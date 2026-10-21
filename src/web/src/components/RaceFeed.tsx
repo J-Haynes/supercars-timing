@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { PHONE, useMediaQuery } from '../useMediaQuery'
 import type { TimingSnapshot } from '../types'
 import { buildFeed, newMemory, type FeedEvent, type Insight } from '../insights'
 import type { TowerSignals } from '../towerSignals'
@@ -16,7 +17,7 @@ const NEW_SECONDS = 30
 const OLD_SECONDS = 600
 /** Rows of each list shown before "more" (fewer on phones, where the feed sits above the leaderboard). */
 const SHOWN = { wide: { now: 4, events: 3 }, narrow: { now: 2, events: 2 } }
-const NARROW = '(max-width: 760px)'
+const NARROW = PHONE
 
 /**
  * The race feed above the tower (insights.ts), replacing the scrolling ticker: moving text was hard to read and
@@ -116,18 +117,6 @@ export function RaceFeed({ timing, signals, onHighlight, onOpen }: {
   )
 }
 
-/** Whether a CSS media query matches, following changes (window resizes, phone rotation). */
-function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(() => window.matchMedia?.(query).matches ?? false)
-  useEffect(() => {
-    const list = window.matchMedia?.(query)
-    if (!list) return
-    const onChange = () => setMatches(list.matches)
-    list.addEventListener('change', onChange)
-    return () => list.removeEventListener('change', onChange)
-  }, [query])
-  return matches
-}
 
 /** Track time of day: Natsoft times are track-local wall clock encoded as Unix seconds, so format them as UTC. */
 function clock(t: number): string {
