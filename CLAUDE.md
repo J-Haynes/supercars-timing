@@ -30,7 +30,17 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   series and a replay. If something can't apply somewhere, say so.
 
 - **Branches:** work on a feature/fix branch, never straight on `main`. One commit per feature or fix, with a message
-  that says what changed, why, and how it was checked. Merge to `main` (fast-forward) and push only when the owner says.
+  that says what changed, why, and how it was checked.
+- **Pull requests** (owner's choice, Oct 2026): feature work goes to GitHub as a PR (`gh pr create`), so CI
+  (`.github/workflows/ci.yml`: .NET build + tests, strict web build) runs before it lands and the owner reviews it
+  there. The description says what changed, why and how it was checked, with screenshots for UI changes: push them to
+  the orphan branch `pr-assets` (`<branch>/<name>.png`, never on `main`) and link
+  `https://github.com/J-Haynes/supercars-timing/raw/pr-assets/<branch>/<name>.png`. The repo is public: screenshots with
+  real timing are the owner's call. Merge with **Rebase and merge** (never squash: it loses one commit per feature),
+  only when the owner says (`gh pr merge --rebase`), then pull `main` and deploy (build below). Rebasing rewrites the
+  hashes: a PR stacked on the merged one needs `git rebase --onto origin/main <old base> <branch>` and a force-push.
+  CI can't run `RecordingRegressionTests` (recordings are only on the laptop): run `dotnet test` locally too.
+  **Race-weekend hotfixes and one-liners** skip the PR: fast-forward `main` locally, deploy, push afterwards.
 - **Commit trailer** (from the session's attribution settings): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Frontend-only changes don't need a server restart:** `cd src/web && npm run build` writes into the server's
   `wwwroot`, which the running service serves; viewers refresh. **Server (C#) changes need a restart**: ask the owner
@@ -215,8 +225,13 @@ the server in live mode by hand.
   judged once it has crossed a timing point after its stop (rejoin.progress holds it at the next point until then).
   Checked on Bathurst Race 30 (1-3 tags at a time in the first stop window) and the rebuilt 2025 Gold Coast races.
 - **Tower** columns: cells in `TimingTower.tsx` (`COLUMNS`), layouts in `towerLayout.ts`; detailed mode is
-  configurable in ⚙ Settings (`SettingsPanel.tsx`, `settings.columns`). Rows slide and pulse on position changes
-  (`useRowMoves.ts`, FLIP; tint on the row with a cleanup timer). Driver markers (hollow white = primary, green =
+  configurable in ⚙ Settings (`SettingsPanel.tsx`, `settings.columns`; also the On-track card). **Simple mode stays on
+  the live toolbar and the replay bar** (`SimpleSwitch` in `Controls.tsx`; owner: it's switched often over a weekend),
+  never only in Settings. Rows slide and pulse on position changes (`useRowMoves.ts`, FLIP; tint on the row with a
+  cleanup timer; the 1.8 s double pulse is deliberate: a pass is a major race event, owner's call). Numbers use Inter's
+  tabular figures (set on `body`), not monospace; cells have 7 px side padding and F1's 24 mini-sectors are 8 px wide
+  (the detailed tower fits at 1600 px for F1; Supercars scrolls ~50 px). Phones (`PHONE`, `useMediaQuery.ts`) move
+  positions gained and driver laps after Gap/Int so the gap shows at 390 px. Driver markers (hollow white = primary, green =
   co-driver), SWAP badge, PIT timer (smooth count from pit-in, then Natsoft's PT for 8 s), penalty badges (+5s, PLP;
   served ones leave the tower), fastest-lap stopwatch badge, positions gained (`startingGrid.ts`: hand-entered grid,
   stopgap until the server sends grid positions), driver laps vs the minimum (60 at the Bathurst 1000, 2026; from
@@ -235,8 +250,11 @@ the server in live mode by hand.
   moving text was hard to read and everything looked equally important). Still text in two parts: **Now** (ranked by
   `priority`: minimum-lap risk, pitted under caution, battles, closing, longest-stint cars, fastest on track last lap,
   movers, spread across the top N) and **Log** (lead changes, fastest laps, race control, cautions/greens; newest
-  first, stamped with the leader's lap, or the track time for messages from before the page loaded; NEW for 30 s).
-  4 + 3 rows (2 + 2 on phones), each expands. Hover highlights the cars; click opens Focus (one car) or Compare (two).
+  first, stamped with the leader's lap, or the track time for messages from before the page loaded; NEW for 30 s,
+  then its age, "6 min ago"; dimmed after 10 min). Now's header says what it's as of ("lap 59 · 13:43:03": if that
+  stops moving, so has the data; owner asked for a way to tell how fresh both are). Side by side when the feed is
+  760 px+ wide (a container query on `.race-feed`), stacked below. Rail colours: yellow only for cautions, cyan battles
+  (as on map and tower), steel strategy, plain race control. 4 + 3 rows (2 + 2 on phones), each expands. Hover highlights the cars; click opens Focus (one car) or Compare (two).
   **Strategy items** (`strategyInsights.ts`, Oct 2026; tuned on Bathurst Race 30 and the rebuilt 2025 Gold Coast races,
   every 5 s of each race through the real feed code, docs/PLANNING.md "Race feed: strategy insights"): undercuts in
   progress (the stopped car within the pit-adjusted top 8) and their result with the time gained or lost (within 5 s;
@@ -265,7 +283,8 @@ the server in live mode by hand.
   Grand Final. Only this season's races count (`racesOf`: last year's rebuilt Gold Coast races matched too).
 - **Charts** (`RaceCharts.tsx`, `LineChart.tsx`, `ChartLab.tsx` large view; colours validated with the dataviz palette
   script against #12161b): gap, lap times, position, battle (trend only over laps since either car's last stop).
-  Lap axis runs to the race distance.
+  Lap axis runs to the race distance. The small gap chart leaves each car's pit lap and the three after it out of the
+  y scale (`scaleSkipsMarked`; a stop put a car 50-85 s back for ~3 laps in Race 30); they still draw, off the plot.
 - **Laps to go / race time** in the header (`raceLaps()`: `<E L>`, else `KNOWN_RACE_LAPS`: Bathurst 161, Gold Coast 85).
 - **Layout:** side by side from 1000 px (was 1500; the minimum the columns need is ~970 px), stacked below, phone
   tabs under 760 px. Side by side: the left column (race feed, tower, tips) sticks at the bottom of the screen while the
@@ -290,7 +309,16 @@ the server in live mode by hand.
   scaled per car, only for stretches started after the caution (settings in `CAUTION_TUNING`, tuned on the replayed
   safety car). "Syncing car positions" greys the map after a page load. Outside races pace is capped at ~1.12×.
 - **Header:** shows what's on screen: the replay at its moment ("Replay · 10×"), a session's results, an upcoming
-  event (`headerView` in App.tsx; ReplayView reports its moment with `onUpdate`); live timing otherwise.
+  event (`headerView` in App.tsx; ReplayView reports its moment with `onUpdate`); live timing otherwise. Results and
+  replay pages don't repeat it (no second title block).
+- **Look** (Oct 2026): each series has its own neutrals, header type and brand rule (`:root[data-series]` in
+  styles.css; `data-series` set in main.tsx): Supercars warm greys + Barlow Condensed bold italic, F1 blue-black +
+  Titillium Web; brand red only in the header's top rule (red in the data means places lost). Fonts are npm packages
+  (`@fontsource*`), not a CDN. **Each colour means one thing:** yellow = caution (and slower mini-sectors) only; pins,
+  selection, highlights and NEW use the neutral `--accent`; Finals gold is `--gold` (#c9a24a). Use the tokens
+  (`--hover`, `--raise`, `--line-strong`, ...) rather than hard-coded greys; the 3D scene reads `--panel`.
+- **Settings** (`settings.ts`) are one shared store (`useSyncExternalStore`): every page sees a change at once. Each
+  page used to keep its own copy, and a stale copy could undo another's change.
 - **3D map look:** a light track with near-white edges over dark slate buildings, plus a faint "x-ray" copy of the
   track and the car dots drawn over everything so buildings never hide them. Corner labels sit 35 m outside the track
   (T-numbers as pills); labels that would overlap an earlier one hide. Spherical buildings (the Sphere) are spheres.
@@ -301,7 +329,10 @@ the server in live mode by hand.
   lowest ground under them (flat footprints on the highest); trees are one instanced mesh; the curtain is hidden.
   "3D" (a still 3D view you can drag) is the default. Settings were renamed (`mapMode` -> `mapView`, `mapCamera` ->
   `camera3d`) each time the default changed, because settings are saved whole and old values would win. Tracks with
-  scenery have a Buildings toggle (`flatBuildings`: footprints only). Event pages use it too.
+  scenery have a Buildings toggle (`flatBuildings`: footprints only). Event pages use it too. The on/off layers
+  (Corners, Battles, Buildings, Landmarks) are in one **Layers** dropdown (`MapLayers.tsx`). The map surface and its
+  overlays (sync pill, notes) are wrapped in `.map-stage`, so overlays never cover the toolbar or caption. A grip
+  under the map sets its height (`MapHeightHandle.tsx`, `settings.mapHeight`, both maps, every page; double-click resets).
 - **Race start** (`map/startGrid.ts`, used by `useCarPlacement`, so 2D/3D, live/replay, both series): before the green
   flag cars are drawn on a staggered grid behind the line (pole 10 m back, 8 m per place, ±3.5 m: a drawing
   approximation) in grid order (`startPosition`, else the order before the start). Natsoft sends no crossings before
@@ -359,6 +390,11 @@ the server in live mode by hand.
   and the launch aimed there (cars then jumped ~300 m at point 1; with the fill: 1 m). A replay snapshot's `now` is set to the replay time (it was the
   last message's time: 4 min behind before the Bathurst start, when the feed was quiet). The page moves the
   time and polls `/replay?t=` every 250 ms; the server keeps a cursor per viewer.
+- **Between sessions** (live page, feed "waiting"; `NextSession.tsx`, both series): one job, readable from the second
+  monitor: the event's name as the headline, the next session, its time with the Your time / Track time switch, a
+  big countdown, over the track orbiting in 3D (`TrackMap3D` `bare`: no toolbar or overlays, attribution kept). It
+  links to the event page and doesn't repeat it (owner agreed: the live page stays single-purpose). F1's hub sends the
+  last session on connecting, so the F1 live page shows that ended race instead.
 - **Upcoming events** (`EventPreview.tsx`, from the menu): session timetable from `calendar.ts` (local track time,
   provisional, source linked), "About the event" (`UpcomingEvent.info`: round, stakes, facts, last year, official
   map; every value from a listed source) and the track map with a work-in-progress note for provisional tracks.
