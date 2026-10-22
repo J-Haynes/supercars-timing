@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import type { TimingSnapshot } from '../types'
 import { buildFeed, newMemory, type FeedEvent, type Insight } from '../insights'
+import type { TowerSignals } from '../towerSignals'
 
 const ICONS: Record<Insight['kind'], string> = {
   fastest: '⏱', lead: '🏁', penalty: '⚠', control: '📣', caution: '🚨', battle: '⚔', closing: '↗', minLaps: '⛽', mover: '⇅',
-  longRun: '🔧', pace: '⚡', spread: '↔',
+  longRun: '🔧', pace: '⚡', spread: '↔', undercut: '⤴', net: '🧮', pit: '🛞', freeStop: '✓', traffic: '🚧', penaltyImpact: '⏲',
+  falloff: '📉', conditions: '🌧',
 }
 
 /** Events newer than this (Natsoft seconds) are marked NEW. */
@@ -22,8 +24,10 @@ const NARROW = '(max-width: 760px)'
  * Each list shows a few rows and expands. Hover highlights the cars in the tower and on the map; click opens the
  * driver's Focus view, or Compare for two cars.
  */
-export function RaceFeed({ timing, onHighlight, onOpen }: {
+export function RaceFeed({ timing, signals, onHighlight, onOpen }: {
   timing: TimingSnapshot
+  /** Undercuts and the pit-adjusted order (towerSignals.ts), shared with the tower. */
+  signals?: TowerSignals
   onHighlight: (ids: string[]) => void
   /** Open the driver dialog: one car = Focus, two = Compare. */
   onOpen?: (carId: string, compareId: string | null) => void
@@ -32,7 +36,7 @@ export function RaceFeed({ timing, onHighlight, onOpen }: {
   const sessionKey = useRef('')
   const key = `${timing.session.meeting}|${timing.session.name}`
   if (sessionKey.current !== key) { memory.current = newMemory(); sessionKey.current = key }
-  const feed = useMemo(() => buildFeed(timing, memory.current), [timing])
+  const feed = useMemo(() => buildFeed(timing, memory.current, signals), [timing, signals])
   const [allEvents, setAllEvents] = useState(false)
   const [allNow, setAllNow] = useState(false)
   const narrow = useMediaQuery(NARROW)

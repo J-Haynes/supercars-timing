@@ -20,6 +20,7 @@ import { ShootoutCard, pickFocusCar } from './ShootoutCard'
 import { PitLog } from './PitLog'
 import { RaceControl } from './RaceControl'
 import { RaceFeed } from './RaceFeed'
+import { useTowerSignals } from '../towerSignals'
 import { Ladder } from './Ladder'
 import { FinalsLadder } from './FinalsStandings'
 import { RaceCharts } from './RaceCharts'
@@ -66,6 +67,8 @@ export function SessionView({ update, live, history, settings, updateSettings, t
   const chart = useChartSelection(race ? raceOrder(timing).slice(0, 4).map((c) => c.id) : [], `${timing.session.meeting}|${timing.session.name}`)
   // The pit rejoin estimate (experimental): one for the tower and the map.
   const ghost = usePitGhost(timing, track, settings.pitGhostCar)
+  // Race signals (battles, undercuts, pit-adjusted order): one memory for the tower and the race feed.
+  const signals = useTowerSignals(timing, [], timing.session.trackCode, resetKey)
   usePitGhostAutoOff(timing.cars, settings.pitGhostCar, () => updateSettings({ pitGhostCar: null }))
   // The on-track card shows automatically for Shootout sessions (by Natsoft's session name), or when forced on.
   const showCard = settings.focusCard === 'on' || (settings.focusCard === 'auto' && isShootout(timing.session.name, timing.session.type))
@@ -81,7 +84,7 @@ export function SessionView({ update, live, history, settings, updateSettings, t
         style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
         <div className="tower-column" ref={towerColumn}>
           {race && <SafetyCarBanner timing={timing} />}
-          {race && <RaceFeed key={resetKey} timing={timing} onHighlight={setHighlightIds} onOpen={open} />}
+          {race && <RaceFeed key={resetKey} timing={timing} signals={signals} onHighlight={setHighlightIds} onOpen={open} />}
           <TimingTower
             timing={timing}
             simple={settings.simple}
@@ -95,6 +98,7 @@ export function SessionView({ update, live, history, settings, updateSettings, t
             onOpen={(carId) => open(carId)}
             actions={{ pitGhostCar: settings.pitGhostCar, onPitGhost: (pitGhostCar) => updateSettings({ pitGhostCar }), chart }}
             pitGhost={ghost}
+            signals={signals}
           />
           {driverView && (
             <DriverDialog timing={timing} {...driverView} history={history} onClose={() => setDriverView(null)}

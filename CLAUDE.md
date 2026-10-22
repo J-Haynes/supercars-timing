@@ -98,7 +98,7 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   (merges F1's patches, works out mini-sector crossings, laps, pit stops, flags; builds the same `TimingSnapshot`),
   `F1FeedService` (+ `F1Store`, `F1Hub`, `F1Options`: live/replay, recording, warm start, broadcasting).
 - `src/web/src/series.ts`: which app the page is (`/f1` = F1, else Supercars), its API base and hub, team colours.
-- `deploy/`: the systemd user service and its README (install, logs, Tailscale serve).
+- `deploy/`: the systemd user service and its README (install, logs, Tailscale serve, Cloudflare Tunnel).
 - `tools/HistoricalRace` (past races as replayable recordings, rebuilt from Natsoft's "Sector and Lap Times" reports +
   a cited event file, e.g. `gc2025.json`; what's estimated is in its docstring), `tools/MapDelaySim` (the map with a
   broadcast delay, Supercars), `tools/PitLoss` (time lost per pit stop: `natsoft_report.py` from Natsoft results-site reports, `f1_archive.py` from F1's
@@ -121,7 +121,7 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 
 ## Endpoints
 
-`GET /api/health` · `GET /api/snapshot` (`TimingUpdate`) · `GET /api/laps` (live lap history) · hub `/hubs/timing`
+`GET /api/health` · `GET /api/features` (`{replay}`: false through the Cloudflare Tunnel, both series) · `GET /api/snapshot` (`TimingUpdate`) · `GET /api/laps` (live lap history) · hub `/hubs/timing`
 (method `snapshot`) · `GET /api/sessions` (Supercars only; `?all=true` for support categories) ·
 `GET /api/sessions/{id}/results` · `GET /api/sessions/{id}/laps` · `GET /api/sessions/{id}/replay/info` ·
 `GET /api/sessions/{id}/replay?t=<natsoft time>&viewer=<id>`.
@@ -237,6 +237,16 @@ the server in live mode by hand.
   movers, spread across the top N) and **Log** (lead changes, fastest laps, race control, cautions/greens; newest
   first, stamped with the leader's lap, or the track time for messages from before the page loaded; NEW for 30 s).
   4 + 3 rows (2 + 2 on phones), each expands. Hover highlights the cars; click opens Focus (one car) or Compare (two).
+  **Strategy items** (`strategyInsights.ts`, Oct 2026; tuned on Bathurst Race 30 and the rebuilt 2025 Gold Coast races,
+  every 5 s of each race through the real feed code, docs/PLANNING.md "Race feed: strategy insights"): undercuts in
+  progress (the stopped car within the pit-adjusted top 8) and their result with the time gained or lost (within 5 s;
+  bigger is a slow stop); the order once the stops play out, only during a pit cycle (top 10 split k-1/k stops, k-th
+  stops within 12 laps); each stop of a top-6 car (P in → P out, pit-lane time, quickest green stop so far, drive-
+  throughs excluded); a free stop for the top 3; lapped traffic within 1.5 s of the top 3; an unserved penalty's
+  effect; tyre fall-off (0.25 s/lap worse than the field over 6 green laps, 10+ laps into a stint); a lead wiped out
+  by a caution (at the restart); lap times jumping 2.5 s+ across the field for two laps (conditions; no wet race
+  recorded to check it on). Battles say how many laps they've lasted; closing says when it'll be within a second, and
+  names a battle being caught. Tower signals (`useTowerSignals`) are worked out once in SessionView for tower and feed.
 - **Battles** (`battles.ts`): `battles()` is every chain within 1 s; the map and the feed use `notableBattles()`: none
   under a caution, none for 2 laps after a start/restart, packs of 5+ cars split to the groups within 0.5 s. Measured on
   Race 30: ~8 cars "battling" behind the safety car, 11-15-car trains for ~9 laps after the start, 2-3 cars mid-race.
@@ -441,8 +451,11 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
   parallel connections or tighter retry loops. **Keep the timetable up to date**: a session missing from it isn't
   recorded. `Feed:Schedule=Always` restores the old always-connected mode. See `docs/PLANNING.md` on data use.
 - **Never commit recordings or `.har` files** (git-ignored; recordings are Natsoft's data, HAR files contain login tokens).
-- **Personal use only:** don't make the app public (no Tailscale Funnel, no public deploy) without the owner deciding,
-  and permission for the data. The tailnet is fine.
+- **Remote access (owner's decision, 19 Oct 2026):** the laptop serves everything; a Cloudflare Tunnel to
+  `localhost:5082` gives live timing, results and upcoming events remotely, **never replays** (`RemoteAccess.cs`:
+  replay endpoints are `.LocalOnly()`, 403 on `Remote:Port` or with Cloudflare's `CF-Connecting-IP` header; the frontend hides Replay via `/api/features`). Any new
+  heavy or per-viewer endpoint should be `.LocalOnly()` too. Replays stay on localhost and the tailnet (port 5080).
+  Setup in `deploy/README.md`. Wider publicity still needs permission for the data (docs/PLANNING.md).
 - Keep the Natsoft library free of ASP.NET dependencies.
 - When you add a field to `CarRow` / `TimingSnapshot` / `SessionInfo`, update `src/web/src/types.ts` too.
 - Don't build on the paid MySupercars+ (Firebase) data, or F1 TV, without discussing it first.
