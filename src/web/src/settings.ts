@@ -1,5 +1,5 @@
 import { isF1 } from './series'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import type { ColumnPrefs, SessionKind } from './towerLayout'
 
 /** Per-viewer preferences, remembered in this browser. */
@@ -20,6 +20,8 @@ export interface Settings {
   mapView: '3d' | '2d'
   /** Map column width in px on wide screens (dragged with ColumnSplitter); null = automatic. */
   mapWidth: number | null
+  /** The map's height in px, from the grip under it (MapHeightHandle); null = the default. */
+  mapHeight: number | null
   /** 3D map camera: still (the default "3D" view), turning slowly around the track, or chasing `followCar`. Named
    * camera3d, not the earlier mapCamera, so browsers that saved 'orbit' start on the new default. */
   camera3d: 'static' | 'orbit' | 'follow' | 'free'
@@ -41,7 +43,7 @@ export interface Settings {
 
 // Each series keeps its own settings (column layouts differ).
 const KEY = isF1 ? 'supercars-timing:f1-settings' : 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, showBattles: true, showLandmarks: true, pitGhostCar: null, followCar: null, focusCard: 'auto', columns: {} }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, mapHeight: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, showBattles: true, showLandmarks: true, pitGhostCar: null, followCar: null, focusCard: 'auto', columns: {} }
 
 function load(): Settings {
   try {
@@ -52,24 +54,36 @@ function load(): Settings {
   }
 }
 
+// One copy of the settings for the whole page. Each component used to keep its own (App, the replay, results, event
+// pages): a change made in one never reached the others (Settings opened from a replay didn't change the replay's
+// tower), and each saved its whole copy, so a stale one could undo another's change.
+let current: Settings = load()
+const listeners = new Set<() => void>()
+
+function save(next: Settings) {
+  current = next
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next))
+  } catch {
+    /* ignore */
+  }
+  listeners.forEach((l) => l())
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => { listeners.delete(listener) }
+}
+
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(load)
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(settings))
-    } catch {
-      /* ignore */
-    }
-  }, [settings])
-
-  const update = useCallback((patch: Partial<Settings>) => setSettings((s) => ({ ...s, ...patch })), [])
+  const settings = useSyncExternalStore(subscribe, () => current)
+  const update = useCallback((patch: Partial<Settings>) => save({ ...current, ...patch }), [])
   const togglePinned = useCallback(
     (carNumber: string) =>
-      setSettings((s) => ({
-        ...s,
-        pinned: s.pinned.includes(carNumber) ? s.pinned.filter((n) => n !== carNumber) : [...s.pinned, carNumber],
-      })),
+      save({
+        ...current,
+        pinned: current.pinned.includes(carNumber) ? current.pinned.filter((n) => n !== carNumber) : [...current.pinned, carNumber],
+      }),
     [],
   )
 
