@@ -40,6 +40,8 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   only when the owner says (`gh pr merge --rebase`), then pull `main` and deploy (build below). Rebasing rewrites the
   hashes: a PR stacked on the merged one needs `git rebase --onto origin/main <old base> <branch>` and a force-push.
   CI can't run `RecordingRegressionTests` (recordings are only on the laptop): run `dotnet test` locally too.
+  The whole PR routine (commits, checks before a push, description, reviews, merging) is in the `steward` skill
+  (`.claude/skills/steward/SKILL.md`); keep it in step with this section.
   **Race-weekend hotfixes and one-liners** skip the PR: fast-forward `main` locally, deploy, push afterwards.
 - **Commit trailer** (from the session's attribution settings): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Frontend-only changes don't need a server restart:** `cd src/web && npm run build` writes into the server's
@@ -108,6 +110,9 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   (merges F1's patches, works out mini-sector crossings, laps, pit stops, flags; builds the same `TimingSnapshot`),
   `F1FeedService` (+ `F1Store`, `F1Hub`, `F1Options`: live/replay, recording, warm start, broadcasting).
 - `src/web/src/series.ts`: which app the page is (`/f1` = F1, else Supercars), its API base and hub, team colours.
+- `.claude/`: `skills/steward/SKILL.md` (the PR routine) and `hooks/session-start.sh` (cloud sessions only: installs
+  the .NET 10 SDK from Ubuntu's archive, since Microsoft's download host is blocked there, then `dotnet restore` and
+  `npm install`, so `dotnet test` and `npm run build` work in the cloud; recordings still don't exist there).
 - `deploy/`: the systemd user service and its README (install, logs, Tailscale serve, Cloudflare Tunnel).
 - `tools/HistoricalRace` (past races as replayable recordings, rebuilt from Natsoft's "Sector and Lap Times" reports +
   a cited event file, e.g. `gc2025.json`; what's estimated is in its docstring), `tools/MapDelaySim` (the map with a
