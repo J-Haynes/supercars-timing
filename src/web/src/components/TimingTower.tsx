@@ -13,6 +13,7 @@ import { useSessionClock } from '../map/useSessionClock'
 import type { ChartSelection } from '../chartSelection'
 import type { TowerSignals } from '../towerSignals'
 import type { PitGhost } from '../pit/usePitGhost'
+import { PHONE, useMediaQuery } from '../useMediaQuery'
 
 /** Per-row buttons on the live race tower (shown on hover): pit rejoin estimate and the race charts. */
 export interface RowActionProps {
@@ -423,7 +424,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   // Driver laps only matter when cars are shared (co-driver events).
   const shared = cars.some((c) => (c.drivers?.length ?? 0) > 1)
   const kind: SessionKind = race ? 'race' : 'timed'
-  const columns = visibleColumns(kind, simple, columnPrefs[kind])
+  const phone = useMediaQuery(PHONE)
+  const columns = phoneOrder(visibleColumns(kind, simple, columnPrefs[kind]), phone)
     .filter((k) => k !== 'driverLaps' || shared)
     .map((k) => COLUMNS[k])
   const totalLaps = raceLaps(timing.session)
@@ -492,4 +494,16 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
       </table>
     </div>
   )
+}
+
+/**
+ * Phones (390 px) only had room for Pos, +/−, Car and Driver: the gap, the number that matters, was off to the side.
+ * There, positions gained and driver laps move to just after Gap and Int (the rest scrolls sideways as before).
+ */
+function phoneOrder(keys: string[], phone: boolean): string[] {
+  if (!phone) return keys
+  const later: string[] = keys.filter((k) => k === 'posChange' || k === 'driverLaps')
+  const rest = keys.filter((k) => !later.includes(k))
+  const after = Math.max(rest.indexOf('gap'), rest.indexOf('int'), rest.indexOf('best'))
+  return after < 0 ? keys : [...rest.slice(0, after + 1), ...later, ...rest.slice(after + 1)]
 }

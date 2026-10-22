@@ -77,7 +77,7 @@ export function RaceCharts({ timing, history: given, selection }: {
             })}
           </div>
           {tab === 'gaps'
-            ? <LineChart series={gapSeries} invertY xMax={xMax} yFormat={(v) => `+${v.toFixed(0)}s`} ariaLabel="Gap to the leader at the end of each lap" />
+            ? <LineChart series={gapSeries} invertY scaleSkipsMarked xMax={xMax} yFormat={(v) => `+${v.toFixed(0)}s`} ariaLabel="Gap to the leader at the end of each lap" />
             : <LineChart series={lapSeries} xMax={xMax} yFormat={(v) => lapTime(v)} axisFormat={shortLap} ariaLabel="Lap times (pit, out and slow laps left out)" />}
           <p className="chart-note">
             {tab === 'gaps'

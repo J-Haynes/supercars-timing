@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 
 const MIN_MAP = 380 // px, the map column's narrowest (as in the CSS default)
 const MIN_TOWER = 520 // px left for the tower
@@ -6,6 +6,7 @@ const STEP = 40 // px per arrow key press
 // Remembers that the viewer has used (or dismissed) the divider, so the "Drag to resize" hint shows only until then.
 const HINT_KEY = 'supercars-timing:splitter-hint-seen'
 const hintSeen = () => { try { return localStorage.getItem(HINT_KEY) === '1' } catch { return true } }
+const HINT_SECONDS = 10
 const markHintSeen = () => { try { localStorage.setItem(HINT_KEY, '1') } catch { /* private mode: just hide it */ } }
 
 /**
@@ -19,6 +20,12 @@ export function ColumnSplitter({ width, onWidth }: { width: number | null; onWid
   const [dragging, setDragging] = useState(false)
   const [hint, setHint] = useState(() => !hintSeen())
   const dismissHint = () => { if (hint) { setHint(false); markHintSeen() } }
+  // It sat over the map (and the ladder, the event page) until dismissed: it goes by itself after a while too.
+  useEffect(() => {
+    if (!hint) return
+    const timer = window.setTimeout(() => { setHint(false); markHintSeen() }, HINT_SECONDS * 1000)
+    return () => window.clearTimeout(timer)
+  }, [hint])
   const latest = useRef(width)
 
   /** Map width for a pointer at clientX: from the pointer to the layout's right edge, within limits. */

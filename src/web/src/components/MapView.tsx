@@ -1,10 +1,12 @@
-import { lazy, Suspense, type ComponentProps } from 'react'
+import { lazy, Suspense, type ComponentProps, type CSSProperties, type ReactNode } from 'react'
 import { TrackMap } from './TrackMap'
 import { isRace } from '../session'
 import { isF1 } from '../series'
 import type { Settings } from '../settings'
 import type { PitGhost } from '../pit/usePitGhost'
 import { PitGhostPanel } from '../pit/PitGhostPanel'
+import { MapLayers } from './MapLayers'
+import { MapHeightHandle } from './MapHeightHandle'
 
 // three.js is large (~0.5 MB): only fetched when a viewer switches to 3D.
 const TrackMap3D = lazy(() => import('./TrackMap3D'))
@@ -23,7 +25,7 @@ const VIEWS: { id: View; label: string; hint: string }[] = [
  * orbiting or following a car. Both place cars with the same code (map/useCarPlacement.ts). Remembered in settings.
  */
 export function MapView({ settings, onSettings, ghost = null, ...props }: ComponentProps<typeof TrackMap> & {
-  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels' | 'showBattles' | 'showLandmarks' | 'pitGhostCar'>
+  settings: Pick<Settings, 'mapView' | 'camera3d' | 'followCar' | 'flatBuildings' | 'cornerLabels' | 'showBattles' | 'showLandmarks' | 'pitGhostCar' | 'mapHeight'>
   onSettings: (change: Partial<Settings>) => void
   /** The pit rejoin estimate for settings.pitGhostCar (SessionView works it out once for the map and the tower). */
   ghost?: PitGhost | null
@@ -60,17 +62,25 @@ export function MapView({ settings, onSettings, ghost = null, ...props }: Compon
     </select>
   )
   const panel = ghost && <PitGhostPanel ghost={ghost} onClose={() => onSettings({ pitGhostCar: null })} />
+  // The map with the height grip under it; the height is a CSS variable both maps' surfaces use (styles.css).
+  const sized = (map: ReactNode) => (
+    <div className={`map-view${settings.mapHeight ? ' sized' : ''}`}
+      style={settings.mapHeight ? { '--map-height': `${settings.mapHeight}px` } as CSSProperties : undefined}>
+      {map}
+      <MapHeightHandle height={settings.mapHeight} onHeight={(mapHeight) => onSettings({ mapHeight })} />
+    </div>
+  )
   if (view === '2d') {
     return (
       <>
-        <TrackMap {...props} extraTools={<>{views}{corners}{battlesButton}{ghostPicker}</>} showLabels={settings.cornerLabels} showBattles={showBattles} pitGhost={ghost} />
+        {sized(<TrackMap {...props} extraTools={<>{views}<MapLayers>{corners}{battlesButton}</MapLayers>{ghostPicker}</>} showLabels={settings.cornerLabels} showBattles={showBattles} pitGhost={ghost} />)}
         {panel}
       </>
     )
   }
   return (
     <>
-      <Suspense fallback={<div className="track-map"><div className="map-missing">Loading the 3D map…</div></div>}>
+      {sized(<Suspense fallback={<div className="track-map"><div className="map-missing">Loading the 3D map…</div></div>}>
         <TrackMap3D track={props.track} update={props.update} live={props.live} hoverId={props.hoverId} highlightIds={props.highlightIds}
           pinned={props.pinned} camera={view} followCar={settings.followCar} views={views}
           cornerLabels={settings.cornerLabels} cornersButton={<>{corners}{battlesButton}</>} showBattles={showBattles}
@@ -79,7 +89,7 @@ export function MapView({ settings, onSettings, ghost = null, ...props }: Compon
           ghostPicker={ghostPicker} pitGhost={ghost}
           onFollowCar={(followCar) => onSettings({ followCar })}
           onHover={props.onHover} onTogglePin={props.onTogglePin} note={props.note} />
-      </Suspense>
+      </Suspense>)}
       {panel}
     </>
   )

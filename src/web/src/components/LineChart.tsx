@@ -26,7 +26,7 @@ const PAD_BASE = { left: 50, right: 80, top: 12, bottom: 26 }
  * a bigger `width`/`height`, and `showPoints` to mark every lap when few enough are in view.
  */
 export function LineChart({
-  series, yFormat, axisFormat = yFormat, invertY = false, robustY = false, ariaLabel,
+  series, yFormat, axisFormat = yFormat, invertY = false, robustY = false, scaleSkipsMarked = false, ariaLabel,
   width = 560, height = 240, xDomain, yDomain, onXDomain, onYDomain, showPoints = false, integerY = false, xMax,
 }: {
   series: Series[]
@@ -40,6 +40,12 @@ export function LineChart({
    * plot. For the battle graph, where a pit cycle's minute-long jump (~15 % of laps) would squash the real gap flat.
    */
   robustY?: boolean
+  /**
+   * Leave each series' marked points (pit laps) and the three after them out of the automatic y scale; they're still
+   * drawn, running off the plot. For the gap chart: a car's own stop put it 50-85 s back for about three laps (Race 30,
+   * until the leader stopped too), which squashed every other gap. Unlike robustY, a car steadily far behind stays in.
+   */
+  scaleSkipsMarked?: boolean
   ariaLabel: string
   width?: number
   height?: number
@@ -70,7 +76,10 @@ export function LineChart({
   const x0 = xDomain && Number.isFinite(xDomain[0]) ? xDomain[0] : dataX[0]
   const x1 = xDomain && Number.isFinite(xDomain[1]) ? xDomain[1] : dataX[1]
   // Automatic y follows what's in view on x.
-  const ys = all.filter((p) => p.x >= x0 && p.x <= x1).map((p) => p.y)
+  const scaled = !scaleSkipsMarked ? all : series.flatMap((s) => s.points.filter((p, i) =>
+    p.y !== null && !s.points.slice(Math.max(0, i - 3), i + 1).some((q) => q.marked))) as { x: number; y: number }[]
+  const inView = (pts: { x: number; y: number }[]) => pts.filter((p) => p.x >= x0 && p.x <= x1).map((p) => p.y)
+  const ys = inView(scaled).length ? inView(scaled) : inView(all)
   let [y0, y1]: Domain = ys.length ? [Math.min(...ys), Math.max(...ys)] : [0, 1]
   if (robustY && ys.length >= 10) {
     const med = (v: number[]) => { const s = [...v].sort((a, b) => a - b); return s[Math.floor(s.length / 2)] }

@@ -1,16 +1,30 @@
 import { MAX_DELAY_SECONDS } from '../useDelayedUpdate'
 import { ManufacturerKey } from './ManufacturerKey'
 
-type FocusCard = 'auto' | 'on' | 'off'
+/**
+ * Simple mode: switched often over a race weekend, so it's always on the toolbar (live) and in the replay bar, never
+ * behind a menu.
+ */
+export function SimpleSwitch({ simple, onSimple }: { simple: boolean; onSimple: (simple: boolean) => void }) {
+  return (
+    <label className="switch">
+      <input type="checkbox" checked={simple} onChange={(e) => onSimple(e.target.checked)} />
+      <span className="track" aria-hidden><span className="thumb" /></span>
+      Simple mode
+    </label>
+  )
+}
 
-export function Controls({ simple, delay, buffered, onSimple, onDelay, focusCard, onFocusCard, onSettings }: {
+/**
+ * The live page's toolbar: what's changed while watching (Simple mode, the broadcast delay) and the way into Settings.
+ * Set-once options (the on-track card, tower columns) are in the Settings drawer, also reachable in replays.
+ */
+export function Controls({ simple, onSimple, delay, buffered, onDelay, onSettings }: {
   simple: boolean
+  onSimple: (simple: boolean) => void
   delay: number
   buffered: number
-  onSimple: (simple: boolean) => void
   onDelay: (seconds: number) => void
-  focusCard: FocusCard
-  onFocusCard: (value: FocusCard) => void
   onSettings: () => void
 }) {
   const setDelay = (s: number) => onDelay(Math.min(MAX_DELAY_SECONDS, Math.max(0, Math.round(s))))
@@ -18,20 +32,7 @@ export function Controls({ simple, delay, buffered, onSimple, onDelay, focusCard
 
   return (
     <div className="controls">
-      <label className="switch">
-        <input type="checkbox" checked={simple} onChange={(e) => onSimple(e.target.checked)} />
-        <span className="track" aria-hidden><span className="thumb" /></span>
-        Simple mode
-      </label>
-
-      <label className="focus-select" title="Card showing the car on its run vs provisional pole. Auto = Shootout sessions only.">
-        On-track card
-        <select value={focusCard} onChange={(e) => onFocusCard(e.target.value as FocusCard)}>
-          <option value="auto">Auto</option>
-          <option value="on">On</option>
-          <option value="off">Off</option>
-        </select>
-      </label>
+      <SimpleSwitch simple={simple} onSimple={onSimple} />
 
       <div className="delay" title="Hold the timing back so it matches a delayed TV or stream broadcast">
           <span className="delay-label">Broadcast delay</span>

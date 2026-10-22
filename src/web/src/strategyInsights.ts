@@ -252,7 +252,7 @@ function traffic({ timing, cars, onTrack }: StrategyContext, out: Insight[]) {
     }
     if (near) {
       out.push({
-        id: `traffic-${c.id}`, kind: 'traffic', tone: 'yellow', priority: i === 0 ? 48 : 42, carIds: [c.id, near.car.id],
+        id: `traffic-${c.id}`, kind: 'traffic', tone: 'plain', priority: i === 0 ? 48 : 42, carIds: [c.id, near.car.id],
         text: `${label(c)}, P${i + 1}, in lapped traffic: ${surname(near.car.driver)} (P${cars.indexOf(near.car) + 1}) ${secs(near.gap)} ahead on the road`,
       })
     }
@@ -325,7 +325,7 @@ function conditions({ timing, cars, memory, log, onTrack }: StrategyContext, gre
   if (prev === undefined || before === undefined || Math.abs(now - before) < CONDITIONS_JUMP || Math.abs(prev - before) < CONDITIONS_JUMP
     || Math.sign(now - before) !== Math.sign(prev - before)) return
   log({
-    at: timing.now, lap: leaderLap, id: `conditions-${leaderLap}`, kind: 'conditions', tone: 'yellow', carIds: [],
+    at: timing.now, lap: leaderLap, id: `conditions-${leaderLap}`, kind: 'conditions', tone: 'plain', carIds: [],
     text: `Lap times ${now > before ? 'up' : 'down'} ${secs(now - before)} across the field over the last two laps: conditions changing?`,
   })
 }
