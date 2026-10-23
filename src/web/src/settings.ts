@@ -41,13 +41,15 @@ export interface Settings {
    * event with a Top Ten Shootout runs it after qualifying (schedule/supercars.json, from Supercars' timetables). The
    * viewer can change it, since the cut differs by event and session (F1's Q1/Q2, a split qualifying). */
   qualifyingCut: number
+  /** Gold badge on the car numbers of drivers still in the Finals (Supercars Finals rounds). */
+  finalistBadges: boolean
   /** Detailed-mode tower columns (order and hidden), per session kind. Missing = the default layout. */
   columns: Partial<Record<SessionKind, ColumnPrefs>>
 }
 
 // Each series keeps its own settings (column layouts differ).
 const KEY = isF1 ? 'supercars-timing:f1-settings' : 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, mapHeight: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, showBattles: true, showLandmarks: true, pitGhostCar: null, followCar: null, focusCard: 'auto', qualifyingCut: 10, columns: {} }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, mapHeight: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, showBattles: true, showLandmarks: true, pitGhostCar: null, followCar: null, focusCard: 'auto', qualifyingCut: 10, finalistBadges: true, columns: {} }
 
 function load(): Settings {
   try {

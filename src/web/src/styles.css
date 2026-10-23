@@ -141,6 +141,13 @@ main { flex: 1; padding: 0 16px 24px; }
 .mfr-ford { border-left-color: var(--ford); }
 .mfr-chevrolet { border-left-color: var(--chevrolet); }
 .mfr-toyota { border-left-color: var(--toyota); }
+/* Drivers still in the Finals: a gold ring and a soft gold sheen on the number (Finals gold, never the caution yellow).
+   The manufacturer stripe stays. */
+.car.finalist {
+  color: #f3dfa6;
+  background: linear-gradient(135deg, rgba(201, 162, 74, .42), rgba(201, 162, 74, .14) 55%, rgba(201, 162, 74, .3));
+  box-shadow: inset 0 0 0 1px var(--gold), 0 0 6px rgba(201, 162, 74, .35);
+}
 
 .session-best { color: var(--purple); font-weight: 700; }
 .personal-best { color: var(--green); }
@@ -574,6 +581,7 @@ body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 .settings-button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 4px; padding: 3px 10px; cursor: pointer; font: inherit; }
 .settings-button:hover { border-color: var(--muted); }
 .settings-panel .switch, .settings-panel .focus-select { display: flex; margin: 10px 0; }
+.settings-check { display: flex; align-items: center; gap: 8px; margin: 10px 0; cursor: pointer; }
 .settings-panel {
   position: fixed; top: 0; right: 0; bottom: 0; width: min(400px, 92vw); z-index: 21; overflow-y: auto;
   background: var(--panel); border-left: 1px solid var(--line); transform: translateX(100%); transition: transform .2s;

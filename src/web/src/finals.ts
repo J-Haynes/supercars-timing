@@ -69,6 +69,14 @@ export function finalsRoundFor(meeting: string): FinalsRound | undefined {
   return FINALS_ROUNDS.find((r) => r.meeting.test(meeting))
 }
 
+/**
+ * Car numbers of the drivers still in the Finals at this meeting: the round's official field (`field`). Empty outside a
+ * Finals round, or for a round whose field isn't entered yet (Sandown and Adelaide until their entries are added).
+ */
+export function finalistCars(meeting: string): Set<string> {
+  return new Set(finalsRoundFor(meeting)?.field?.map((f) => f.car) ?? [])
+}
+
 /** Points by car number from a finishing order (car numbers, 1st first). */
 function scored(order: string[], scale: number[]): Map<string, number> {
   return new Map(order.map((car, i) => [car, scale[i] ?? 0]))

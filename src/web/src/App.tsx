@@ -69,6 +69,8 @@ export default function App() {
         onFocusCard={(focusCard) => updateSettings({ focusCard })}
         qualifyingCut={settings.qualifyingCut}
         onQualifyingCut={(qualifyingCut) => updateSettings({ qualifyingCut })}
+        finalistBadges={settings.finalistBadges}
+        onFinalistBadges={(finalistBadges) => updateSettings({ finalistBadges })}
       />
       {preview ? (
         <main><EventPreview event={preview} onLive={() => setPreview(null)} /></main>

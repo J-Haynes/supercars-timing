@@ -254,6 +254,10 @@ the server in live mode by hand.
   (opacity .65); the viewer can move it (`settings.qualifyingCut`, 0 = off; ⚙ Settings, or −/+/× on the line): the
   cut differs by event and session, so it isn't worked out (owner's call, 23 Oct 2026). Other sessions: no line. Checked on
   a synthetic qualifying recording only: no real chequered flag outside a race was recorded at that point.
+- **Finalist badge** (Supercars only: F1 has no Finals): at a Finals round the car numbers of the drivers still in
+  the Finals get a gold ring and sheen (`.car.finalist`, `--gold`), every session of the round, live and replay.
+  From the round's official `field` (`finalistCars` in `finals.ts`), so none until a round's field is entered.
+  On by default; ⚙ Settings "Gold badge for drivers in the Finals" (`settings.finalistBadges`).
 - **Mini-sectors:** stretch times quicker than 0.8× the median of `RawSegmentSeconds` are rejected (pit-lane lines).
   Never base that median on accepted times (a slow out-lap once locked out every real time); out-laps don't count as
   pace; stretches starting at a snapshot `LP` or a pit crossing aren't timed.
