@@ -15,6 +15,8 @@ import { RaceCharts } from './RaceCharts'
 import { PitLog } from './PitLog'
 import { RaceControl } from './RaceControl'
 import { Ladder } from './Ladder'
+import { useHideResults } from '../spoilers'
+import { HideResultsSwitch } from './Controls'
 
 type Tab = 'classification' | 'summary' | 'charts' | 'pits' | 'control' | 'championship'
 
@@ -33,6 +35,8 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
   const { settings, update: updateSettings, togglePinned } = useSettings()
   const track = useTrack(session.trackCode, session.track)
   const [hoverId, setHoverId] = useState<string | null>(null)
+  const [hideResults, setHideResults] = useHideResults()
+  const hidden = hideResults && !!onReplay
 
   useEffect(() => {
     setResults(null); setHistory(null); setError(false); setTab('classification')
@@ -60,6 +64,8 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
       <div className="results-head slim">
         <div className="results-when">{series} · {when}</div>
         <div className="results-actions">
+          {/* Only where replays are allowed: hiding the results is for watching the replay without spoilers. */}
+          {onReplay && <HideResultsSwitch hide={hideResults} onHide={setHideResults} />}
           {onReplay && <button type="button" className="back-button" onClick={onReplay}>▶ Replay</button>}
           <button type="button" className="back-button" onClick={onLive}>Back to live</button>
         </div>
@@ -72,21 +78,30 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
         {!results && !error && <p className="menu-muted">Loading results…</p>}
         {results && (
           <>
+            {/* Hide results: the tabs stay but can't be opened, and the classification keeps its size with every cell
+                covered, so the page looks the same without giving anything away. */}
             <div className="segmented results-tabs" role="tablist">
               {tabs.map(([k, name]) => (
-                <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''} onClick={() => setTab(k)}>{name}</button>
+                <button key={k} type="button" role="tab" aria-selected={!hidden && tab === k} className={!hidden && tab === k ? 'active' : ''}
+                  disabled={hidden} onClick={() => setTab(k)}>{name}</button>
               ))}
             </div>
-            {tab === 'classification' && <Classification results={results} race={race} />}
-            {tab === 'summary' && <Summary results={results} history={history} />}
-            {tab === 'charts' && (history
+            {hidden && (
+              <div className="results-masked">
+                <div aria-hidden inert><Classification results={results} race={race} /></div>
+                <span className="results-masked-label">Results hidden · turn off Hide results to see them</span>
+              </div>
+            )}
+            {!hidden && tab === 'classification' && <Classification results={results} race={race} />}
+            {!hidden && tab === 'summary' && <Summary results={results} history={history} />}
+            {!hidden && tab === 'charts' && (history
               ? <RaceCharts timing={results} history={history} />
               : <p className="menu-muted">No lap history for this session (it needs a server with /api/sessions/&#123;id&#125;/laps).</p>)}
-            {tab === 'pits' && <PitLog timing={results} limit={500} />}
-            {tab === 'control' && (results.raceControl?.length || results.session.lapRecord
+            {!hidden && tab === 'pits' && <PitLog timing={results} limit={500} />}
+            {!hidden && tab === 'control' && (results.raceControl?.length || results.session.lapRecord
               ? <RaceControl timing={results} limit={500} />
               : <p className="menu-muted">No race control messages in this session.</p>)}
-            {tab === 'championship' && <Ladder timing={results} onHighlight={() => {}} />}
+            {!hidden && tab === 'championship' && <Ladder timing={results} onHighlight={() => {}} />}
           </>
         )}
         </div>

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE } from '../series'
 import type { LapHistory, RecordedSession, TimingSnapshot, TimingUpdate } from '../types'
 import { useSettings } from '../settings'
-import { SimpleSwitch } from './Controls'
+import { HideResultsSwitch, SimpleSwitch } from './Controls'
+import { useHideResults } from '../spoilers'
 import { flagKind, flagPeriods, leaderLap } from '../session'
 import { SessionView } from './SessionView'
 import type { MapFeed } from '../map/crossingLog'
@@ -196,17 +197,22 @@ export function ReplayView({ session, onBack, onUpdate, onSettings }: {
     [timing, playing, speed, session.name])
   useEffect(() => () => onUpdate?.(null), []) // eslint-disable-line react-hooks/exhaustive-deps -- on leaving only
 
+  // Hide results (spoilers.ts): the scrubber only marks what the replay has reached.
+  const [hideResults, setHideResults] = useHideResults()
+  const reached = (time: number) => !hideResults || time <= t
   // Scrubber marks: every 10th lap of the leader, the start and finish, and safety car and red flag periods (from the
-  // whole session, so they show before the replay gets there).
+  // whole session, so they show before the replay gets there, unless results are hidden).
   const leaderLaps = useMemo(() => laps?.cars.flatMap((c) => c.laps.filter((l) => l.position === 1)).sort((a, b) => a.at - b.at) ?? [], [laps])
-  const lapMarks = leaderLaps.filter((l) => l.lap % 10 === 0).map((l) => ({ lap: l.lap, at: l.at }))
+  const lapMarks = leaderLaps.filter((l) => l.lap % 10 === 0).map((l) => ({ lap: l.lap, at: l.at })).filter((m) => reached(m.at))
   const lapAt = (time: number) => leaderLaps.filter((l) => l.at <= time).length + 1
   const history = whole?.flagHistory ?? timing?.flagHistory
+  // With results hidden, a band still out when the replay is in it ends at the replay's moment.
   const bands = [
     ...flagPeriods(history, 'caution').map((p) => ({ ...p, kind: 'caution', label: 'Safety car / FCY' })),
     ...flagPeriods(history, 'red').map((p) => ({ ...p, kind: 'red', label: 'Red flag' })),
-  ]
-  const finishAt = history?.find((f) => flagKind(f.flag) === 'finished')?.time
+  ].filter((b) => reached(b.start)).map((b) => (hideResults && (b.end === undefined || b.end > t) ? { ...b, end: t } : b))
+  const finish = history?.find((f) => flagKind(f.flag) === 'finished')?.time
+  const finishAt = finish !== undefined && reached(finish) ? finish : undefined
   const pct = (time: number) => (range ? ((time - range.start) / (range.end - range.start || 1)) * 100 : 0)
   const seek = (seconds: number) => range && setT((now) => Math.min(Math.max(now + seconds, range.start), range.end))
   // The lap the leader is on (laps completed + 1), as the live header shows it; nothing before the start.
@@ -236,6 +242,7 @@ export function ReplayView({ session, onBack, onUpdate, onSettings }: {
         {/* Same as the live toolbar: Simple mode up front, the rest in Settings. */}
         <span className="replay-view-options">
           <SimpleSwitch simple={settings.simple} onSimple={(simple) => updateSettings({ simple })} />
+          <HideResultsSwitch hide={hideResults} onHide={setHideResults} />
           {onSettings && <button type="button" className="settings-button" onClick={onSettings}>⚙ Settings</button>}
         </span>
         <div className="replay-scrubber">
