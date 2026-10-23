@@ -107,7 +107,10 @@ main { flex: 1; padding: 0 16px 24px; }
 .flag-green { background: var(--green); color: #04210f; }
 .flag-yellow { background: var(--yellow); color: #2b2200; }
 .flag-red { background: var(--red); color: #fff; }
-.flag-checkered { background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 10px 10px; color: #000; text-shadow: 0 0 3px #fff; }
+/* Black text with a solid white outline (a ring of shadows), so it reads over both the black and the white squares. */
+.flag-checkered { background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 10px 10px; color: #000;
+  text-shadow: -1.5px -1.5px 0 #fff, 0 -1.5px 0 #fff, 1.5px -1.5px 0 #fff, 1.5px 0 0 #fff,
+    1.5px 1.5px 0 #fff, 0 1.5px 0 #fff, -1.5px 1.5px 0 #fff, -1.5px 0 0 #fff, 0 0 4px #fff; }
 .flag-ended { background: var(--line); color: var(--muted); }
 
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
