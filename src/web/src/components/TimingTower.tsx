@@ -57,6 +57,16 @@ interface Ctx {
   pitGhost: PitGhost | null
 }
 
+/** "Deleted" in place of the last lap's time, with how many this session. */
+function DeletedLap({ car }: { car: CarRow }) {
+  const n = car.deletedLaps ?? 0
+  return (
+    <span className="lap-deleted" title={`Lap ${car.laps} deleted: the timing withheld its time (a kerb hop or chicane cut). It doesn't count for the car's best lap.${n > 1 ? ` ${n} laps deleted this session.` : ''}`}>
+      Deleted{n > 1 ? ` ×${n}` : ''}
+    </span>
+  )
+}
+
 interface Column {
   key: string
   header: string
@@ -179,9 +189,11 @@ const COLUMNS: Record<string, Column> = {
   },
   last: {
     key: 'last', header: 'Last', numeric: true,
-    cell: ({ car }) => lapTime(car.lastLap),
+    // Practice, qualifying and the Shootout: a kerb hop or chicane cut deletes the lap (Natsoft withholds its time).
+    // Races police it differently (an allowance, then the stewards), so a race only shows the missing time.
+    cell: ({ car, race }) => (!race && car.lastLapDeleted ? <DeletedLap car={car} /> : lapTime(car.lastLap)),
     cellClass: ({ car, best }) => timeClass(car.lastLap, car.bestLap, best.lap),
-    flashKey: ({ car }) => car.lastLap,
+    flashKey: ({ car }) => (car.lastLapDeleted ? `deleted-${car.laps}` : car.lastLap),
   },
   s1: {
     key: 's1', header: 'S1', numeric: true, cell: ({ car }) => seconds(car.s1),

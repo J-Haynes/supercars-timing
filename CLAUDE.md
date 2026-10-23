@@ -207,6 +207,9 @@ the server in live mode by hand.
   green's I, so flag-change times use I only within 10 s of the message.
 - After the chequered flag: lap counts stop at the distance, timing points keep coming from the cool-down lap, road
   positions of stopped cars stop updating, and cars entering the pit lane are not pit stops.
+- `I="?"` = lap time withheld: on a lap that isn't an in- or out-lap, a **deleted lap** (kerb hop / chicane cut at the
+  Gold Coast, ~10 % of practice laps). `CarState.LastLapDeleted`, `DeletedLaps`, `LapEntry.Deleted`. It used to leave
+  the previous lap's time as the last lap.
 - The per-car `SC` attribute is not the safety car. `SP` (speed trap) is sent as 0, then the value.
 
 ## Live page essentials
@@ -239,7 +242,9 @@ the server in live mode by hand.
   cleanup timer; the 1.8 s double pulse is deliberate: a pass is a major race event, owner's call). Numbers use Inter's
   tabular figures (set on `body`), not monospace; cells have 7 px side padding and F1's 24 mini-sectors are 8 px wide
   (the detailed tower fits at 1600 px for F1; Supercars scrolls ~50 px). Phones (`PHONE`, `useMediaQuery.ts`) move
-  positions gained and driver laps after Gap/Int so the gap shows at 390 px. Driver markers (hollow white = primary, green =
+  positions gained and driver laps after Gap/Int so the gap shows at 390 px. Practice, qualifying and the Shootout:
+  a deleted lap (kerb hop, chicane cut) shows DELETED in the Last column (×N if more than one this session) and in
+  Focus; races only show the missing time (owner: not needed for races, where it's an allowance and the stewards). Driver markers (hollow white = primary, green =
   co-driver), SWAP badge, PIT timer (smooth count from pit-in, then Natsoft's PT for 8 s), penalty badges (+5s, PLP;
   served ones leave the tower), fastest-lap stopwatch badge, positions gained (`startingGrid.ts`: hand-entered grid,
   stopgap until the server sends grid positions), driver laps vs the minimum (60 at the Bathurst 1000, 2026; from

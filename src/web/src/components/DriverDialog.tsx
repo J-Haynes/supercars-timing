@@ -105,12 +105,13 @@ function Focus({ timing, car, laps, historyLoaded }: { timing: TimingSnapshot; c
       </div>
 
       <div className="stat-row">
-        <Stat label="Last lap" value={lapTime(car.lastLap) || '–'} className={timeClass(car.lastLap, car.bestLap, best.lap)} />
+        <Stat label="Last lap" value={!race && car.lastLapDeleted ? 'Deleted' : lapTime(car.lastLap) || '–'} className={!race && car.lastLapDeleted ? 'lap-deleted-stat' : timeClass(car.lastLap, car.bestLap, best.lap)} />
         <Stat label="Best lap" value={lapTime(car.bestLap) || '–'} note={car.bestLapNo ? `lap ${car.bestLapNo}` : undefined} className={timeClass(car.bestLap, car.bestLap, best.lap)} />
         {laps && race && <Stat label="Recent pace" value={lapTime(recentPace(laps)) || '–'} note="median, last 5 clean laps" />}
         <Stat label={race ? 'Gap to leader' : 'Gap to P1'} value={gapText(car.gap, car.gapLaps, car.position === 1) || '–'} />
         {race && <Stat label="Laps" value={String(car.laps)} note={`${car.stintLaps} this stint`} />}
         <Stat label="Pit stops" value={String(car.pitStops)} />
+        {!race && (car.deletedLaps ?? 0) > 0 && <Stat label="Laps deleted" value={String(car.deletedLaps)} note="kerb hops, chicane cuts" />}
         {car.speed > 0 && <Stat label="Speed trap" value={`${Math.round(car.speed)}`} note={best.speed ? `km/h · best ${Math.round(best.speed)}` : 'km/h'} />}
       </div>
 

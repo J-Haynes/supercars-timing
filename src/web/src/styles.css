@@ -793,6 +793,10 @@ body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 .ladder-elimination-label { color: var(--elim); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px 2px; }
 .finals-row.out .ladder-pos { color: var(--red); }
 /* Championship standings at a Finals round (FinalsStandings.tsx): event page and live tab. */
+/* A deleted lap in the tower's Last column: neutral, not a colour the data uses for something else. */
+.lap-deleted { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+  border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 4px; }
+.stat-value.lap-deleted-stat { color: var(--muted); }
 .championship-tabs { max-width: 220px; margin: 0 0 8px; }
 .standings-row { display: grid; grid-template-columns: 26px 1fr 84px 52px; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; }
 .standings.live .standings-row { grid-template-columns: 26px 30px 1fr 44px 40px 48px; }
