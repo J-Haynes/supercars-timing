@@ -3,7 +3,7 @@ import { isF1 } from '../series'
 import type { CarRow, TimingUpdate } from '../types'
 import type { TrackDefinition } from '../tracks/types'
 import { TrackModel, type Vec } from './trackModel'
-import { carPosition, cautionPace, place, F1_PACING, SUPERCARS_PACING } from './carPosition'
+import { carPosition, cautionPace, placeBetween, F1_PACING, SUPERCARS_PACING } from './carPosition'
 import { useSessionClock } from './useSessionClock'
 import { cautionPeriods, flagKind, isRace, isShootout } from '../session'
 import { calibrateTimingPoints } from './calibrate'
@@ -15,6 +15,9 @@ import { gridPlaces, gridSlot, launchDistance, onGrid, preStartDistance, type Gr
 import { standingRestart } from './standingRestart'
 
 const PIT_SPACING = 70
+/** Garages span this part of the pit lane (shares of its length from the entry): the ends are entry and exit roads. */
+const GARAGES_FROM = 0.2
+const GARAGES_TO = 0.8
 /** After the green flag, cars without a crossing yet are launched from their grid slot for this long (seconds). */
 const LAUNCH_SECONDS = 120
 
@@ -24,7 +27,7 @@ const LAUNCH_SECONDS = 120
  */
 export type Placement =
   | { car: CarRow; kind: 'track'; distance: number; dim: boolean; lateral?: number }
-  | { car: CarRow; kind: 'pit'; point: Vec; dim: true }
+  | { car: CarRow; kind: 'pit'; point: Vec; dim: boolean }
 
 /**
  * Places every car for the current frame: the session clock, provisional timing points, the crossing log for a
@@ -136,7 +139,10 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     return { car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral * fan }
   }
 
-  // Back of the field first, so pit slots are handed out in a stable order.
+  // Each car's own spot in the pit lane (by car number, like garages), so cars don't shuffle along it as others come
+  // and go. Back of the field first, so slots by the line (tracks without a pit lane) are handed out in a stable order.
+  const garages = useMemo(() => garageSpots(model, mapCars), [model, mapCars.map((c) => c.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps -- the ids are the key
+  const garageOf = (car: CarRow) => garages.get(car.id)
   const placements: Placement[] = []
   let pitIndex = 0
   let onTrack = 0
@@ -199,12 +205,20 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
       const exact = knownDistance(model, car, live ? crossings.current.around(car.id, now) : undefined, now)
       onTrack++
       if (exact !== undefined) known++
-      const distance = exact ?? state.distance
+      // Just out of the pits: down the rest of the pit lane from its garage first, then on from the pit exit.
+      const leaving = leavingPits(model, car, exact ?? state.distance, order, garageOf(car))
+      if (leaving?.kind === 'pit') {
+        smoothing.current.delete(car.id) // it joins the track at the exit, not from where it was before it pitted
+        placements.push({ car, kind: 'pit', point: leaving.point, dim: false })
+        continue
+      }
+      const distance = leaving?.distance ?? exact ?? state.distance
       const sm = smoothPosition(smoothing.current.get(car.id), car.lastPointAt, distance, now, model.length, caution ? TAU_CAUTION : TAU)
       smoothing.current.set(car.id, sm)
       placements.push({ car, kind: 'track', distance: model.wrap(sm.shown), dim: state.stale })
     } else if (state.kind === 'pit') {
-      const point = track.pitLane.length > 1 ? pitSlot(model, pitIndex++) : pitAreaSlot(model, pitIndex++)
+      const garage = garageOf(car)
+      const point = garage !== undefined ? model.pitPointAt(garage) : pitAreaSlot(model, pitIndex++)
       placements.push({ car, kind: 'pit', point, dim: true })
     }
   }
@@ -238,16 +252,52 @@ export function knownDistance(model: TrackModel, car: CarRow, around: [Crossing,
   if (!around) return undefined
   const [a, b] = around
   if (car.lastPoint === a.point && car.lastPointAt > a.at && car.lastPointAt === car.pitLog?.at(-1)?.outAt) {
-    const exit = model.pitExitDistance
-    const to = model.pointDistance.get(b.point)
-    const span = b.at - car.lastPointAt
-    // Only when the exit is on the stretch the car is in (between the line and the next point).
-    if (exit !== null && to !== undefined && exit < to && span > 0) {
-      return place(model, exit, b.point, Math.min(Math.max((now - car.lastPointAt) / span, 0), 1))
-    }
     return knownPosition(model, { point: car.lastPoint, at: car.lastPointAt }, b, now)
   }
   return knownPosition(model, a, b, now)
+}
+
+/** Garage spots: metres along the pit lane for each car, by car number, over its middle part. Empty without a pit lane. */
+export function garageSpots(model: TrackModel, cars: CarRow[]): Map<string, number> {
+  const pit = model.pitLane
+  if (!pit) return new Map()
+  const sorted = [...cars].sort((x, y) => (parseInt(x.carNumber, 10) || 0) - (parseInt(y.carNumber, 10) || 0) || x.carNumber.localeCompare(y.carNumber))
+  return new Map(sorted.map((c, i) => [c.id, pit.length * (GARAGES_FROM + (GARAGES_TO - GARAGES_FROM) * (i + 0.5) / sorted.length)]))
+}
+
+/**
+ * Where a car just out of the pits is drawn when its pit lane rejoins the lap partway along the stretch it's on (the
+ * Gold Coast: Natsoft's pit-out comes from the pit lane, the lane runs past the line and rejoins 295 m on; Bathurst's
+ * rejoins just before the first point). `distance` is where the timing puts it on that stretch, as if it had started
+ * from the line. The stretch's simulated time up to the pit exit is spent driving from its garage to the end of the
+ * pit lane, the rest on track from the exit, so it still reaches the next point when the timing says. Before, it
+ * appeared on track at the line and raced alongside the pit lane. Undefined when that doesn't apply (no pit lane, not
+ * just out of the pits, or the lane rejoins on another stretch). Shared with tools/MapDelaySim.
+ */
+export function leavingPits(
+  model: TrackModel, car: CarRow, distance: number, order: string[], garage: number | undefined,
+): { kind: 'pit'; point: Vec } | { kind: 'track'; distance: number } | undefined {
+  const pit = model.pitLane
+  if (!pit || car.inPit || car.lastPointAt <= 0 || car.lastPointAt !== car.pitLog?.at(-1)?.outAt) return undefined
+  const i = order.indexOf(car.lastPoint)
+  const from = model.pointDistance.get(car.lastPoint)
+  const to = i < 0 ? undefined : model.pointDistance.get(order[(i + 1) % order.length])
+  if (from === undefined || to === undefined) return undefined
+  const span = model.wrap(to - from) || model.length
+  if (model.wrap(pit.exit - from) >= span) return undefined
+  // Simulated seconds from `from` forward to `d`, on this stretch.
+  const sim = (d: number) => {
+    const end = from + model.wrap(d - from)
+    return end > model.length ? model.lapSimTime - model.simTimeAt(from) + model.simTimeAt(end - model.length) : model.simTimeAt(end) - model.simTimeAt(from)
+  }
+  const total = sim(to) || 1
+  const inLane = sim(pit.exit) / total // share of the stretch spent in the pit lane
+  const f = Math.min(sim(distance) / total, 1)
+  if (f < inLane) {
+    const start = garage ?? pit.length / 2
+    return { kind: 'pit', point: model.pitPointAt(start + (pit.length - start) * (f / inLane)) }
+  }
+  return { kind: 'track', distance: placeBetween(model, pit.exit, to, (f - inLane) / (1 - inLane || 1)) }
 }
 
 /** For tracks without a mapped pit lane: a row beside the control line. */
@@ -258,16 +308,3 @@ function pitAreaSlot(model: TrackModel, index: number): Vec {
   return { x: p.x + n.x * 110, y: p.y + n.y * 110 }
 }
 
-/** Spreads cars in the pit lane out along it from the middle, so they don't stack on one spot. */
-function pitSlot(model: TrackModel, index: number): Vec {
-  const pit = model.def.pitLane
-  const cum = [0]
-  for (let i = 1; i < pit.length; i++) cum.push(cum[i - 1] + Math.hypot(pit[i][0] - pit[i - 1][0], pit[i][1] - pit[i - 1][1]))
-  const total = cum[cum.length - 1]
-  const offset = Math.ceil(index / 2) * PIT_SPACING * (index % 2 ? 1 : -1)
-  const d = Math.min(Math.max(total / 2 + offset, 0), total)
-  let i = 1
-  while (i < cum.length - 1 && cum[i] < d) i++
-  const t = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1)
-  return { x: pit[i - 1][0] + t * (pit[i][0] - pit[i - 1][0]), y: pit[i - 1][1] + t * (pit[i][1] - pit[i - 1][1]) }
-}

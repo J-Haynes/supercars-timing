@@ -310,6 +310,16 @@ the server in live mode by hand.
   With a 20-40 s delay (watching a stream) positions are known 96-100 % of the time under green (Supercars, Race 30,
   `tools/MapDelaySim`); F1 dots never wait at a mini-sector (`tools/F1MapEval`, real positions). Cars leaving the pits
   start their stretch at pit-out (`rejoined()`). Numbers and what's left: docs/PLANNING.md, "Map with a broadcast delay".
+- **Pit lane on the map** (`useCarPlacement.ts`, both maps and series): cars in the pits sit at their own spot along the
+  pit lane (`garageSpots`, by car number over its middle 60 %; they used to be re-handed out every frame, so cars hopped
+  as others came and went). Leaving, a car whose pit lane rejoins partway along its stretch (`leavingPits`) drives from
+  its spot to the end of the pit lane for the stretch's simulated time up to the exit, then on from the exit, reaching
+  the next point when the timing says (it used to appear on track at the line and race beside the pit lane: Gold Coast
+  P1). `TrackModel.pitLane` orients the lane entry -> exit (Bathurst's file lists it backwards, so its exit was the
+  entry). Left: live without a delay, Bathurst's pit-out to Pos1 is ~7 s against 12.9 s expected, so the dot is still
+  in the pit lane when the crossing comes and steps ~240 m (it stepped ~300 m before).
+  Also left: out-lap dots crawl (< 8 m/s) between Int2 and the line on the rebuilt 2025 Gold Coast races, since an
+  out-lap uses the car's previous time through the stretch, which was its in-lap with the pit entry (MapDelaySim).
 - **Map:** cars are placed by fraction of the *simulated* stretch time vs expected real time (`carPosition.ts`). Visual
   only (never changes timing data): 4% slack on expected times, the step at each crossing fades out (0.3 s green,
   0.8 s caution, `smoothing.ts`), the clock blends server corrections over 0.5 s. Out-laps use the car's previous

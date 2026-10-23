@@ -7,7 +7,7 @@
 //   npx tsx ../../tools/MapDelaySim/delay-sim.mts <session id> <track code> <from natsoft time> <seconds> [label] [samples.json]
 // Race 30, green running and stops:   V8SUPER_20261011_094535-2510 MOUN 1791721779 900
 // Race 30, safety car and restart:    V8SUPER_20261011_094535-2510 MOUN 1791738700 1200
-// Rebuilt 2025 Gold Coast Race 28, green: DELAYS=0,90 ... V8SUPER_20251025_051800_hist-r28-0 SURF 1761410080 900
+// Rebuilt 2025 Gold Coast Race 28, green: DELAYS=0,90 ... V8SUPER_20251025_051800_hist-r28-0 SPSC 1761410080 900
 // Findings (Oct 2026) are in docs/PLANNING.md, "Map with a broadcast delay".
 (globalThis as any).window = { location: { pathname: '/' } }
 const W = new URL('../../src/web/src', import.meta.url).pathname
@@ -16,7 +16,7 @@ const { carPosition, cautionPace, SUPERCARS_PACING } = await import(`${W}/map/ca
 const { CrossingLog, knownPosition } = await import(`${W}/map/crossingLog.ts`)
 const { smoothPosition, TAU, TAU_CAUTION } = await import(`${W}/map/smoothing.ts`)
 const { cautionPeriods, flagKind } = await import(`${W}/session.ts`)
-const { rejoined, knownDistance } = await import(`${W}/map/useCarPlacement.ts`)
+const { rejoined, knownDistance, leavingPits } = await import(`${W}/map/useCarPlacement.ts`)
 const { calibrateTimingPoints } = await import(`${W}/map/calibrate.ts`)
 const { readFileSync } = await import('node:fs')
 const [session, code] = [process.argv[2], process.argv[3]]
@@ -73,7 +73,10 @@ for (let t = from; t <= from + seconds; t += STEP) {
       if (state.kind !== 'track') { lastShown.get(d)!.delete(row.id); continue }
       const pair = log.around(car.id, now)
       const kp = knownDistance(model, car, pair, now)
-      const distance = kp ?? state.distance
+      // Leaving the pits: in the pit lane until its exit (no garages here: from the middle of the lane), then on track.
+      const leaving = leavingPits(model, car, kp ?? state.distance, order, undefined)
+      if (leaving?.kind === 'pit') { lastShown.get(d)!.delete(row.id); smooth.get(d)!.delete(car.id); continue }
+      const distance = leaving?.distance ?? kp ?? state.distance
       const sm = smoothPosition(smooth.get(d)!.get(car.id), car.lastPointAt, distance, now, model.length, caution ? TAU_CAUTION : TAU)
       smooth.get(d)!.set(car.id, sm)
       if (!last) continue
