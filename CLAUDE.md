@@ -57,7 +57,8 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 
 - `src/SupercarsTiming.Natsoft` (no ASP.NET dependency; protocol and domain logic):
   - `NatsoftDecoder`: XOR-chain frame decoding. `NatsoftClient`: the WebSocket client (reconnects: 30 s while not
-    live, 10 s after errors, immediately on `<Redirect/>`).
+    live, 10 s after errors, immediately on `<Redirect/>`). Since 23 Oct 2026 it needs the meeting page's
+    `gsLiveToken` as `?Token=`, sent with the page request's User-Agent, or Natsoft says `<NotFound/>` (docs/PROTOCOL.md).
   - `Recording` (`RecordingWriter`, `RecordingReader`): JSON Lines recordings.
   - `SessionIndex`: finds sessions in recordings (split at `<New>`/`<NotFound>`, merged across restarts), `Replay()`
     (final `TimingState`), `Results()`, `IsSupercarsChampionship()`.
@@ -452,6 +453,8 @@ the server in live mode by hand.
   the app). Last year's races are replayable: menu → Past seasons (rebuilt with `tools/HistoricalRace`).
 
 - Sessions and sources are in `calendar.ts` (Supercars schedule "correct as of 16 Sep"). Races 31 and 32, 85 laps.
+- **Practice 1 (23 Oct):** missed for its first ~13 min: Natsoft started requiring a token (fixed, see `NatsoftClient`).
+  Natsoft's code for the track is `SPSC` (the `SURF` file is found by name; rename it when rebuilding the map).
 - **Before the weekend:** done: the Enduro Cup winner (Brown, #888) and the official starting points are in
   `finals.ts`. Optional: a `startingGrid.ts` entry for each race once the grid is known (without one, positions
   gained count from Natsoft's order before the start). For Sandown, add a `FINALS_ROUNDS` entry with its official

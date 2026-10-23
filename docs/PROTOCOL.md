@@ -14,7 +14,16 @@ are not covered here.
 ## Transport
 
 - `wss://server.natsoft.com.au:8080/LiveMeeting/{meeting}`. Supercars weekends use `V8SUPER`.
-- No auth. The browser sends an `Origin: https://server.natsoft.com.au:8080` header; the client never sends a message.
+- **A token, since the Gold Coast 500 (23 Oct 2026; Bathurst didn't need one).** The meeting page
+  (`https://server.natsoft.com.au:8080/LiveMeeting/V8SUPER`) sets `var gsLiveToken="..."` (~300 chars, new on
+  every load) and Natsoft's script opens the WebSocket as `.../LiveMeeting/V8SUPER?Token=<token>`. Without the
+  token the server answers `<NotFound />` even while cars are on track (Practice 1 was missed until we fixed it).
+  The token only works with the **same User-Agent** as the page request: same UA -> `<New>`, no UA on the
+  WebSocket -> `<NotFound />` (tested one connection at a time). No cookies are involved. `NatsoftClient` loads the
+  page for each new connection (keeping the token across a `<Redirect>`) and sends one User-Agent on both.
+- Frames came as plain XML with the token at the Gold Coast (the decoder passes plain XML through).
+- The browser sends an `Origin: https://server.natsoft.com.au:8080` header; the client never sends a message.
+- The Gold Coast's track code is `SPSC` ("SURFERS PARADISE STREET CIRCUIT"); our map file is still `SURF`, found by name.
 - On connect the server sends a full snapshot (`<New>`), then incremental updates.
 - `<NotFound />` = the meeting isn't live. The browser client waits and retries; we retry every 30 s.
 - `<Redirect URL="..." />` = reconnect to that URL.
