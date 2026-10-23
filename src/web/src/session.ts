@@ -1,4 +1,4 @@
-import type { SessionInfo } from './types'
+import type { CarRow, SessionInfo } from './types'
 
 /** Practice, qualifying and shootouts are ranked by best lap; races by running order. */
 export function isRace(sessionType: string): boolean {
@@ -8,6 +8,29 @@ export function isRace(sessionType: string): boolean {
 /** Top Ten Shootout (or similar single-car runs), detected from Natsoft's session name/type. */
 export function isShootout(sessionName: string, sessionType: string): boolean {
   return /shoot\s*-?out|top\s*(10|ten)/i.test(`${sessionName} ${sessionType}`)
+}
+
+/**
+ * Cars that have taken the chequered flag in practice, qualifying or a Shootout. Neither feed says so per car
+ * (Natsoft has no field for it that we know of, docs/PROTOCOL.md), so it's worked out:
+ * - once the session's flag is chequered, a car has finished when it crosses the line after the flag came out
+ *   (`lastLineAt`, which stays put when the car pits afterwards; the flag's time is from the flag history);
+ * - in a Shootout each car runs on its own and its run ends at the line after its one flying lap, so a car with a
+ *   lap time has finished (the on-track card counts "completed" runs the same way).
+ * The marks go when the flag changes again (F1 qualifying: the next part starts). Races have their own finish
+ * (raceFinished in liveGaps.ts), so none here.
+ */
+export function finishedCars(timing: { session: SessionInfo; cars: CarRow[]; flagHistory?: { time: number; flag: string }[] }): Set<string> {
+  const { session, cars } = timing
+  if (isRace(session.type)) return new Set()
+  const done = new Set<string>()
+  if (isShootout(session.name, session.type)) cars.filter((c) => c.bestLap > 0).forEach((c) => done.add(c.id))
+  if (flagKind(session.flag) === 'finished') {
+    // Chequered then Ended is one period: the start of the current one is when the flag came out.
+    const period = flagPeriods(timing.flagHistory, 'finished').at(-1)
+    if (period && period.end === undefined) cars.filter((c) => (c.lastLineAt ?? 0) >= period.start).forEach((c) => done.add(c.id))
+  }
+  return done
 }
 
 /** Race distances Natsoft doesn't send (it sends <E L> = 0 for most races). `race` narrows it to one race by name. */

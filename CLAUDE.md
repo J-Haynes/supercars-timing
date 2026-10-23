@@ -244,6 +244,13 @@ the server in live mode by hand.
   served ones leave the tower), fastest-lap stopwatch badge, positions gained (`startingGrid.ts`: hand-entered grid,
   stopgap until the server sends grid positions), driver laps vs the minimum (60 at the Bathurst 1000, 2026; from
   `LCD`), stint laps, mini-sectors.
+- **Finished cars** (Oct 2026, both series, live and replay): in practice, qualifying and
+  the Shootout a chequered flag icon marks each car that has finished (`finishedCars` in `session.ts`). Neither feed
+  says so per car, so it's worked out: a car whose last line crossing (`CarRow.LastLineAt`, Natsoft's `D/@T`, F1's
+  line crossing; unlike `LapStartAt` it isn't cleared when the car pits) is at or after the start of the current
+  chequered/ended flag period; in a Shootout, any car with a lap time (its one run is done). Not in races (they have
+  `raceFinished`). Checked on
+  a synthetic qualifying recording only: no real chequered flag outside a race was recorded at that point.
 - **Mini-sectors:** stretch times quicker than 0.8× the median of `RawSegmentSeconds` are rejected (pit-lane lines).
   Never base that median on accepted times (a slow out-lap once locked out every real time); out-laps don't count as
   pace; stretches starting at a snapshot `LP` or a pit crossing aren't timed.

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
 import { MiniSectors } from './MiniSectors'
-import { isRace, minDriverLaps, raceLaps } from '../session'
+import { finishedCars, isRace, minDriverLaps, raceLaps } from '../session'
 import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
 import { startPosition } from '../startingGrid'
 import { carPenalties } from '../penalties'
@@ -55,6 +55,8 @@ interface Ctx {
   signals: TowerSignals
   /** The pit rejoin estimate on screen (pit/usePitGhost.ts), shared with the map. */
   pitGhost: PitGhost | null
+  /** Practice/qualifying/Shootout: the car has taken the chequered flag (finishedCars in session.ts). */
+  chequered: boolean
 }
 
 interface Column {
@@ -120,7 +122,7 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions, signals, pitGhost }) => {
+    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions, signals, pitGhost, chequered }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
@@ -133,6 +135,7 @@ const COLUMNS: Record<string, Column> = {
             : car.driver}
           {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
           {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
+          {chequered && <span className="chequer-badge" title="Finished: crossed the line after the chequered flag" aria-label="Finished"><ChequerIcon /></span>}
           {/* Races only: in practice and qualifying the fastest lap is simply P1. */}
           {race && !!best.lap && Math.abs(car.bestLap - best.lap) < 0.0005 && (
             <span className="fastest-badge" title={`Fastest lap: ${lapTime(car.bestLap)}`} aria-label="Fastest lap"><StopwatchIcon /></span>
@@ -354,6 +357,17 @@ function StopwatchIcon() {
   )
 }
 
+/** A small chequered flag (2 x 3 squares on a pole) for cars that have finished. */
+function ChequerIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+      <path d="M2.5 1.5v13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="3.5" y="2" width="11" height="7.5" fill="none" stroke="currentColor" strokeWidth="1" />
+      <path d="M3.5 2h3.67v2.5H3.5zM10.83 2h3.67v2.5h-3.67zM7.17 4.5h3.66V7H7.17zM3.5 7h3.67v2.5H3.5zM10.83 7h3.67v2.5h-3.67z" fill="currentColor" />
+    </svg>
+  )
+}
+
 /** "5 seconds" -> "+5s", "plp" (pit lane penalty) -> "PLP", "Drive Through" -> "DT"; anything else -> "PEN". */
 function penaltyBadge(penalty: string): string {
   const seconds = penalty.match(/(\d+)\s*sec/i)
@@ -434,6 +448,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   const minLaps = minDriverLaps(timing.session)
   // Row buttons only while racing: no pit stops or charts to add after the flag, or outside races.
   const rowActions = race && !finished ? actions : undefined
+  const chequered = finishedCars(timing)
+
 
   // Where the "would rejoin here" row goes: before the car that would be just behind it (others only, in race order).
   const rejoin = race && !finished && pitGhost?.status === 'ok' ? pitGhost.rejoin : null
@@ -468,7 +484,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         </thead>
         <tbody>
           {cars.map((car, i) => [ghostRowAt === car.id && ghostRow, (() => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions, signals, pitGhost }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions, signals, pitGhost, chequered: chequered.has(car.id) }
             const role = signals.battle.get(car.id)
             const classes = [role && `battle-${role}`, car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (

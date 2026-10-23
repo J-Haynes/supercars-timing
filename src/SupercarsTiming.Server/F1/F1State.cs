@@ -333,7 +333,8 @@ public sealed partial class F1State
                 TyreLaps: (int?)stint?["TotalLaps"] ?? 0,
                 TeamColour: (string?)driverInfo["TeamColour"] ?? "",
                 GridPosition: ParseInt(app?[number]?["GridPos"]),
-                Retired: retired || (bool?)line["Stopped"] == true));
+                Retired: retired || (bool?)line["Stopped"] == true,
+                LastLineAt: car.LapStartAt));
         }
         rows = rows.OrderBy(r => r.Position == 0 ? int.MaxValue : r.Position).ToList();
 

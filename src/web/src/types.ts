@@ -126,6 +126,8 @@ export interface CarRow {
   /** Starting grid position; 0 = unknown. */
   gridPosition?: number
   retired?: boolean
+  /** Time of the last control-line crossing, pit lane included (not cleared on pitting, unlike lapStartAt); 0 = not seen. */
+  lastLineAt?: number
 }
 
 export interface PitStopRow {

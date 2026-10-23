@@ -130,4 +130,21 @@ public class TimingStateTests
         s.Apply(NatsoftMessage.FromRaw(DateTimeOffset.UtcNow, "<NotFound />\r\n"));
         Assert.Equal(before, s.MessageCount);
     }
+
+    [Fact]
+    public void Last_line_crossing_survives_a_pit_entry()
+    {
+        // After the chequered flag the UI marks cars that crossed the line since (finishedCars in session.ts).
+        // Entering the pits clears LapStartAt, so the crossing time needs its own field.
+        var s = Loaded();
+        s.Apply("""<S T="1791630300.0000" S="Checkered" I="1791630300.0000" R="0" E="P12" P="1" SN="0" />""");
+        s.Apply("""<L T="1791630310.0000" Y="p"><P L="1" C="22" D="2"><D L="4" I="126.0000" T="1791630310.0000" LP="M" /></P></L>""");
+        s.Apply("""<L T="1791630400.0000" Y="p"><P L="1" C="22" D="2"><D P="Y" PF="P" PI="1791630400.0000" /></P></L>""");
+
+        var car = TimingSnapshot.From(s).Cars.Single(c => c.Id == "22");
+        Assert.Equal(0, car.LapStartAt);
+        Assert.Equal(1791630310.0, car.LastLineAt);
+        Assert.Equal("Checkered", s.FlagHistory[^1].Flag);
+        Assert.True(car.LastLineAt >= s.FlagHistory[^1].Time);
+    }
 }

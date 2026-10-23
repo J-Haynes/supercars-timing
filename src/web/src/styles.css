@@ -619,6 +619,9 @@ body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 /* Fastest lap in a race: same box as the penalty badge, in session-best purple, with a stopwatch. */
 .fastest-badge { margin-left: 8px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--purple); color: #fff; display: inline-flex; align-items: center; vertical-align: 1px; }
 .fastest-badge svg { display: block; height: 1.25em; width: 1.25em; }
+/* Finished in practice/qualifying/Shootout (took the chequered flag): plain, like the flag itself. */
+.chequer-badge { margin-left: 8px; color: var(--text); display: inline-flex; align-items: center; vertical-align: -1px; opacity: .85; }
+.chequer-badge svg { display: block; }
 
 /* Race control panel under the map. */
 .race-control { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 8px 10px; }

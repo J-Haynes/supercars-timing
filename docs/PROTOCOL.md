@@ -153,4 +153,7 @@ passes the pit lane (Bathurst 1000, car 9's stop: `LP` 18 -> 24 within 32 s, `L`
 - What `LGI`/`LGNI` actually represent (gap at the last timing point crossed?).
 - Safety car and red flag representation (`S` values, `SC` field).
 - Driver changes mid-race (`D` index switching).
-- Qualifying session type (not yet seen).
+- Qualifying session type (not yet seen; the 2026 timetable names sessions "Qualifying (Race 31)").
+- **No per-car "finished" (took the chequered flag) field is known.** `TY`, `TSL`, `SN`, `LT`, `FTY` and `PN` are
+  unidentified: check a recording of a practice or qualifying chequered flag for any of them changing as cars cross
+  the line. Until then the app works it out from each car's line crossing time `T` vs the flag's change time.
