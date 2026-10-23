@@ -60,8 +60,9 @@ decided both races. 85 laps is ~1 h 40 min without cautions.
 
 Existing checklist (CLAUDE.md, "Next round"), plus:
 
-1. **Practice 1:** rebuild the `SURF` map from the recording (TrackBuilder README); check Natsoft's track code really is
-   `SURF` and how many timing points the live feed has (the rebuilt races only have the two sector lines).
+1. **Practice 1 (done, 23 Oct):** Natsoft's code is `SPSC` (not `SURF`): map rebuilt from the recording and renamed, as
+   were the pit-loss figures. The live feed has 7 timing points (Pos1, Pos2, Int1, Pos3, Pos4, Int2, Pos5); the rebuilt
+   2025 races have the two sector lines, now with the live IDs (3 and 6).
 2. **Race 31 (Saturday):** watch the undercut tags and "net P1" in the first stop window (laps ~20-35 in a green race,
    or everyone under the first safety car). Note any tag that's clearly wrong, with the lap: they're tuned on Bathurst's
    long fuel stops and the rebuilt 2025 races, whose pit times are estimates.

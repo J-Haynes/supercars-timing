@@ -129,7 +129,7 @@ So for Supercars the prediction is a range even with perfect history.
   Interlagos 21.7, Las Vegas 22.1, Lusail 25.2, Yas Marina 22.7. Singapore checks out (~22 s after 2025's 60 -> 80 km/h
   pit limit change, https://www.motorsport.com/f1/live-text/f1-singapore-gp-live-coverage-and-updates-race/1125751/?p=3 ),
   which also shows last year's figure is only a starting point.
-- **Estimating from the map doesn't work well enough:** pit lanes drawn in our track files are 461 m (SURF) to 744 m
+- **Estimating from the map doesn't work well enough:** pit lanes drawn in our track files are 461 m (SPSC) to 744 m
   (MOUN), but the speed limit varies by event and isn't found for 2026 (40 km/h at the Gold Coast in 2010; Rule
   D11.4.2 40 km/h at The Bend 2025, https://speedcafe.com/supercars-news-2025-the-bend-500-craig-lowndes-speeding-fine-pit-lane-details-stewards-report/ ;
   Bathurst's 32.6 s over 744 m suggests ~80 km/h), and where Natsoft's pit-in/out lines sit is unknown.
@@ -161,7 +161,7 @@ every race's "Sector and Lap Times" report: sectors and lap times per car, in-la
 - Most cars at the Gold Coast (Race 28) and Sandown (Race 31) stopped under safety cars: what a caution stop costs
   isn't measured yet (to do: compare with cars that stayed out on the same laps).
 - The results site's track codes (SPSC, SIMR, APC, and MPB2 for Bathurst) aren't the live feed's (`MOUN`), so they
-  don't settle our guessed `SURF`/`SAND`/`ADEL` codes (the map loader falls back to names anyway).
+  don't settle our guessed `SAND`/`ADEL` codes (the Gold Coast's live code did turn out to be `SPSC`) (the map loader falls back to names anyway).
 - F1: `tools/PitLoss/f1_archive.py <year>` downloads PitStopSeries and TimingData for each circuit we have a map for
   (cached in `data/recordings/f1-archive/`) and prints the table above.
 

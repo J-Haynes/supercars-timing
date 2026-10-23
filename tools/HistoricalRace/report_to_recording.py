@@ -36,6 +36,9 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, os.path.join(REPO, 'tools', 'PitLoss'))
 from natsoft_report import TIME, seconds  # noqa: E402  (same report format as the pit loss tool)
 
+# Natsoft's IDs for the two intermediates at the Gold Coast (Practice 1, 23 Oct 2026: Pos1, Pos2, Int1, Pos3, Pos4, Int2,
+# Pos5 are points 1-7). The reports only have the intermediates; using the live IDs lets these races share the live map.
+INT1, INT2 = '3', '6'
 PIT_ENTRY_BEFORE_LINE = 8.0   # seconds from pit entry to the line crossing in the pit lane (estimate)
 PIT_EXIT_SHARE_OF_S1 = 0.55   # pit exit to the end of sector 1, as a share of the car's usual sector 1 (estimate)
 SLOW = 1.30                   # a sector this much slower than the car's median is "slow"
@@ -211,7 +214,7 @@ def messages(event, key, built):
     rl = ''.join(f'<R ID="{ids[no]}" CC="0" C="{no}" S="" N="{no}" V={quoteattr(vehicle(no))}><V ID="1" B="1" N={quoteattr(name(no))} /></R>'
                  for no in sorted(report, key=lambda n: int(n)))
     out.append((t0, f'<New T="{f(t0)}" Seq="1"><M D={quoteattr(event["meeting"])} Y="Cars" />'
-                    f'<T C="{event["trackCode"]}" N={quoteattr(event["trackName"])} I="2" P="2" PI1="1" PI2="2"><TP ID="1" Y="Int1" /><TP ID="2" Y="Int2" /></T>'
+                    f'<T C="{event["trackCode"]}" N={quoteattr(event["trackName"])} I="2" P="2" PI1="{INT1}" PI2="{INT2}"><TP ID="{INT1}" Y="Int1" /><TP ID="{INT2}" Y="Int2" /></T>'
                     f'<E C="{race["code"]}" D={quoteattr(race["session"])} Y="Race" MP="N" MPD="0" L="{race["laps"]}" TY="S" ST="0" RY="Race" />'
                     f'<RL>{rl}</RL></New>'))
     grid = sorted(report, key=lambda no: (entries.get(no) or {}).get('grid') or 99)
@@ -253,10 +256,10 @@ def messages(event, key, built):
         road = 1 + sum(1 for o, (c, at) in progress.items() if o != no and (c > count or (c == count and at < t)))
         if point == '1':
             lap_split[no] = [sector, 0.0]
-            d = f'I1="{f(sector)}" I2="0.0000" S1="{f(sector)}" S2="0.0000" S3="0.0000" LL="1" LP="1"'
+            d = f'I1="{f(sector)}" I2="0.0000" S1="{f(sector)}" S2="0.0000" S3="0.0000" LL="1" LP="{INT1}"'
         elif point == '2':
             lap_split[no][1] = sector
-            d = f'I2="{f(lap_split[no][0] + sector)}" S2="{f(sector)}" LL="2" LP="2"'
+            d = f'I2="{f(lap_split[no][0] + sector)}" S2="{f(sector)}" LL="2" LP="{INT2}"'
         else:
             laps[no] = n
             line_times[no][n] = t

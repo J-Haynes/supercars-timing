@@ -1,35 +1,13 @@
 {
-  "MOUN": {
-    "name": "Mount Panorama",
+  "ADEL": {
+    "name": "Adelaide Parklands",
     "match": [
-      "MOUNT PANORAMA"
-    ],
-    "provisional": false
-  },
-  "SURF": {
-    "name": "Surfers Paradise",
-    "match": [
-      "SURFERS"
+      "ADELAIDE"
     ],
     "provisional": true
   },
-  "F1-61": {
-    "name": "Marina Bay",
-    "match": [],
-    "provisional": false
-  },
-  "F1-70": {
-    "name": "Yas Island",
-    "match": [],
-    "provisional": false
-  },
-  "F1-152": {
-    "name": "Las Vegas",
-    "match": [],
-    "provisional": false
-  },
-  "F1-65": {
-    "name": "Mexico City",
+  "F1-14": {
+    "name": "S\u00E3o Paulo",
     "match": [],
     "provisional": false
   },
@@ -38,14 +16,41 @@
     "match": [],
     "provisional": false
   },
-  "F1-14": {
-    "name": "S\u00e3o Paulo",
+  "F1-152": {
+    "name": "Las Vegas",
+    "match": [],
+    "provisional": false
+  },
+  "F1-22": {
+    "name": "Monaco",
+    "match": [],
+    "provisional": false
+  },
+  "F1-61": {
+    "name": "Marina Bay",
+    "match": [],
+    "provisional": false
+  },
+  "F1-65": {
+    "name": "Mexico City",
+    "match": [],
+    "provisional": false
+  },
+  "F1-70": {
+    "name": "Yas Island",
     "match": [],
     "provisional": false
   },
   "F1-9": {
     "name": "Austin",
     "match": [],
+    "provisional": false
+  },
+  "MOUN": {
+    "name": "Mount Panorama",
+    "match": [
+      "MOUNT PANORAMA"
+    ],
     "provisional": false
   },
   "SAND": {
@@ -55,16 +60,11 @@
     ],
     "provisional": true
   },
-  "ADEL": {
-    "name": "Adelaide Parklands",
+  "SPSC": {
+    "name": "Surfers Paradise",
     "match": [
-      "ADELAIDE"
+      "SURFERS"
     ],
-    "provisional": true
-  },
-  "F1-22": {
-    "name": "Monaco",
-    "match": [],
     "provisional": false
   }
 }

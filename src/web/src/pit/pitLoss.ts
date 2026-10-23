@@ -35,7 +35,7 @@ const PRIORS: Record<string, Prior> = {
     byStop: [[61.4, 64.0, 66.8], [63.4, 66.7, 68.1], [62.0, 66.4, 68.1], [66.0, 67.8, 68.8], [59.7, 67.0, 68.6], [54.3, 61.3, 68.3]],
     source: 'Bathurst 1000 Race 30, 2026 (our recording, 155 stops)',
   },
-  SURF: { byStop: [[37.7, 38.8, 44.8], [46.6, 50.2, 54.9]], source: `Gold Coast Races 28-29 (${NATSOFT_2025}, 57 stops)` },
+  SPSC: { byStop: [[37.7, 38.8, 44.8], [46.6, 50.2, 54.9]], source: `Gold Coast Races 28-29 (${NATSOFT_2025}, 57 stops)` },
   SAND: { byStop: [[36.5, 37.7, 39.8], [46.1, 48.2, 49.1]], source: `Sandown Races 30-31 (${NATSOFT_2025}, 46 stops)` },
   ADEL: {
     byStop: [[27.3, 28.6, 31.1], [42.1, 43.8, 45.1]],

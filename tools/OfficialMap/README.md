@@ -7,9 +7,9 @@ OSM's (or fills in a missing one). Visitor things on the map (gates, toilets, ba
 
 ```bash
 pdftocairo -v                                   # needs poppler-utils
-cd src/web && npx tsx ../../tools/OfficialMap/official-map.ts <map.pdf> SURF          # lists the round markers
-cd src/web && npx tsx ../../tools/OfficialMap/official-map.ts <map.pdf> SURF ../../tools/TrackBuilder/official/SURF.corners.json
-dotnet run --project tools/TrackBuilder -- <the track's usual options> --official tools/TrackBuilder/official/SURF.json
+cd src/web && npx tsx ../../tools/OfficialMap/official-map.ts <map.pdf> SPSC          # lists the round markers
+cd src/web && npx tsx ../../tools/OfficialMap/official-map.ts <map.pdf> SPSC ../../tools/TrackBuilder/official/SPSC.corners.json
+dotnet run --project tools/TrackBuilder -- <the track's usual options> --official tools/TrackBuilder/official/SPSC.json
 ```
 
 - The track file needs `origin` (TrackBuilder writes it since Oct 2026) to convert back to latitude/longitude.
@@ -22,4 +22,4 @@ dotnet run --project tools/TrackBuilder -- <the track's usual options> --officia
 
 | Track | Map | Fit (mean / max) | Lap (official / ours) |
 |---|---|---|---|
-| SURF | SC26-GC-Track_Map-5 (Gold Coast 500, 2026) | 2.8 m / 8.4 m | 2,986 m / 2,985 m |
+| SPSC | SC26-GC-Track_Map-5 (Gold Coast 500, 2026) | 2.8 m / 8.4 m | 2,986 m / 2,985 m |

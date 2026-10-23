@@ -64,7 +64,7 @@ const SUPERCARS_EVENTS: Omit<UpcomingEvent, 'startDate' | 'endDate' | 'utcOffset
     format: 'Enduro Cup · 161 laps, two drivers per car',
   },
   {
-    name: 'Boost Mobile Gold Coast 500', venue: 'Surfers Paradise Street Circuit', location: 'Surfers Paradise, QLD', trackCode: 'SURF',
+    name: 'Boost Mobile Gold Coast 500', venue: 'Surfers Paradise Street Circuit', location: 'Surfers Paradise, QLD', trackCode: 'SPSC',
     format: 'Finals round 1 · two 250 km races',
     info: {
       round: 'Round 12 of 14 · Finals round 1 of 3',
