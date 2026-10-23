@@ -113,6 +113,8 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 - `.claude/`: `skills/steward/SKILL.md` (the PR routine) and `hooks/session-start.sh` (cloud sessions only: installs
   the .NET 10 SDK from Ubuntu's archive, since Microsoft's download host is blocked there, then `dotnet restore` and
   `npm install`, so `dotnet test` and `npm run build` work in the cloud; recordings still don't exist there).
+- `README.md`: the public face of the repo (what it is, screenshots, then how to run it); screenshots in
+  `docs/images/` (taken from replays). Update it when a headline feature or a run command changes.
 - `deploy/`: the systemd user service and its README (install, logs, Tailscale serve, Cloudflare Tunnel).
 - `tools/HistoricalRace` (past races as replayable recordings, rebuilt from Natsoft's "Sector and Lap Times" reports +
   a cited event file, e.g. `gc2025.json`; what's estimated is in its docstring), `tools/MapDelaySim` (the map with a
