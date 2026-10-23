@@ -81,7 +81,7 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 - `src/web` (React 19 + Vite + TypeScript, strict). `src/types.ts` mirrors the C# DTOs **by hand**: update it when
   `CarRow`/`TimingSnapshot`/`SessionInfo` change. Key modules:
   - Data/logic: `useTiming.ts` (SignalR), `useDelayedUpdate.ts` (broadcast delay), `liveGaps.ts` (live gaps, road
-    order, `raceOrder`), `insights.ts` (race feed), `battles.ts`, `chartSelection.ts`, `penalties.ts`, `championship.ts` + `finals.ts` (points data, cited),
+    order, `raceOrder`), `insights.ts` (race feed), `battles.ts`, `chartSelection.ts`, `penalties.ts`, `championship.ts` + `finals.ts` + `teams.ts` (points data, cited),
     `startingGrid.ts`, `raceSummary.ts`, `chartData.ts`, `driverStats.ts` (stints, recent pace), `session.ts` (`isRace`, `flagKind`, `raceLaps`,
     `minDriverLaps`, `cautionPeriods`), `calendar.ts` (upcoming events and session times), `towerLayout.ts`.
   - Pit strategy (`pit/`, experimental estimates): `pitLoss.ts` (what a stop costs: this race's stops, else last
@@ -288,7 +288,9 @@ the server in live mode by hand.
   `useFinalsData`, only races before the session shown). **Provisional points only during the round's two races,
   from the green flag** (owner's rule): their own "Race" column, ▲/▼ against the standings now, running position;
   otherwise only earned points. Points on offer per finishing place (`PointsOnOffer`). Top 7 advance, then 4 to the
-  Grand Final. Only this season's races count (`racesOf`: last year's rebuilt Gold Coast races matched too).
+  Grand Final. A **Drivers | Teams** switch (owner's request) shows the teams' championship (`teams.ts`: Supercars'
+  standings after Bathurst, cited, each entry's cars and garages; races at the round aren't added) wherever the round
+  has a `TEAMS_ROUNDS` entry. Only this season's races count (`racesOf`: last year's rebuilt Gold Coast races matched too).
 - **Charts** (`RaceCharts.tsx`, `LineChart.tsx`, `ChartLab.tsx` large view; colours validated with the dataviz palette
   script against #12161b): gap, lap times, position, battle (trend only over laps since either car's last stop).
   Lap axis runs to the race distance. The small gap chart leaves each car's pit lap and the three after it out of the
@@ -310,9 +312,10 @@ the server in live mode by hand.
   With a 20-40 s delay (watching a stream) positions are known 96-100 % of the time under green (Supercars, Race 30,
   `tools/MapDelaySim`); F1 dots never wait at a mini-sector (`tools/F1MapEval`, real positions). Cars leaving the pits
   start their stretch at pit-out (`rejoined()`). Numbers and what's left: docs/PLANNING.md, "Map with a broadcast delay".
-- **Pit lane on the map** (`useCarPlacement.ts`, both maps and series): cars in the pits sit at their own spot along the
-  pit lane (`garageSpots`, by car number over its middle 60 %; they used to be re-handed out every frame, so cars hopped
-  as others came and went). Leaving, a car whose pit lane rejoins partway along its stretch (`leavingPits`) drives from
+- **Pit lane on the map** (`useCarPlacement.ts`, both maps and series): cars in the pits sit at their own garage along
+  the middle 60 % of the pit lane (`garageSpots`; they used to be re-handed out every frame, so cars hopped as others
+  came and went). Supercars: the round's official garage order (`teams.ts` `TEAMS_ROUNDS`, garage 1 nearest pit exit,
+  set by the teams' championship); rounds without one, and F1, by car number. Leaving, a car whose pit lane rejoins partway along its stretch (`leavingPits`) drives from
   its spot to the end of the pit lane for the stretch's simulated time up to the exit, then on from the exit, reaching
   the next point when the timing says (it used to appear on track at the line and race beside the pit lane: Gold Coast
   P1). `TrackModel.pitLane` orients the lane entry -> exit (Bathurst's file lists it backwards, so its exit was the
@@ -466,6 +469,9 @@ the server in live mode by hand.
 - **Practice 1 (23 Oct):** missed for its first ~13 min: Natsoft started requiring a token (fixed, see `NatsoftClient`).
   Natsoft's code for the track is `SPSC`: the map, scenery, pit-loss figures and calendar now use it (they were `SURF`,
   and the pit rejoin ghost fell back to its wide guess). The rebuilt 2025 races use `SPSC` and the live IDs 3/6 too.
+- **Teams and pit lane order:** `teams.ts` has the standings after Bathurst and the Gold Coast garage order (Supercars'
+  article). For Sandown add a `TEAMS_ROUNDS` entry with its published order and the teams' standings after the Gold
+  Coast (Supercars re-orders the pit lane after each event).
 - **Before the weekend:** done: the Enduro Cup winner (Brown, #888) and the official starting points are in
   `finals.ts`. Optional: a `startingGrid.ts` entry for each race once the grid is known (without one, positions
   gained count from Natsoft's order before the start). For Sandown, add a `FINALS_ROUNDS` entry with its official

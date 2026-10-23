@@ -13,6 +13,7 @@ import { CrossingLog, knownPosition, type Crossing, type MapFeed } from './cross
 import { useReferenceFallback } from './useReferenceFallback'
 import { gridPlaces, gridSlot, launchDistance, onGrid, preStartDistance, type GridSlot } from './startGrid'
 import { standingRestart } from './standingRestart'
+import { teamsRoundFor } from '../teams'
 
 const PIT_SPACING = 70
 /** Garages span this part of the pit lane (shares of its length from the entry): the ends are entry and exit roads. */
@@ -139,9 +140,11 @@ export function useCarPlacement(track: TrackDefinition, update: TimingUpdate, li
     return { car, kind: 'track', distance: model.wrap(sm.shown), dim: false, lateral: slot.lateral * fan }
   }
 
-  // Each car's own spot in the pit lane (by car number, like garages), so cars don't shuffle along it as others come
-  // and go. Back of the field first, so slots by the line (tracks without a pit lane) are handed out in a stable order.
-  const garages = useMemo(() => garageSpots(model, mapCars), [model, mapCars.map((c) => c.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps -- the ids are the key
+  // Each car's own garage in the pit lane, so cars don't shuffle along it as others come and go: the round's official
+  // order where we have it (teams.ts), else by car number. Back of the field first, so slots by the line (tracks
+  // without a pit lane) are handed out in a stable order.
+  const garageOrder = isF1 ? undefined : teamsRoundFor(timing.session.meeting)?.garages
+  const garages = useMemo(() => garageSpots(model, mapCars, garageOrder), [model, mapCars.map((c) => c.id).join(), garageOrder]) // eslint-disable-line react-hooks/exhaustive-deps -- the ids are the key
   const garageOf = (car: CarRow) => garages.get(car.id)
   const placements: Placement[] = []
   let pitIndex = 0
@@ -257,12 +260,19 @@ export function knownDistance(model: TrackModel, car: CarRow, around: [Crossing,
   return knownPosition(model, a, b, now)
 }
 
-/** Garage spots: metres along the pit lane for each car, by car number, over its middle part. Empty without a pit lane. */
-export function garageSpots(model: TrackModel, cars: CarRow[]): Map<string, number> {
+/**
+ * Garage spots: metres along the pit lane for each car, spread over its middle part. With `order` (car numbers by
+ * garage, garage 1 nearest pit exit: the teams' championship leaders, teams.ts) garage 1 is the spot nearest the exit
+ * and cars not in it follow the listed ones; without it, by car number from the entry. Empty without a pit lane.
+ */
+export function garageSpots(model: TrackModel, cars: CarRow[], order?: string[]): Map<string, number> {
   const pit = model.pitLane
   if (!pit) return new Map()
-  const sorted = [...cars].sort((x, y) => (parseInt(x.carNumber, 10) || 0) - (parseInt(y.carNumber, 10) || 0) || x.carNumber.localeCompare(y.carNumber))
-  return new Map(sorted.map((c, i) => [c.id, pit.length * (GARAGES_FROM + (GARAGES_TO - GARAGES_FROM) * (i + 0.5) / sorted.length)]))
+  const byNumber = (x: CarRow, y: CarRow) => (parseInt(x.carNumber, 10) || 0) - (parseInt(y.carNumber, 10) || 0) || x.carNumber.localeCompare(y.carNumber)
+  const garage = (c: CarRow) => { const i = order?.indexOf(c.carNumber) ?? -1; return i < 0 ? Infinity : i }
+  const sorted = [...cars].sort((x, y) => garage(x) - garage(y) || byNumber(x, y))
+  const share = (i: number) => (i + 0.5) / sorted.length
+  return new Map(sorted.map((c, i) => [c.id, pit.length * (order ? GARAGES_TO - (GARAGES_TO - GARAGES_FROM) * share(i) : GARAGES_FROM + (GARAGES_TO - GARAGES_FROM) * share(i))]))
 }
 
 /**
