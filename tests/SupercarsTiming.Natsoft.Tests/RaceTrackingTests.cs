@@ -27,6 +27,34 @@ public class RaceTrackingTests
     }
 
     [Fact]
+    public void A_lap_time_of_question_mark_on_a_flying_lap_is_a_deleted_lap_and_clears_the_last_lap()
+    {
+        // Gold Coast Practice 1 (23 Oct 2026): a kerb hop withholds the lap time and the last sector at the line.
+        // Before, "?" didn't parse and the previous lap's time stayed on as the last lap.
+        var s = Fresh();
+        Car(s, 1100, """L="11" I="78.1000" S3="28.9000" LP="M" """);
+        Car(s, 1180, """L="12" I="?" S3="?" LP="M" """);
+
+        var car = s.Cars["22"];
+        Assert.True(car.LastLapDeleted);
+        Assert.Equal(0, car.LastLap);
+        Assert.Equal(0, car.S3);
+        Assert.Equal(1, car.DeletedLaps);
+        Assert.True(car.LapHistory[^1].Deleted);
+        Assert.Equal(0, car.LapHistory[^1].Time);
+        Assert.True(TimingSnapshot.From(s).Cars.Single().LastLapDeleted);
+
+        Car(s, 1258, """L="13" I="77.9000" LP="M" """);
+        Assert.False(car.LastLapDeleted);
+        Assert.Equal(77.9, car.LastLap);
+
+        // An in-lap without a time isn't a deleted lap (at Bathurst "?" came on in- and out-laps).
+        Car(s, 1345, """L="14" I="?" P="Y" PF="P" LP="M" """);
+        Assert.False(car.LastLapDeleted);
+        Assert.Equal(1, car.DeletedLaps);
+    }
+
+    [Fact]
     public void Scheduled_laps_come_from_the_session_element()
     {
         Assert.Equal(161, Fresh().ScheduledLaps);

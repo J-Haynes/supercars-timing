@@ -250,7 +250,22 @@ public sealed class TimingState
         // off after a swap back). Trust it over our count; it's in snapshots too, so it survives connecting mid-race.
         if (Int(d, "LCD") is int lcd) c.LapsByDriver[c.DriverIndex] = lcd;
         if (leaving) c.StintStartLap = c.Laps;
-        c.LastLap = Dbl(d, "I") ?? c.LastLap;
+        // Lap time "?": Natsoft has the lap but withholds its time. On a lap that started and ended on track (not in
+        // the pits, not an out-lap) that's a deleted lap: at the 2026 Gold Coast 500 kerb hops and chicane cuts, ~10 %
+        // of laps in Practice 1 and SuperUte qualifying, at full pace through every timing point. At Bathurst "?" came
+        // almost only on in- and out-laps (docs/PROTOCOL.md). LapsSincePit only counts up at the line, after this.
+        if (Str(d, "I") == "?")
+        {
+            c.LastLap = 0; // not the previous lap's time, which it kept before
+            var deleted = !c.InPit && c.LapsSincePit > 0;
+            if (deleted && !_inSnapshot && c.Laps > lapsBefore) c.DeletedLaps++;
+            c.LastLapDeleted = deleted;
+        }
+        else if (Dbl(d, "I") is double lapTime)
+        {
+            c.LastLap = lapTime;
+            c.LastLapDeleted = false;
+        }
         c.BestLap = Dbl(d, "FI") ?? c.BestLap;
         c.BestLapNo = Int(d, "FL") ?? c.BestLapNo;
         c.Gap = Dbl(d, "GI") ?? c.Gap;
@@ -261,9 +276,9 @@ public sealed class TimingState
         c.LiveInterval = Dbl(d, "LGNI") ?? c.LiveInterval;
         c.LiveGapLaps = Int(d, "LGL") ?? c.LiveGapLaps;
         c.LiveIntervalLaps = Int(d, "LGNL") ?? c.LiveIntervalLaps;
-        c.S1 = Dbl(d, "S1") ?? c.S1;
-        c.S2 = Dbl(d, "S2") ?? c.S2;
-        c.S3 = Dbl(d, "S3") ?? c.S3;
+        c.S1 = Seconds(d, "S1") ?? c.S1;
+        c.S2 = Seconds(d, "S2") ?? c.S2;
+        c.S3 = Seconds(d, "S3") ?? c.S3;
         c.BestS1 = Dbl(d, "FS1") ?? c.BestS1;
         c.BestS2 = Dbl(d, "FS2") ?? c.BestS2;
         c.BestS3 = Dbl(d, "FS3") ?? c.BestS3;
@@ -282,7 +297,7 @@ public sealed class TimingState
         if (!_inSnapshot && c.Laps > lapsBefore && c.Laps > 0 && (c.LapHistory.Count == 0 || c.LapHistory[^1].Lap < c.Laps))
         {
             c.LapHistory.Add(new LapEntry(c.Laps, c.LastLap, c.Position, c.Gap, c.GapLaps, c.DriverIndex,
-                c.InPit || c.PitLog.Any(p => p.Lap == c.Laps), c.LastLineCrossing > 0 ? c.LastLineCrossing : Now));
+                c.InPit || c.PitLog.Any(p => p.Lap == c.Laps), c.LastLineCrossing > 0 ? c.LastLineCrossing : Now, c.LastLapDeleted));
         }
     }
 
@@ -363,6 +378,10 @@ public sealed class TimingState
     static int? Int(XElement e, string a) =>
         int.TryParse(Str(e, a), NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null;
 
+    /// <summary>A time attribute: its value, 0 for "?" (Natsoft withholds it, e.g. a deleted lap's last sector), or
+    /// null when it isn't in this update.</summary>
+    static double? Seconds(XElement e, string a) => Str(e, a) == "?" ? 0 : Dbl(e, a);
+
     static double? Dbl(XElement e, string a) =>
         double.TryParse(Str(e, a), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
 }
@@ -407,6 +426,10 @@ public sealed class CarState
     /// <summary>Each completed lap seen live, oldest first (for lap time and gap charts).</summary>
     public List<LapEntry> LapHistory { get; } = [];
     public double LastLap { get; set; }
+    /// <summary>The last lap's time was withheld ("?") on a lap that wasn't an in- or out-lap: a deleted lap.</summary>
+    public bool LastLapDeleted { get; set; }
+    /// <summary>Deleted laps seen live this session.</summary>
+    public int DeletedLaps { get; set; }
     public double BestLap { get; set; }
     public int BestLapNo { get; set; }
     /// <summary>Gap to the leader in seconds. See <see cref="GapLaps"/> when lapped.</summary>
@@ -507,6 +530,7 @@ public sealed class CarState
         LapHistory.AddRange(newLaps.Where(l => LapHistory.Count == 0 || l.Lap > LapHistory[^1].Lap));
         DriverChangedAt = old.DriverChangedAt;
         LapsSincePit = old.LapsSincePit;
+        DeletedLaps = Math.Max(DeletedLaps, old.DeletedLaps);
         foreach (var (k, v) in old.SegmentSeconds) SegmentSeconds[k] = v;
         foreach (var (k, v) in old.RawSegmentSeconds) RawSegmentSeconds[k] = v;
         foreach (var (k, v) in old.BestSegments) BestSegments[k] = v;
@@ -522,9 +546,10 @@ public sealed record FlagChange(double Time, string Flag);
 
 /// <summary>
 /// One completed lap: lap number, lap time (s), official position and gap to the leader at the line (GI/GL),
-/// driver index, whether the car pitted on this lap, and when it crossed the line (Natsoft time).
+/// driver index, whether the car pitted on this lap, when it crossed the line (Natsoft time), and whether the lap was
+/// deleted (time withheld, <see cref="CarState.LastLapDeleted"/>; Time is then 0).
 /// </summary>
-public sealed record LapEntry(int Lap, double Time, int Position, double Gap, int GapLaps, string Driver, bool Pitted, double At);
+public sealed record LapEntry(int Lap, double Time, int Position, double Gap, int GapLaps, string Driver, bool Pitted, double At, bool Deleted = false);
 
 public sealed record LapRecord(double Seconds, string Driver, string Vehicle);
 

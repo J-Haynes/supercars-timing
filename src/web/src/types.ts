@@ -126,6 +126,10 @@ export interface CarRow {
   /** Starting grid position; 0 = unknown. */
   gridPosition?: number
   retired?: boolean
+  /** Natsoft: the last lap was deleted (time withheld: a kerb hop or chicane cut at the Gold Coast); lastLap is 0. */
+  lastLapDeleted?: boolean
+  /** Natsoft: deleted laps seen live this session. */
+  deletedLaps?: number
 }
 
 export interface PitStopRow {
@@ -186,6 +190,8 @@ export interface LapEntry {
   driver: string
   pitted: boolean
   at: number
+  /** Deleted lap (time withheld); time is 0. */
+  deleted?: boolean
 }
 
 export interface CarLaps {
