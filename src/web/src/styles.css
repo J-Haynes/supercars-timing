@@ -1092,6 +1092,16 @@ html { scrollbar-gutter: stable; }
 .ghost-row-note { margin-left: 8px; color: var(--muted); font-size: 11px; }
 .ghost-row-net { color: var(--text); }
 
+/* Qualifying cut-off (the viewer's): a red dashed line under the last car through, as the Finals elimination line. */
+.tower tbody tr.cutoff-row td { padding: 0 10px; height: 20px; border-top: 2px dashed var(--red); background: rgba(255, 77, 79, .05); }
+.cutoff-label { color: var(--red); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.cutoff-tools { margin-left: 10px; display: inline-flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.cutoff-row:hover .cutoff-tools, .cutoff-tools:focus-within { opacity: 1; }
+.cutoff-tools button { width: 18px; height: 16px; padding: 0; line-height: 1; font-size: 12px; border-radius: 3px; border: 1px solid var(--line-strong); background: var(--raise); color: var(--text); cursor: pointer; }
+.cutoff-tools button:disabled { opacity: .4; cursor: default; }
+@media (hover: none) { .cutoff-tools { opacity: 1; } }
+.tower tbody tr.below-cut td { opacity: .65; }
+
 /* Narrow maps (the map column at its narrowest, phones): the toolbar leaves the map and becomes a tidy bar above it,
    instead of ragged right-aligned rows over a third of the map. By the map's own width (container query), so it works
    wherever the map is. Row 1: the view switch, full width; row 2: the Layers menu and the pit rejoin (or follow) picker. */

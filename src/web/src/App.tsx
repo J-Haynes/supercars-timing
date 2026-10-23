@@ -67,6 +67,8 @@ export default function App() {
         onColumns={(columns) => updateSettings({ columns })}
         focusCard={settings.focusCard}
         onFocusCard={(focusCard) => updateSettings({ focusCard })}
+        qualifyingCut={settings.qualifyingCut}
+        onQualifyingCut={(qualifyingCut) => updateSettings({ qualifyingCut })}
       />
       {preview ? (
         <main><EventPreview event={preview} onLive={() => setPreview(null)} /></main>

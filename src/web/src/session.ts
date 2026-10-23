@@ -11,6 +11,14 @@ export function isShootout(sessionName: string, sessionType: string): boolean {
 }
 
 /**
+ * Qualifying (not the Shootout): Natsoft's session name says so ("Qualifying (Race 31)" in the 2026 timetable; the
+ * session type Natsoft sends for qualifying hasn't been seen yet, docs/PROTOCOL.md), F1's type is "Qualifying".
+ */
+export function isQualifying(sessionName: string, sessionType: string): boolean {
+  return !isRace(sessionType) && !isShootout(sessionName, sessionType) && /qualif/i.test(`${sessionName} ${sessionType}`)
+}
+
+/**
  * Cars that have taken the chequered flag in practice, qualifying or a Shootout. Neither feed says so per car
  * (Natsoft has no field for it that we know of, docs/PROTOCOL.md), so it's worked out:
  * - once the session's flag is chequered, a car has finished when it crosses the line after the flag came out

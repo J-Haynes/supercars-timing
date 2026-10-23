@@ -99,6 +99,8 @@ export function SessionView({ update, live, history, settings, updateSettings, t
             actions={{ pitGhostCar: settings.pitGhostCar, onPitGhost: (pitGhostCar) => updateSettings({ pitGhostCar }), chart }}
             pitGhost={ghost}
             signals={signals}
+            cutoff={settings.qualifyingCut}
+            onCutoff={(qualifyingCut) => updateSettings({ qualifyingCut })}
           />
           {driverView && (
             <DriverDialog timing={timing} {...driverView} history={history} onClose={() => setDriverView(null)}
