@@ -47,6 +47,7 @@ public class RecordingRegressionTests
 {
     const string Race = "Supercars Championship - Race 30";
     const string Practice6 = "Practice 6 (All Drivers)";
+    const string GoldCoastPractice1 = "Supercars Championship - Practice 1";
 
     [RecordingFact(Race)]
     public void Race_pit_log_matches_Natsofts_pit_count_with_no_duplicates_or_stuck_stops()
@@ -136,5 +137,23 @@ public class RecordingRegressionTests
         });
         var times = s.Cars.Values.SelectMany(c => c.LapHistory).Where(l => l.Time > 0).Select(l => l.Time).Order().ToList();
         Assert.InRange(times[times.Count / 2], 120, 140);   // a typical Bathurst race lap
+    }
+
+    [RecordingFact(GoldCoastPractice1)]
+    public void Gold_Coast_deleted_laps_are_flagged_and_never_show_the_previous_laps_time()
+    {
+        // Kerb hops at the Gold Coast: Natsoft sends I="?" at the line. #19 (Payne) lost laps 11 and 14, at 77.5 s
+        // and 79.9 s pace through every timing point.
+        var s = Recordings.Replay(GoldCoastPractice1);
+        var payne = TimingSnapshot.From(s).Cars.Single(c => c.CarNumber == "19");
+        var laps = s.Cars[payne.Id].LapHistory;
+        Assert.Contains(laps, l => l.Lap == 11 && l.Deleted && l.Time == 0);
+        Assert.Contains(laps, l => l.Lap == 14 && l.Deleted && l.Time == 0);
+        Assert.True(payne.DeletedLaps >= 2);
+        // Every deleted lap has no time; no lap repeats the one before it (the old bug).
+        var all = s.Cars.Values.SelectMany(c => c.LapHistory.Zip(c.LapHistory.Skip(1))).ToList();
+        Assert.DoesNotContain(all, p => p.Second.Time > 0 && p.Second.Time == p.First.Time);
+        Assert.All(s.Cars.Values.SelectMany(c => c.LapHistory).Where(l => l.Deleted), l => Assert.Equal(0, l.Time));
+        Assert.InRange(s.Cars.Values.Sum(c => c.DeletedLaps), 15, 25);
     }
 }

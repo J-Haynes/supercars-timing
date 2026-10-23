@@ -61,7 +61,8 @@ public sealed record TimingSnapshot(
                     c.PitLog.Select(p => new PitStopRow(p.Lap, p.InAt, p.OutAt, Math.Round(p.Seconds, 1), Name(p.DriverIn), Name(p.DriverOut))).ToArray(),
                     c.RoadPosition,
                     penalties[e?.CarNumber ?? c.Id].ToArray(),
-                    LastLineAt: c.LastLineCrossing);
+                    LastLineAt: c.LastLineCrossing,
+                    LastLapDeleted: c.LastLapDeleted, DeletedLaps: c.DeletedLaps);
             })
             .ToList();
 
@@ -216,7 +217,12 @@ public sealed record CarRow(
     bool Retired = false,
     /// <summary>Time of the car's last control-line crossing (Natsoft's D/@T), pit lane included; 0 = not seen. Unlike
     /// LapStartAt it isn't cleared when the car pits, so it says whether the car crossed after the chequered flag.</summary>
-    double LastLineAt = 0);
+    double LastLineAt = 0,
+    // Natsoft only:
+    /// <summary>The last lap was deleted (time withheld: kerb hop or chicane cut at the Gold Coast); LastLap is 0.</summary>
+    bool LastLapDeleted = false,
+    /// <summary>Deleted laps seen live this session.</summary>
+    int DeletedLaps = 0);
 
 /// <summary>A pit stop. Seconds = time in pit lane, 0 while the car is still in. Driver names differ on a swap.</summary>
 public sealed record PitStopRow(int Lap, double InAt, double OutAt, double Seconds, string DriverIn, string DriverOut);

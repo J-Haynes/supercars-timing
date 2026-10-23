@@ -146,7 +146,8 @@ passes the pit lane (Bathurst 1000, car 9's stop: `LP` 18 -> 24 within 32 s, `L`
 | `GL`, `GNL` | Can be `?` before a gap in laps is known |
 | `FT` | Time the best lap was set |
 | `PN` | `0` -> `1` once per car at its first line crossing in the race; meaning unclear |
-| `TY`, `TSL`, `SN`, `LT`, `FTY` | Not yet identified (constant in the Bathurst 1000 so far; `FTY="S"` when a best lap is set) |
+| `I="?"` | **Lap time withheld.** At the line, with `S3="?"` (and `I1`/`I2`/`S1`/`S2` if not reached). On a lap that isn't an in- or out-lap it's a **deleted lap**: Gold Coast 2026, 21 of 210 laps in Supercars Practice 1 and 10 of 101 in SuperUte qualifying, complete laps through all 7 points at full pace (#19 lap 11: 77.5 s), i.e. kerb hops / chicane cuts, which delete the lap in practice and qualifying. At Bathurst `?` came almost only on in- and out-laps (≤ 0.7 % of other laps). Natsoft sends nothing else about it (no race control text). `TimingState` sets `LastLap` and those sectors to 0 and `LastLapDeleted` |
+| `TY`, `TSL`, `SN`, `LT`, `FTY` | Not yet identified (constant in the Bathurst 1000; `FTY="S"` when a best lap is set). `TY` isn't the tyre: at the Gold Coast it went `S` -> `W` for two cars after the chequered flag, on track |
 
 ## Open questions
 
