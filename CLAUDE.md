@@ -416,6 +416,13 @@ the server in live mode by hand.
   and the launch aimed there (cars then jumped ~300 m at point 1; with the fill: 1 m). A replay snapshot's `now` is set to the replay time (it was the
   last message's time: 4 min behind before the Bathurst start, when the feed was quiet). The page moves the
   time and polls `/replay?t=` every 250 ms; the server keeps a cursor per viewer.
+- **Hide results** (owner's request, Oct 2026; `spoilers.ts`, one site-wide setting in its own storage key like
+  `timeZone.ts`, kept across refreshes): a switch on results pages and the replay bar, only where replays are allowed.
+  On: a results page keeps the classification at its full height with every cell an opaque bar (headers readable,
+  owner's call: same height, no "watch the replay" card) and its tabs disabled; the replay's
+  scrubber only marks what the replay has reached (safety car / red flag bands end at its moment, lap ticks, the
+  chequered flag). The leaderboard, map and feed show the replay's moment anyway. Anything new that shows a session's
+  later state on these pages should respect it.
 - **Between sessions** (live page, feed "waiting"; `NextSession.tsx`, both series): one job, readable from the second
   monitor: the event's name as the headline, the next session, its time with the Your time / Track time switch, a
   big countdown, over the track orbiting in 3D (`TrackMap3D` `bare`: no toolbar or overlays, attribution kept). It

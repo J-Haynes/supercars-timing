@@ -15,6 +15,17 @@ export function SimpleSwitch({ simple, onSimple }: { simple: boolean; onSimple: 
   )
 }
 
+/** Hide results (spoilers.ts): on replays and results pages, nothing that gives away how the session ends. */
+export function HideResultsSwitch({ hide, onHide }: { hide: boolean; onHide: (hide: boolean) => void }) {
+  return (
+    <label className="switch" title="Hide results: the results page and the replay's timeline only show what the replay has reached. The leaderboard stays.">
+      <input type="checkbox" checked={hide} onChange={(e) => onHide(e.target.checked)} />
+      <span className="track" aria-hidden><span className="thumb" /></span>
+      Hide results
+    </label>
+  )
+}
+
 /**
  * The live page's toolbar: what's changed while watching (Simple mode, the broadcast delay) and the way into Settings.
  * Set-once options (the on-track card, tower columns) are in the Settings drawer, also reachable in replays.

@@ -797,6 +797,14 @@ body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 .lap-deleted { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
   border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 4px; }
 .stat-value.lap-deleted-stat { color: var(--muted); }
+/* Hide results: the classification at its normal size, every cell an opaque bar (headers stay readable). */
+.results-masked { position: relative; user-select: none; }
+.results-masked td { color: transparent !important; background: linear-gradient(var(--line-strong), var(--line-strong)) center / 72% 10px no-repeat; }
+.results-masked td * { visibility: hidden; }
+.results-masked-label { position: absolute; top: 44px; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 6px 12px;
+  border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--muted); font-size: 12px; }
+.results-tabs button:disabled { cursor: default; opacity: .5; }
+.results-actions .switch { margin-right: 4px; }
 .championship-tabs { max-width: 220px; margin: 0 0 8px; }
 .standings-row { display: grid; grid-template-columns: 26px 1fr 84px 52px; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; }
 .standings.live .standings-row { grid-template-columns: 26px 30px 1fr 44px 40px 48px; }
