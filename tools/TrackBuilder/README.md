@@ -19,13 +19,13 @@ lands mid-Conrod Straight at ~295 km/h simulated, which matches the real speed t
 
 ## Usage
 
-Gold Coast (no recording yet, so provisional):
+Gold Coast (Natsoft code `SPSC`, from the Practice 1 recording, 23 Oct 2026):
 
 ```bash
 dotnet run --project tools/TrackBuilder -- \
-  --code SURF --relation 9325885 --name "Surfers Paradise" --match SURFERS \
-  --control-way "Gold Coast Highway" --lap-time 71 --elevation none --scenery 900 \
-  --official tools/TrackBuilder/official/SURF.json
+  --code SPSC --relation 9325885 --name "Surfers Paradise" --match SURFERS \
+  --control-way "Gold Coast Highway" --elevation none --scenery 900 \
+  --official tools/TrackBuilder/official/SPSC.json --recording data/recordings/V8SUPER_20261023_125815.jsonl
 ```
 
 Bathurst (from a recording; scenery on the hill, see "Terrain" below):
@@ -105,7 +105,7 @@ map draws it as a side view of the lap with the cars on it (`ElevationStrip.tsx`
   McPhillamy Park). Wikipedia gives a 174 m vertical difference between the highest and lowest points
   (https://en.wikipedia.org/wiki/Mount_Panorama_Circuit).
 - **Street circuits:** SRTM measures the surface, rooftops and trees included. At Surfers Paradise it gave 0-23 m
-  of bumps on a flat seaside course, so `SURF` is built with `--elevation none` and the map shows no strip there.
+  of bumps on a flat seaside course, so `SPSC` is built with `--elevation none` and the map shows no strip there.
   Look at the raw cache before trusting heights on any circuit lined with buildings.
 - F1 tracks have no heights yet: they aren't geolocated, so OpenTopoData can't be asked. F1's archived car
   positions may include a height (`Z`); `tools/F1TrackBuilder` could use that.
@@ -199,14 +199,17 @@ Track geometry © OpenStreetMap contributors, available under the ODbL.
 | Code | Circuit | OSM relation |
 |---|---|---|
 | `MOUN` | Mount Panorama, Bathurst | 6942508 |
-| `SURF` | Surfers Paradise (Gold Coast 500). Provisional; control line estimated mid Gold Coast Highway; no elevation | 9325885 |
+| `SPSC` | Surfers Paradise (Gold Coast 500). From Practice 1 (2026); control line estimated mid Gold Coast Highway; no elevation | 9325885 |
 | `SAND` | Sandown (Sandown 500). Provisional. No circuit relation in OSM: built from ways (`--ways`); the line is OSM's "Supercars Start/Finish Line" node; corners T1-T13 from OSM's turn nodes | ways 25927060, 770953497, 770953498 |
 | `ADEL` | Adelaide Parklands (Grand Final, 2026 layout). Provisional; line estimated level with the middle of the pit lane; corner names from Wikipedia, placed by hand (`corners/ADEL.json`) | 3121459 |
 
 ## Gold Coast weekend checklist (23-25 Oct 2026)
 
-The Gold Coast track file (`SURF`) is provisional: no recording at Surfers Paradise exists yet, so the web map places
-the timing points itself from live pace a lap or two into the first session (`map/calibrate.ts`).
+**Done on 23 Oct 2026:** Natsoft's code is `SPSC`; the file (`SPSC`, was `SURF`) was rebuilt from Practice 1 with the
+command under "Usage". The notes below are kept for the next new track.
+
+Before Practice 1 the Gold Coast track file was provisional: the web map placed the timing points itself from live
+pace a lap or two into the first session (`map/calibrate.ts`).
 
 **How good is that?** Checked at Bathurst on 11 Oct 2026: a provisional Mount Panorama built the same way (no
 recording, `--lap-time 128`), calibrated from the race's live pace, put every timing point within 4 m of the

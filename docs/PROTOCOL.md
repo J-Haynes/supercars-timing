@@ -23,7 +23,12 @@ are not covered here.
   page for each new connection (keeping the token across a `<Redirect>`) and sends one User-Agent on both.
 - Frames came as plain XML with the token at the Gold Coast (the decoder passes plain XML through).
 - The browser sends an `Origin: https://server.natsoft.com.au:8080` header; the client never sends a message.
-- The Gold Coast's track code is `SPSC` ("SURFERS PARADISE STREET CIRCUIT"); our map file is still `SURF`, found by name.
+- The Gold Coast's track code is `SPSC` ("SURFERS PARADISE STREET CIRCUIT"); the map file is `SPSC` since Practice 1.
+- **Gold Coast timing points** (Practice 1, 23 Oct 2026): 7 points, `Pos1`, `Pos2`, `Int1`, `Pos3`, `Pos4`, `Int2`, `Pos5`
+  (IDs 1-7, `PI1="3" PI2="6"`), rebuilt map: 544, 688, 896, 1216, 1774, 2036, 2755 m of 2985 m. Speed trap `SP` was 0 all
+  session (no trap). **Pits:** the pit lane crosses the control line, so a stop starts with the line crossing itself
+  (`LP="M"` and `P="Y" PF="P"` in one message); `P="N"` comes from inside the pit lane, a median 10.3 s before the car
+  reaches Pos1 (15 stops, 9.0-10.8 s; a flying lap takes 9.1 s from the line to Pos1), and no point is crossed in between.
 - On connect the server sends a full snapshot (`<New>`), then incremental updates.
 - `<NotFound />` = the meeting isn't live. The browser client waits and retries; we retry every 30 s.
 - `<Redirect URL="..." />` = reconnect to that URL.

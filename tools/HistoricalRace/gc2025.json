@@ -1,7 +1,7 @@
 {
  "_about": "2025 Boost Mobile Gold Coast 500 (Races 28 and 29), for tools/HistoricalRace/report_to_recording.py. Lap and sector times come from Natsoft's 'Sector and Lap Times' reports (data/recordings/natsoft-results/, git-ignored, saved by hand). This file holds what the reports don't have: grid, the winner's race time and lead-lap gaps (to place each car's lap 1), vehicles, and post-race penalties. Source: https://en.wikipedia.org/wiki/2025_Gold_Coast_500 (revision read 13 Oct 2026), citing https://www.supercars.com/results/2025/2025-gold-coast/R6 and /R12. Corrected: Stanaway is #62 in Race 28 (Wikipedia says #18). Wikipedia's Race 29 row for #3 says 84 laps with a seconds gap: inconsistent, so the generator checks every derived lap 1 and estimates implausible ones.",
  "meeting": "2025 Boost Mobile Gold Coast 500",
- "trackCode": "SURF",
+ "trackCode": "SPSC",
  "trackName": "SURFERS PARADISE STREET CIRCUIT",
  "utcOffsetHours": 10,
  "races": {

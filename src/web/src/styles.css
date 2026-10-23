@@ -107,7 +107,10 @@ main { flex: 1; padding: 0 16px 24px; }
 .flag-green { background: var(--green); color: #04210f; }
 .flag-yellow { background: var(--yellow); color: #2b2200; }
 .flag-red { background: var(--red); color: #fff; }
-.flag-checkered { background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 10px 10px; color: #000; text-shadow: 0 0 3px #fff; }
+/* Black text with a solid white outline (a ring of shadows), so it reads over both the black and the white squares. */
+.flag-checkered { background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 10px 10px; color: #000;
+  text-shadow: -1.5px -1.5px 0 #fff, 0 -1.5px 0 #fff, 1.5px -1.5px 0 #fff, 1.5px 0 0 #fff,
+    1.5px 1.5px 0 #fff, 0 1.5px 0 #fff, -1.5px 1.5px 0 #fff, -1.5px 0 0 #fff, 0 0 4px #fff; }
 .flag-ended { background: var(--line); color: var(--muted); }
 
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
@@ -790,6 +793,7 @@ body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 .ladder-elimination-label { color: var(--elim); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px 2px; }
 .finals-row.out .ladder-pos { color: var(--red); }
 /* Championship standings at a Finals round (FinalsStandings.tsx): event page and live tab. */
+.championship-tabs { max-width: 220px; margin: 0 0 8px; }
 .standings-row { display: grid; grid-template-columns: 26px 1fr 84px 52px; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; }
 .standings.live .standings-row { grid-template-columns: 26px 30px 1fr 44px 40px 48px; }
 .standings-row:not(.standings-head):hover { background: var(--hover); }

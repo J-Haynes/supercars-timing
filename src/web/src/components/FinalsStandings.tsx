@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import type { TimingSnapshot } from '../types'
 import { finalsRoundFor, roundStandings, type FinalsRound, type StandingRow } from '../finals'
 import { projectedFinish } from '../championship'
 import { flagKind } from '../session'
 import { useFinalsData } from '../useFinalsData'
+import { teamsRoundFor, type TeamsRound } from '../teams'
 
 /** The championship's own races (not support categories, qualifying or the Shootout): the only ones paying points. */
 const POINTS_RACE = /supercars championship - race \d+$/i
@@ -75,6 +77,67 @@ function StandingsTable({ round, rows, advance, live, onHighlight }: {
   )
 }
 
+/**
+ * Teams' championship going into the round (teams.ts, Supercars' standings), with each entry's cars and garages: the
+ * order sets the pit lane, leaders nearest pit exit. Races at the round aren't added (how the Finals count for teams
+ * isn't in our sources).
+ */
+function TeamsTable({ round, onHighlight }: { round: TeamsRound; onHighlight?: (carNumbers: string[]) => void }) {
+  const leader = round.standings[0]?.points ?? 0
+  const garagesOf = (cars: string[]) => cars.map((c) => round.garages.indexOf(c) + 1).filter((g) => g > 0).sort((a, b) => a - b)
+  return (
+    <div className="standings" onMouseLeave={() => onHighlight?.([])}>
+      <div className="standings-row standings-head">
+        <span>Pos</span>
+        <span>Team</span>
+        <span>Gap</span>
+        <span>Points</span>
+      </div>
+      {round.standings.map((t, i) => {
+        const garages = garagesOf(t.cars)
+        return (
+          <div key={t.name} className={`standings-row plain${t.cars.length ? '' : ' absent'}`} onMouseEnter={() => onHighlight?.(t.cars)}
+            title={[t.team !== t.name && t.team, !t.cars.length && 'Not entered in this round (wildcard)'].filter(Boolean).join(' · ') || undefined}>
+            <span className="standings-pos">{i + 1}</span>
+            <span className="standings-driver">
+              {t.name}{t.cars.length > 0 && <span className="standings-car"> {t.cars.map((c) => `#${c}`).join(' ')}</span>}
+              {garages.length > 0 && <span className="standings-tag"> · garage{garages.length > 1 ? 's' : ''} {garages.length > 1 ? `${garages[0]}-${garages[garages.length - 1]}` : garages[0]}</span>}
+            </span>
+            <span className="standings-extra">{i > 0 ? `-${leader - t.points}` : ''}</span>
+            <span className="standings-points">{t.points}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+type ChampionshipTab = 'drivers' | 'teams'
+
+/** Drivers | Teams switch over the standings. */
+function ChampionshipTabs({ tab, onTab }: { tab: ChampionshipTab; onTab: (tab: ChampionshipTab) => void }) {
+  return (
+    <div className="segmented small championship-tabs" role="tablist" aria-label="Championship">
+      {(['drivers', 'teams'] as const).map((k) => (
+        <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'active' : ''} onClick={() => onTab(k)}>
+          {k === 'drivers' ? 'Drivers' : 'Teams'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** The note under the teams' table. */
+function TeamsNote({ round }: { round: TeamsRound }) {
+  return (
+    <p className="ladder-note">
+      Teams' championship after Bathurst (Supercars' standings); points from races here aren't added yet. It sets the pit
+      lane: the leading team gets the two garages nearest pit exit, and so on down (<a href={round.source} target="_blank" rel="noreferrer">this round's order</a>).
+      The map puts each car in its garage.
+    </p>
+  )
+}
+
 /** Points for each finishing place in a race of the round (the same for every driver, finalist or not). */
 export function PointsOnOffer({ round, open = true }: { round: FinalsRound; open?: boolean }) {
   return (
@@ -94,14 +157,27 @@ export function PointsOnOffer({ round, open = true }: { round: FinalsRound; open
 /** Event page: the standings going into the round (plus any race already run there), the cut and the points on offer. */
 export function FinalsField({ meeting }: { meeting: string }) {
   const round = finalsRoundFor(meeting)
+  const teams = teamsRoundFor(meeting)
+  const [tab, setTab] = useState<ChampionshipTab>('drivers')
   const data = useFinalsData(round, '')
   const standings = round && roundStandings(round, data?.earlier ?? [])
   if (!round || !standings) return null
+  if (teams && tab === 'teams') {
+    return (
+      <section className="ladder finals-field" aria-label="Championship standings">
+        <h2>Championship standings <span className="ladder-live">teams, after Bathurst</span></h2>
+        <ChampionshipTabs tab={tab} onTab={setTab} />
+        <TeamsTable round={teams} />
+        <TeamsNote round={teams} />
+      </section>
+    )
+  }
   const { rows, advance } = standings
   const run = data?.earlier.length ?? 0
   return (
     <section className="ladder finals-field" aria-label="Championship standings">
       <h2>Championship standings <span className="ladder-live">{run ? `after ${run} race${run > 1 ? 's' : ''} here` : 'now, after Bathurst'} · {advance} of {round.finalists} finalists go through</span></h2>
+      {teams && <ChampionshipTabs tab={tab} onTab={setTab} />}
       <p className="finals-explain">
         The top {round.finalists} after Bathurst are the finalists. Their points were reset for the Finals: {round.reset} plus
         a bonus for where they finished the regular season (up to {round.bonus[0]}), and {round.cupBonus} more for the Sprint
@@ -128,6 +204,8 @@ export function FinalsField({ meeting }: { meeting: string }) {
 export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; onHighlight: (ids: string[]) => void }) {
   // Championship sessions only (support categories share the feed; the live view hides them, replays don't).
   const round = /supercars championship/i.test(timing.session.name) ? finalsRoundFor(timing.session.meeting) : undefined
+  const teams = round ? teamsRoundFor(timing.session.meeting) : undefined
+  const [tab, setTab] = useState<ChampionshipTab>('drivers')
   const data = useFinalsData(round, timing.session.name)
   const pointsRace = POINTS_RACE.test(timing.session.name) && (timing.session.greenAt ?? 0) > 0
   const live = pointsRace ? projectedFinish(timing).map((c) => c.carNumber) : undefined
@@ -138,6 +216,16 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
     const id = car ? timing.cars.find((c) => c.carNumber === car)?.id : undefined
     onHighlight(id ? [id] : [])
   }
+  if (teams && tab === 'teams') {
+    return (
+      <section className="ladder finals-ladder" aria-label="Championship standings">
+        <h2>Championship standings <span className="ladder-live">teams, after Bathurst</span></h2>
+        <ChampionshipTabs tab={tab} onTab={setTab} />
+        <TeamsTable round={teams} onHighlight={(cars) => onHighlight(timing.cars.filter((c) => cars.includes(c.carNumber)).map((c) => c.id))} />
+        <TeamsNote round={teams} />
+      </section>
+    )
+  }
   return (
     <section className="ladder finals-ladder" aria-label="Championship standings">
       <h2>
@@ -146,6 +234,7 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
           {live ? (finished ? 'provisional result, before any post-race penalties' : 'provisional: if the race finished now') : 'points earned so far'}
         </span>
       </h2>
+      {teams && <ChampionshipTabs tab={tab} onTab={setTab} />}
       <StandingsTable round={round} rows={standings.rows} advance={standings.advance} live={!!live} onHighlight={highlight} />
       <PointsOnOffer round={round} open={false} />
       <p className="ladder-note">
