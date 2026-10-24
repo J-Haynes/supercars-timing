@@ -48,6 +48,7 @@ public class RecordingRegressionTests
     const string Race = "Supercars Championship - Race 30";
     const string Practice6 = "Practice 6 (All Drivers)";
     const string GoldCoastPractice1 = "Supercars Championship - Practice 1";
+    const string GoldCoastShootout = "Top Ten Shoot Out Race 31";
 
     [RecordingFact(Race)]
     public void Race_pit_log_matches_Natsofts_pit_count_with_no_duplicates_or_stuck_stops()
@@ -154,6 +155,24 @@ public class RecordingRegressionTests
         var all = s.Cars.Values.SelectMany(c => c.LapHistory.Zip(c.LapHistory.Skip(1))).ToList();
         Assert.DoesNotContain(all, p => p.Second.Time > 0 && p.Second.Time == p.First.Time);
         Assert.All(s.Cars.Values.SelectMany(c => c.LapHistory).Where(l => l.Deleted), l => Assert.Equal(0, l.Time));
-        Assert.InRange(s.Cars.Values.Sum(c => c.DeletedLaps), 15, 25);
+        // 21 with I="?" at the line, more since S3-only and mid-lap "?" count too (32 on 24 Oct 2026).
+        Assert.InRange(s.Cars.Values.Sum(c => c.DeletedLaps), 25, 40);
+    }
+
+    [RecordingFact(Practice6)]
+    public void A_red_flag_withholding_times_deletes_no_laps()
+    {
+        // Bathurst Practice 6: the red flag sent "?" for every lap in progress (I1, I2, then I at the pit lane).
+        Assert.InRange(Recordings.Replay(Practice6).Cars.Values.Sum(c => c.DeletedLaps), 0, 3);
+    }
+
+    [RecordingFact(GoldCoastShootout)]
+    public void A_shootout_lap_deleted_mid_lap_is_flagged_although_the_car_pits_before_the_line()
+    {
+        // #2 Wood's kerb strike: I2="?" at Int2, then he pitted without crossing the line (no lap time ever came).
+        var s = Recordings.Replay(GoldCoastShootout);
+        var wood = TimingSnapshot.From(s).Cars.Single(c => c.CarNumber == "2");
+        Assert.True(wood.LastLapDeleted);
+        Assert.Equal(1, wood.DeletedLaps);
     }
 }

@@ -236,7 +236,7 @@ public sealed class TimingState
             // sat in the garage since, or crossed a pit-lane timing line).
             if (c.InPit != (inPit == "Y")) c.SegmentStartAt = 0;
             c.InPit = inPit == "Y";
-            if (entering) { c.LapsSincePit = 0; c.LapStartAt = 0; c.CurrentLapSplits.Clear(); }
+            if (entering) { c.LapsSincePit = 0; c.LapStartAt = 0; c.CurrentLapSplits.Clear(); c.CurrentLapDeleted = false; }
         }
         if (Int(d, "L") is int laps)
         {
@@ -250,21 +250,40 @@ public sealed class TimingState
         // off after a swap back). Trust it over our count; it's in snapshots too, so it survives connecting mid-race.
         if (Int(d, "LCD") is int lcd) c.LapsByDriver[c.DriverIndex] = lcd;
         if (leaving) c.StintStartLap = c.Laps;
-        // Lap time "?": Natsoft has the lap but withholds its time. On a lap that started and ended on track (not in
-        // the pits, not an out-lap) that's a deleted lap: at the 2026 Gold Coast 500 kerb hops and chicane cuts, ~10 %
-        // of laps in Practice 1 and SuperUte qualifying, at full pace through every timing point. At Bathurst "?" came
-        // almost only on in- and out-laps (docs/PROTOCOL.md). LapsSincePit only counts up at the line, after this.
-        if (Str(d, "I") == "?")
+        // A time of "?": Natsoft withholds it. On a lap that started on track (not an out-lap) and isn't in the pits,
+        // that's a deleted lap: at the 2026 Gold Coast 500 kerb hops and chicane cuts, ~10 % of practice laps, at full
+        // pace through every timing point. Natsoft sends it three ways (docs/PROTOCOL.md): I="?" at the line; only
+        // S3="?" at the line, with no lap time at all; or I1/I2="?" mid-lap, often followed by the car pitting before
+        // the line (#2 Wood in the Top Ten Shootout, 24 Oct 2026). So the first "?" of a lap marks it deleted, shown
+        // straight away like the broadcast, and counted once. At Bathurst "?" came almost only on in- and out-laps.
+        // A red flag withholds the times of every lap in progress (Bathurst Practice 6): those aren't deleted.
+        // LapsSincePit only counts up at the line, after this, so a line update's "?" belongs to the lap just done.
+        var flyingLap = !c.InPit && c.LapsSincePit > 0 && Flag != "Red";
+        if (flyingLap && WithheldTimes.Any(a => Str(d, a) == "?"))
         {
+            // A snapshot's "?" may be the last lap's, not this one's: show it, but don't carry it to the next line.
+            if (!_inSnapshot && !c.CurrentLapDeleted) { c.CurrentLapDeleted = true; c.DeletedLaps++; }
+            c.LastLapDeleted = true;
             c.LastLap = 0; // not the previous lap's time, which it kept before
-            var deleted = !c.InPit && c.LapsSincePit > 0;
-            if (deleted && !_inSnapshot && c.Laps > lapsBefore) c.DeletedLaps++;
-            c.LastLapDeleted = deleted;
         }
+        if (Str(d, "I") == "?") c.LastLap = 0;
         else if (Dbl(d, "I") is double lapTime)
         {
             c.LastLap = lapTime;
-            c.LastLapDeleted = false;
+            // A real lap time: the lap stands after all.
+            if (lapTime > 0)
+            {
+                if (c.CurrentLapDeleted) c.DeletedLaps--;
+                c.CurrentLapDeleted = false;
+                c.LastLapDeleted = false;
+            }
+        }
+        if (c.Laps > lapsBefore)
+        {
+            // At the line the lap is done: it's the last lap now. A line crossing in the pit lane (an in-lap,
+            // never timed) leaves what's shown alone.
+            if (!c.InPit) c.LastLapDeleted = c.CurrentLapDeleted;
+            c.CurrentLapDeleted = false;
         }
         c.BestLap = Dbl(d, "FI") ?? c.BestLap;
         c.BestLapNo = Int(d, "FL") ?? c.BestLapNo;
@@ -380,6 +399,8 @@ public sealed class TimingState
 
     /// <summary>A time attribute: its value, 0 for "?" (Natsoft withholds it, e.g. a deleted lap's last sector), or
     /// null when it isn't in this update.</summary>
+    /// <summary>The lap and sector times Natsoft sends as "?" when it withholds them (a deleted lap).</summary>
+    static readonly string[] WithheldTimes = ["I", "I1", "I2", "S1", "S2", "S3"];
     static double? Seconds(XElement e, string a) => Str(e, a) == "?" ? 0 : Dbl(e, a);
 
     static double? Dbl(XElement e, string a) =>
@@ -426,8 +447,11 @@ public sealed class CarState
     /// <summary>Each completed lap seen live, oldest first (for lap time and gap charts).</summary>
     public List<LapEntry> LapHistory { get; } = [];
     public double LastLap { get; set; }
-    /// <summary>The last lap's time was withheld ("?") on a lap that wasn't an in- or out-lap: a deleted lap.</summary>
+    /// <summary>The last lap's time was withheld ("?") on a lap that wasn't an in- or out-lap: a deleted lap. Also
+    /// true from the moment the lap in progress is deleted mid-lap (I1/I2 "?").</summary>
     public bool LastLapDeleted { get; set; }
+    /// <summary>The lap in progress has had a time withheld ("?"): it's deleted and already counted.</summary>
+    public bool CurrentLapDeleted { get; set; }
     /// <summary>Deleted laps seen live this session.</summary>
     public int DeletedLaps { get; set; }
     public double BestLap { get; set; }
@@ -531,6 +555,7 @@ public sealed class CarState
         DriverChangedAt = old.DriverChangedAt;
         LapsSincePit = old.LapsSincePit;
         DeletedLaps = Math.Max(DeletedLaps, old.DeletedLaps);
+        CurrentLapDeleted = old.CurrentLapDeleted;
         foreach (var (k, v) in old.SegmentSeconds) SegmentSeconds[k] = v;
         foreach (var (k, v) in old.RawSegmentSeconds) RawSegmentSeconds[k] = v;
         foreach (var (k, v) in old.BestSegments) BestSegments[k] = v;

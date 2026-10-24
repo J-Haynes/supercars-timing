@@ -55,6 +55,61 @@ public class RaceTrackingTests
     }
 
     [Fact]
+    public void Only_a_sector_time_of_question_mark_at_the_line_is_a_deleted_lap_too()
+    {
+        // Gold Coast Practice 2: some deleted laps come with S3="?" and no lap time at all.
+        var s = Fresh();
+        Car(s, 1100, """L="11" I="70.1000" LP="M" """);
+        Car(s, 1172, """L="12" S3="?" LP="M" """);
+
+        var car = s.Cars["22"];
+        Assert.True(car.LastLapDeleted);
+        Assert.Equal(0, car.LastLap);
+        Assert.Equal(1, car.DeletedLaps);
+        Assert.True(car.LapHistory[^1].Deleted);
+    }
+
+    [Fact]
+    public void A_question_mark_mid_lap_deletes_the_lap_at_once_and_counts_it_once()
+    {
+        // Gold Coast Shootout: I2="?" at Int2, then I="?" at the line (or a pit stop instead) for the same lap.
+        var s = Fresh();
+        Car(s, 1100, """L="11" I="70.1000" LP="M" """);
+        Car(s, 1140, """I2="?" S2="?" LP="6" """);
+
+        var car = s.Cars["22"];
+        Assert.True(car.LastLapDeleted);
+        Assert.Equal(0, car.LastLap);
+        Assert.Equal(1, car.DeletedLaps);
+
+        Car(s, 1172, """L="12" I="?" S3="?" LP="M" """);
+        Assert.True(car.LastLapDeleted);
+        Assert.Equal(1, car.DeletedLaps);
+
+        // The next lap stands.
+        Car(s, 1244, """L="13" I="71.0000" LP="M" """);
+        Assert.False(car.LastLapDeleted);
+        Assert.Equal(1, car.DeletedLaps);
+
+        // Deleted mid-lap, then into the pits before the line: still deleted.
+        Car(s, 1280, """I2="?" S2="?" LP="6" """);
+        Car(s, 1300, """P="Y" PF="P" """);
+        Assert.True(car.LastLapDeleted);
+        Assert.Equal(2, car.DeletedLaps);
+    }
+
+    [Fact]
+    public void Times_withheld_under_a_red_flag_are_not_deleted_laps()
+    {
+        var s = Fresh();
+        Car(s, 1100, """L="11" I="70.1000" LP="M" """);
+        s.Apply("""<S T="1120.0000" S="Red" I="1120.0000" />""");
+        Car(s, 1130, """I1="?" S1="?" LP="3" """);
+        Assert.False(s.Cars["22"].LastLapDeleted);
+        Assert.Equal(0, s.Cars["22"].DeletedLaps);
+    }
+
+    [Fact]
     public void Scheduled_laps_come_from_the_session_element()
     {
         Assert.Equal(161, Fresh().ScheduledLaps);
