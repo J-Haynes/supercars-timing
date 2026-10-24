@@ -174,7 +174,11 @@ public sealed record SessionInfo(
     /// <summary>Natsoft time of the first green flag (race start); 0 = not seen.</summary>
     double GreenAt,
     /// <summary>Lap record for this session type at this track, if Natsoft sends one.</summary>
-    LapRecord? LapRecord);
+    LapRecord? LapRecord,
+    /// <summary>F1 qualifying only: the part running (1-3; 0 = not qualifying) and how many cars go through to the
+    /// next part (0 = none: Q3). Natsoft sends nothing like it.</summary>
+    int QualifyingPart = 0,
+    int QualifyingCut = 0);
 
 public sealed record BestTimes(double? Lap, double? S1, double? S2, double? S3, int? Speed);
 

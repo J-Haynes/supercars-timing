@@ -266,6 +266,22 @@ public sealed partial class F1State
         if (flag == "Green" && _greenAt == 0 && IsRace) _greenAt = t;
     }
 
+    /// <summary>
+    /// The qualifying part running and how many cars go through to the next, from TimingData: `SessionPart` (1-3)
+    /// and `NoEntries`, the cars in each part ([22, 16, 10] in 2026). Q1 cuts at
+    /// NoEntries[1], Q2 at NoEntries[2], Q3 has no cut. (0, 0) outside qualifying.
+    /// </summary>
+    (int Part, int Cut) QualifyingCut()
+    {
+        var type = (string?)Topic("SessionInfo")?["Type"] ?? "";
+        var timing = Topic("TimingData");
+        if (!type.Contains("Qualifying", StringComparison.OrdinalIgnoreCase) || timing?["SessionPart"] is not { } p) return (0, 0);
+        var part = (int)p;
+        var entries = timing["NoEntries"] as JsonArray;
+        var cut = entries is not null && part >= 1 && part < entries.Count ? (int?)entries[part] ?? 0 : 0;
+        return (part, cut);
+    }
+
     bool IsRace => ((string?)Topic("SessionInfo")?["Type"] ?? "").Contains("Race", StringComparison.OrdinalIgnoreCase);
 
     string DriverName(string number)
@@ -364,6 +380,8 @@ public sealed partial class F1State
             Flag(), ClockRemaining(), null,
             (int?)Topic("LapCount")?["TotalLaps"] ?? 0,
             _greenAt, null);
+        var (part, cut) = QualifyingCut();
+        session = session with { QualifyingPart = part, QualifyingCut = cut };
 
         var timingPoints = order.Skip(1).Select(id => new TimingPoint(id, $"Sector {id.Split('.')[0]} · {id.Split('.')[1]}")).ToList();
         return new TimingSnapshot(session, timingPoints, best, rows, reference, SessionBestSegments(order),

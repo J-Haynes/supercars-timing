@@ -259,7 +259,7 @@ the server in live mode by hand.
   `raceFinished`). Qualifying sessions (`isQualifying`: "qualif" in the name or type, not the Shootout) get a red
   dashed **cut-off line**, cars below it dimmed (opacity .65), worked out by `qualifyingCut.ts` (25 Oct 2026, owner
   asked; it used to be one saved position for every session): F1 from the server's `qualifyingPart`/`qualifyingCut`
-  (F1's `SessionPart`, `NoEntries`); Supercars from the race's sessions in `schedule/supercars.json` (Supercars' 2026
+  (`F1State.QualifyingCut`: F1's `SessionPart`, `NoEntries`; 2026 US GP: Q1 16, Q2 10, Q3 none); Supercars from the race's sessions in `schedule/supercars.json` (Supercars' 2026
   formats, cited there: one qualifying + Shootout = top 10; Q1 + Q2 = top 10 in Q1; Q1 + Q2 + Shootout = cars - 6
   in Q1 (18 of 24), top 10 in Q2; the part from Natsoft's name, else the timetable slot the clock is in; Supercars'
   article mislabels Race 31, so the timetable decides). Natsoft sends nothing about it. The viewer drags the line
