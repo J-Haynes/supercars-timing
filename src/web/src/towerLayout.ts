@@ -24,7 +24,7 @@ export const COLUMN_LABELS: Record<string, string> = {
   pits: 'Pit stops',
   stint: 'Stint (laps since pit)',
   laps: 'Laps',
-  minis: 'Mini-sectors',
+  minis: 'Micro-sectors',
   tyre: 'Tyre (F1)',
 }
 

@@ -208,7 +208,8 @@ the server in live mode by hand.
 - After the chequered flag: lap counts stop at the distance, timing points keep coming from the cool-down lap, road
   positions of stopped cars stop updating, and cars entering the pit lane are not pit stops.
 - `I="?"` = lap time withheld: on a lap that isn't an in- or out-lap, a **deleted lap** (kerb hop / chicane cut at the
-  Gold Coast, ~10 % of practice laps). `CarState.LastLapDeleted`, `DeletedLaps`, `LapEntry.Deleted`. It used to leave
+  Gold Coast, ~10-20 % of practice and qualifying laps). Also sent as only `S3="?"` at the line (no lap time), or
+  `I1`/`I2`="?" mid-lap (the car may then pit before the line); the first `?` of a lap counts. Not under a red flag. `CarState.LastLapDeleted`, `DeletedLaps`, `LapEntry.Deleted`. It used to leave
   the previous lap's time as the last lap.
 - The per-car `SC` attribute is not the safety car. `SP` (speed trap) is sent as 0, then the value.
 
@@ -245,7 +246,7 @@ the server in live mode by hand.
   positions gained and driver laps after Gap/Int so the gap shows at 390 px. Practice, qualifying and the Shootout:
   a deleted lap (kerb hop, chicane cut) shows DELETED in the Last column (×N if more than one this session) and in
   Focus; races only show the missing time (owner: not needed for races, where it's an allowance and the stewards). Driver markers (hollow white = primary, green =
-  co-driver), SWAP badge, PIT timer (smooth count from pit-in, then Natsoft's PT for 8 s), penalty badges (+5s, PLP;
+  co-driver), SWAP badge, PIT timer in races (smooth count from pit-in, then Natsoft's PT for 8 s; practice and qualifying just say PIT, owner's call), penalty badges (+5s, PLP;
   served ones leave the tower), fastest-lap stopwatch badge, positions gained (`startingGrid.ts`: hand-entered grid,
   stopgap until the server sends grid positions), driver laps vs the minimum (60 at the Bathurst 1000, 2026; from
   `LCD`), stint laps, mini-sectors.
@@ -265,7 +266,9 @@ the server in live mode by hand.
   On by default; ⚙ Settings "Gold badge for drivers in the Finals" (`settings.finalistBadges`).
 - **Mini-sectors:** stretch times quicker than 0.8× the median of `RawSegmentSeconds` are rejected (pit-lane lines).
   Never base that median on accepted times (a slow out-lap once locked out every real time); out-laps don't count as
-  pace; stretches starting at a snapshot `LP` or a pit crossing aren't timed.
+  pace or as a best (both series); stretches starting at a snapshot `LP` or a pit crossing aren't timed. Outside races
+  the tower doesn't draw an out-lap's stretches (they lit up in the Shootout). The column is called "Micro-sectors"
+  (owner, 24 Oct 2026); code still says `minis`/`MiniSectors`.
 - **Flags:** always via `flagKind()`. Caution/red: screen border, `SafetyCarBanner`, race feed items, "SC" tags on stops.
 - **Focus / Compare** (`DriverDialog.tsx`): click a driver's name in the tower (live and replay). Focus: key numbers,
   sectors vs session best, lap times, stints (split at `pitted` laps; checked: stints ending in a stop = `pitStops`

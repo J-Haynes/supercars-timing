@@ -351,9 +351,10 @@ public sealed class TimingState
             if (seconds > 0 && IsPlausibleSegment(c.LastPoint, seconds))
             {
                 if (timedLap) c.SegmentSeconds[c.LastPoint] = seconds;
-                // Mini-sectors: this lap's time through the stretch (out-laps too), and the car's best through it.
+                // Mini-sectors: this lap's time through the stretch (out-laps too: the map paces by it), and the car's
+                // best through it, from timed laps only (a Shootout out-lap was each car's "best", green or purple).
                 c.CurrentLapSegments[c.LastPoint] = seconds;
-                if (!c.BestSegments.TryGetValue(c.LastPoint, out var best) || seconds < best) c.BestSegments[c.LastPoint] = seconds;
+                if (timedLap && (!c.BestSegments.TryGetValue(c.LastPoint, out var best) || seconds < best)) c.BestSegments[c.LastPoint] = seconds;
             }
         }
         if (point == "M")

@@ -537,7 +537,9 @@ sealed class F1Car(string number)
         {
             SegmentSeconds[last] = seconds;
             CurrentSegments[last] = seconds;
-            if (!InPit && (BestSegments[last] == 0 || seconds < BestSegments[last])) BestSegments[last] = seconds;
+            // Out-laps don't count as a best: in a Shootout or a first run the out-lap was a car's "best" (green, or
+            // purple for the first car out). Laps > StintStartLap: not the lap out of the pits.
+            if (!InPit && Laps > StintStartLap && (BestSegments[last] == 0 || seconds < BestSegments[last])) BestSegments[last] = seconds;
         }
 
         if (index == 0 || index < last)

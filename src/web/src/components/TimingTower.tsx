@@ -230,7 +230,7 @@ const COLUMNS: Record<string, Column> = {
     key: 'driverLaps', header: 'Driver laps', cellClass: () => 'driver-laps',
     cell: ({ car, minLaps, lapsLeft }) => <DriverLaps car={car} minLaps={minLaps} lapsLeft={lapsLeft} />,
   },
-  minis: { key: 'minis', header: 'Mini-sectors', cell: ({ car, order, segmentBest }) => <MiniSectors car={car} order={order} sessionBest={segmentBest} /> },
+  minis: { key: 'minis', header: 'Micro-sectors', cell: ({ car, order, segmentBest, race }) => <MiniSectors car={car} order={order} sessionBest={segmentBest} race={race} /> },
 }
 
 /**

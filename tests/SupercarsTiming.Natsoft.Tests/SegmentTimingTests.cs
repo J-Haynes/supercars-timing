@@ -120,6 +120,9 @@ public class SegmentTimingTests
         foreach (var car in new[] { "9", "5", "6", "22" }) { Cross(s, 1000, car, "1"); Cross(s, 1025, car, "2"); }   // out-lap: 25 s
         Assert.Empty(s.Cars["22"].SegmentSeconds);                              // not the car's pace
         Assert.Equal(25, s.Cars["22"].CurrentLapSegments["1"], 3);             // but still a mini-sector
+        // Nor a best: in a Shootout the out-lap was each car's green (purple for the first car out) mini-sectors.
+        Assert.Empty(s.Cars["22"].BestSegments);
+        Assert.Equal(0, TimingSnapshot.From(s).SegmentBest[0]);
 
         Cross(s, 1040, "22", "M"); Cross(s, 1053, "22", "1"); Cross(s, 1067.5, "22", "2");   // flying lap: 14.5 s
         var car22 = s.Cars["22"];

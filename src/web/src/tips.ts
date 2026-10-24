@@ -9,5 +9,5 @@ export const TIPS: string[] = [
   'Simple mode shows just the essentials. Turn it off for sectors, speed trap and lap progress.',
   'During the Top Ten Shootout the on-track card compares each lap with provisional pole, timing point by timing point.',
   'Open the menu (☰) for results from earlier sessions and countdowns to upcoming rounds.',
-  'The Mini-sectors column colours each stretch of the lap: purple fastest of anyone, green a personal best, yellow slower. Faded blocks are from the previous lap.',
+  'The Micro-sectors column colours each stretch of the lap: purple fastest of anyone, green a personal best, yellow slower. Faded blocks are from the previous lap.',
 ]
