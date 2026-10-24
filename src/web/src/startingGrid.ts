@@ -15,6 +15,18 @@ const STARTING_GRIDS: { meeting: RegExp; session: RegExp; grid: Record<string, n
       '34': 21, '15': 22, '777': 23, '11': 24, '38': 25, '2': 26,
     },
   },
+  {
+    // Natsoft's order before the start (Race 31 began behind the safety car). Matches the Shootout except #888
+    // Brown, 7th there and 9th here after a two-place penalty for impeding #4 Le Brocq in qualifying:
+    // https://www.supercars.com/news/supercars-news-2026-will-brown-grid-penalty-gold-coast-500-impeding-incident-jack-le-brocq
+    meeting: /gold coast 500/i,
+    session: /supercars championship - race 31$/i,
+    grid: {
+      '88': 1, '1': 2, '18': 3, '8': 4, '19': 5, '55': 6, '6': 7, '26': 8, '888': 9, '2': 10,
+      '17': 11, '7': 12, '10': 13, '48': 14, '96': 15, '3': 16, '4': 17, '99': 18, '14': 19, '36': 20,
+      '38': 21, '9': 22, '31': 23, '11': 24,
+    },
+  },
 ]
 
 /** Grid position for a car in this session, or undefined when we don't know the grid. */

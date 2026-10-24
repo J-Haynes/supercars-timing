@@ -502,8 +502,8 @@ the server in live mode by hand.
   article). For Sandown add a `TEAMS_ROUNDS` entry with its published order and the teams' standings after the Gold
   Coast (Supercars re-orders the pit lane after each event).
 - **Before the weekend:** done: the Enduro Cup winner (Brown, #888) and the official starting points are in
-  `finals.ts`. Optional: a `startingGrid.ts` entry for each race once the grid is known (without one, positions
-  gained count from Natsoft's order before the start). For Sandown, add a `FINALS_ROUNDS` entry with its official
+  `finals.ts`. A `startingGrid.ts` entry for each race once the grid is known: **without one the +/- column is
+  empty** (Race 31's was added mid-race; take Natsoft's order before the first flag from the recording). For Sandown, add a `FINALS_ROUNDS` entry with its official
   field after the Gold Coast.
 - **After Practice 1 (done, 23 Oct):** map rebuilt from the recording as `SPSC` (lap 76.9 s; the control line is still
   estimated mid Gold Coast Highway). Watch in Practice 2 that cars cross the points as the tower updates.
