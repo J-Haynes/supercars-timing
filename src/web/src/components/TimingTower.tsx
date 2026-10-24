@@ -3,12 +3,13 @@ import type { ReactNode } from 'react'
 import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
 import { MiniSectors } from './MiniSectors'
-import { isRace, minDriverLaps, raceLaps } from '../session'
+import { finishedCars, isQualifying, isRace, minDriverLaps, raceLaps } from '../session'
 import { visibleColumns, type ColumnPrefs, type SessionKind } from '../towerLayout'
 import { startPosition } from '../startingGrid'
 import { carPenalties } from '../penalties'
 import { liveGap, parkedAtLine, raceFinished, raceOrder } from '../liveGaps'
 import { useRowMoves } from './useRowMoves'
+import { finalistCars } from '../finals'
 import { useSessionClock } from '../map/useSessionClock'
 import type { ChartSelection } from '../chartSelection'
 import type { TowerSignals } from '../towerSignals'
@@ -55,6 +56,10 @@ interface Ctx {
   signals: TowerSignals
   /** The pit rejoin estimate on screen (pit/usePitGhost.ts), shared with the map. */
   pitGhost: PitGhost | null
+  /** Practice/qualifying/Shootout: the car has taken the chequered flag (finishedCars in session.ts). */
+  chequered: boolean
+  /** The driver is still in the Finals (finalistCars in finals.ts) and the viewer shows the badge. */
+  finalist: boolean
 }
 
 interface Column {
@@ -111,7 +116,10 @@ const COLUMNS: Record<string, Column> = {
   },
   car: {
     key: 'car', header: 'Car',
-    cell: ({ car }) => <span className={`car mfr-${car.manufacturer.toLowerCase()}`} style={teamStyle(car)} title={car.vehicle}>{car.carNumber}</span>,
+    cell: ({ car, finalist }) => (
+      <span className={`car mfr-${car.manufacturer.toLowerCase()}${finalist ? ' finalist' : ''}`} style={teamStyle(car)}
+        title={finalist ? `${car.vehicle} · in the Finals` : car.vehicle}>{car.carNumber}</span>
+    ),
   },
   tyre: {
     key: 'tyre', header: 'Tyre',
@@ -120,7 +128,7 @@ const COLUMNS: Record<string, Column> = {
   },
   driver: {
     key: 'driver', header: 'Driver', cellClass: () => 'driver',
-    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions, signals, pitGhost }) => {
+    cell: ({ car, now, simple, race, best, timing, clockRate, onOpen, actions, signals, pitGhost, chequered }) => {
       // Co-driver events: name the driver in the car, with the other driver alongside in detailed mode.
       const others = (car.drivers ?? []).filter((d) => d && d !== car.driver)
       const swapped = car.driverChangedAt > 0 && now - car.driverChangedAt < 180
@@ -133,6 +141,7 @@ const COLUMNS: Record<string, Column> = {
             : car.driver}
           {!simple && others.length > 0 && <span className="co-driver"> / {others.map(surname).join(', ')}</span>}
           {swapped && <span className="swap-badge" title="Driver change">SWAP</span>}
+          {chequered && <span className="chequer-badge" title="Finished: crossed the line after the chequered flag" aria-label="Finished"><ChequerIcon /></span>}
           {/* Races only: in practice and qualifying the fastest lap is simply P1. */}
           {race && !!best.lap && Math.abs(car.bestLap - best.lap) < 0.0005 && (
             <span className="fastest-badge" title={`Fastest lap: ${lapTime(car.bestLap)}`} aria-label="Fastest lap"><StopwatchIcon /></span>
@@ -354,6 +363,17 @@ function StopwatchIcon() {
   )
 }
 
+/** A small chequered flag (2 x 3 squares on a pole) for cars that have finished. */
+function ChequerIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+      <path d="M2.5 1.5v13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="3.5" y="2" width="11" height="7.5" fill="none" stroke="currentColor" strokeWidth="1" />
+      <path d="M3.5 2h3.67v2.5H3.5zM10.83 2h3.67v2.5h-3.67zM7.17 4.5h3.66V7H7.17zM3.5 7h3.67v2.5H3.5zM10.83 7h3.67v2.5h-3.67z" fill="currentColor" />
+    </svg>
+  )
+}
+
 /** "5 seconds" -> "+5s", "plp" (pit lane penalty) -> "PLP", "Drive Through" -> "DT"; anything else -> "PEN". */
 function penaltyBadge(penalty: string): string {
   const seconds = penalty.match(/(\d+)\s*sec/i)
@@ -391,7 +411,7 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions, pitGhost = null, signals }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions, pitGhost = null, signals, cutoff = 0, onCutoff, finalistBadges = false }: {
   timing: TimingSnapshot
   simple: boolean
   /** The viewer's detailed-mode layout per session kind (settings panel). */
@@ -412,6 +432,11 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   pitGhost?: PitGhost | null
   /** Race signals (towerSignals.ts), worked out once in SessionView and shared with the race feed. */
   signals: TowerSignals
+  /** Qualifying cut-off: a line under this position (0 = none), set by the viewer (settings.qualifyingCut). */
+  cutoff?: number
+  onCutoff?: (position: number) => void
+  /** Gold badge on the car numbers of drivers still in the Finals (settings.finalistBadges; Supercars only). */
+  finalistBadges?: boolean
 }) {
   const { best, timingPoints } = timing
   const race = isRace(timing.session.type)
@@ -434,6 +459,28 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   const minLaps = minDriverLaps(timing.session)
   // Row buttons only while racing: no pit stops or charts to add after the flag, or outside races.
   const rowActions = race && !finished ? actions : undefined
+  const chequered = finishedCars(timing)
+  const finalists = finalistBadges && !isF1 ? finalistCars(timing.session.meeting) : new Set<string>()
+
+  // Qualifying cut-off: who goes through depends on the event (a Shootout, Q2, F1's Q1/Q2...), so the viewer sets
+  // the position. The line goes under that car, with buttons to move or remove it.
+  const cutAt = isQualifying(timing.session.name, timing.session.type) && cutoff > 0 && cutoff < cars.length ? cars[cutoff - 1].id : null
+  // Cars below the line: dimmed a little (out if it ended now), still easy to read.
+  const belowCut = new Set(cutAt ? cars.slice(cutoff).map((c) => c.id) : [])
+  const cutRow = cutAt && (
+    <tr key="cutoff" className="cutoff-row">
+      <td colSpan={columns.length}>
+        <span className="cutoff-label" title="Your qualifying cut-off: cars below the line would be out if the session ended now">Cut-off · top {cutoff}</span>
+        {onCutoff && (
+          <span className="cutoff-tools">
+            <button type="button" onClick={() => onCutoff(cutoff - 1)} disabled={cutoff <= 1} aria-label="Move the cut-off line up">−</button>
+            <button type="button" onClick={() => onCutoff(cutoff + 1)} disabled={cutoff >= cars.length - 1} aria-label="Move the cut-off line down">+</button>
+            <button type="button" onClick={() => onCutoff(0)} aria-label="Remove the cut-off line" title="Remove (set it again in Settings)">×</button>
+          </span>
+        )}
+      </td>
+    </tr>
+  )
 
   // Where the "would rejoin here" row goes: before the car that would be just behind it (others only, in race order).
   const rejoin = race && !finished && pitGhost?.status === 'ok' ? pitGhost.rejoin : null
@@ -468,9 +515,9 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
         </thead>
         <tbody>
           {cars.map((car, i) => [ghostRowAt === car.id && ghostRow, (() => {
-            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions, signals, pitGhost }
+            const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions, signals, pitGhost, chequered: chequered.has(car.id), finalist: finalists.has(car.carNumber) }
             const role = signals.battle.get(car.id)
-            const classes = [role && `battle-${role}`, car.inPit && 'in-pit', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
+            const classes = [role && `battle-${role}`, car.inPit && 'in-pit', belowCut.has(car.id) && 'below-cut', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
             return (
               <tr
                 key={car.id}
@@ -488,7 +535,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
                 })}
               </tr>
             )
-          })()])}
+          })(), cutAt === car.id && cutRow])}
           {ghostRowAt === 'end' && ghostRow}
         </tbody>
       </table>
