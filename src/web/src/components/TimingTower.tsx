@@ -163,7 +163,7 @@ const COLUMNS: Record<string, Column> = {
               {penaltyBadge(p.what)}
             </span>
           ))}
-          <PitTimer car={car} serverNow={now} rate={clockRate} />
+          <PitTimer car={car} serverNow={now} rate={clockRate} race={race} />
           <SignalBadges car={car} signals={signals} />
           {pitGhost?.car.id === car.id && <GhostTag ghost={pitGhost} />}
           {actions && <RowActions car={car} actions={actions} />}
@@ -341,19 +341,20 @@ const PIT_RESULT_SECONDS = 8
 /**
  * Pit badge with a smooth timer. While the car is in the pit lane it counts up from the server's pit-in time,
  * driven by the session clock every frame (the server only updates a few times a second). When the car leaves it
- * shows the stop's final pit-lane time from the server (Natsoft's PT) for a few seconds.
+ * shows the stop's final pit-lane time from the server (Natsoft's PT) for a few seconds. Races only: in practice
+ * and qualifying a stop isn't against the clock (owner), so the badge just says the car is in the pit lane.
  */
-function PitTimer({ car, serverNow, rate }: { car: CarRow; serverNow: number; rate: number }) {
+function PitTimer({ car, serverNow, rate, race }: { car: CarRow; serverNow: number; rate: number; race: boolean }) {
   const log = car.pitLog ?? []
   const open = car.inPit ? [...log].reverse().find((s) => s.outAt === 0) : undefined
   const last = log[log.length - 1]
   const justOut = !car.inPit && last && last.outAt > 0 && last.seconds > 0 && serverNow - last.outAt < PIT_RESULT_SECONDS
   if (car.inPit) {
-    return open && open.inAt > 0
+    return race && open && open.inAt > 0
       ? <PitCounter since={open.inAt} serverNow={serverNow} rate={rate} />
       : <span className="pit-badge" title="In the pit lane">PIT</span>
   }
-  if (justOut) return <span className="pit-badge done" title="Time in the pit lane (from the timing)">PIT {last.seconds.toFixed(1)}s</span>
+  if (race && justOut) return <span className="pit-badge done" title="Time in the pit lane (from the timing)">PIT {last.seconds.toFixed(1)}s</span>
   return null
 }
 
