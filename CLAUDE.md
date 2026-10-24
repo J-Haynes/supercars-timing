@@ -121,7 +121,8 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   a cited event file, e.g. `gc2025.json`; what's estimated is in its docstring), `tools/MapDelaySim` (the map with a
   broadcast delay, Supercars), `tools/PitLoss` (time lost per pit stop: `natsoft_report.py` from Natsoft results-site reports, `f1_archive.py` from F1's
   archive; `backtest.mts` scores the pit rejoin estimate on real stops; `demo-server.sh` replays races on :5081;
-  findings in `docs/PLANNING.md`, "Pit strategy features"), `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
+  findings in `docs/PLANNING.md`, "Pit strategy features"), `tools/QualiProjection/backtest.mts` (scores the qualifying
+  lap projection on a recorded session through the replay API), `tools/NatsoftRecorder` (console recorder/inspector), `tools/TrackBuilder` (track files from OSM + a recording;
   README has the Gold Coast checklist), `tools/OfficialMap` (corners and pit lane from Supercars' official track map
   PDFs, lined up with our track), `tools/F1TrackBuilder/build_track.py` (F1 track files from an archived
   session's car positions; see its docstring), `tools/F1MapEval/evalmap.py` (scores map placement against real positions).
@@ -163,6 +164,7 @@ dotnet run --project src/SupercarsTiming.Server --no-launch-profile -- --urls ht
 TIMING_SERVER=http://localhost:5081 npx vite --port 5174   # preview the frontend against it
 tools/PitLoss/demo-server.sh [F1 archive] [skip min] [speed]  # :5081 replaying Bathurst Race 30 + an F1 race (pit ghost demo)
 cd src/web && npx tsx ../../tools/PitLoss/backtest.mts V8SUPER_20261011_094535-2510 MOUN   # pit rejoin backtest
+cd src/web && npx tsx ../../tools/QualiProjection/backtest.mts <session id> [server] [step s] [--f1]   # quali projection
 # F1 replay from an archive folder (download <Topic>.jsonStream files from livetiming.formula1.com/static/...):
 #   add --F1:Mode=Replay --F1:ReplayArchive=<folder> --F1:ReplaySpeed=2 --F1:ReplaySkipMinutes=79, open /f1
 python3 tools/F1TrackBuilder/build_track.py <qualifying archive folder>   # writes src/web/src/tracks/F1-<key>.json
@@ -254,6 +256,10 @@ the server in live mode by hand.
   (opacity .65); the viewer can move it (`settings.qualifyingCut`, 0 = off; ⚙ Settings, or −/+/× on the line): the
   cut differs by event and session, so it isn't worked out (owner's call, 23 Oct 2026). Other sessions: no line. Checked on
   a synthetic qualifying recording only: no real chequered flag outside a race was recorded at that point.
+- **Qualifying projections** (in progress, docs/PLANNING.md "Qualifying: projected laps"): step 1 is built,
+  `qualiProjection.ts` (`projectLaps`: time to the last point + the rest of the car's own best lap; push-lap
+  detection; `PROJECTION_TUNING`), not shown anywhere yet. `bestSegments` include out-laps, so a car's own stretches
+  only count once it has a timed lap. Tune on real recordings with `tools/QualiProjection/backtest.mts` first.
 - **Finalist badge** (Supercars only: F1 has no Finals): at a Finals round the car numbers of the drivers still in
   the Finals get a gold ring and sheen (`.car.finalist`, `--gold`), every session of the round, live and replay.
   From the round's official `field` (`finalistCars` in `finals.ts`), so none until a round's field is entered.
