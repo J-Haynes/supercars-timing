@@ -37,19 +37,26 @@ export interface Settings {
   pitGhostCar: string | null
   /** Car number the 3D camera follows (null: the leader). */
   followCar: string | null
-  /** Qualifying sessions: a cut-off line under this position in the tower; 0 = none. On by default at 10: every 2026
-   * event with a Top Ten Shootout runs it after qualifying (schedule/supercars.json, from Supercars' timetables). The
-   * viewer can change it, since the cut differs by event and session (F1's Q1/Q2, a split qualifying). */
-  qualifyingCut: number
+  /** Qualifying cut-off lines in the tower: where qualifyingCut.ts works them out (F1's feed, Supercars' timetable),
+   * or none at all. Replaced a single saved position (qualifyingCut), which was wrong for most sessions. */
+  cutoffLines: 'auto' | 'off'
+  /** The viewer's own line for one session (dragged in the tower); a new session goes back to automatic. */
+  cutoffOverride: CutoffOverride | null
   /** Gold badge on the car numbers of drivers still in the Finals (Supercars Finals rounds). */
   finalistBadges: boolean
   /** Detailed-mode tower columns (order and hidden), per session kind. Missing = the default layout. */
   columns: Partial<Record<SessionKind, ColumnPrefs>>
 }
 
+/** A cut-off line the viewer moved: which session (`cutoffKey`) and the position (0 = removed). */
+export interface CutoffOverride {
+  session: string
+  position: number
+}
+
 // Each series keeps its own settings (column layouts differ).
 const KEY = isF1 ? 'supercars-timing:f1-settings' : 'supercars-timing:settings'
-const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, mapHeight: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, showBattles: true, showLandmarks: true, pitGhostCar: null, followCar: null, focusCard: 'auto', qualifyingCut: 10, finalistBadges: true, columns: {} }
+const DEFAULTS: Settings = { simple: false, delay: 0, pinned: [], tipDismissed: false, mapRotation: {}, mapView: '3d', mapWidth: null, mapHeight: null, camera3d: 'static', flatBuildings: false, cornerLabels: true, showBattles: true, showLandmarks: true, pitGhostCar: null, followCar: null, focusCard: 'auto', cutoffLines: 'auto', cutoffOverride: null, finalistBadges: true, columns: {} }
 
 function load(): Settings {
   try {

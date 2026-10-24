@@ -257,10 +257,15 @@ the server in live mode by hand.
   line crossing; unlike `LapStartAt` it isn't cleared when the car pits) is at or after the start of the current
   chequered/ended flag period; in a Shootout, any car with a lap time (its one run is done). Not in races (they have
   `raceFinished`). Qualifying sessions (`isQualifying`: "qualif" in the name or type, not the Shootout) get a red
-  dashed cut-off line under P10 by default (every 2026 Top Ten Shootout follows qualifying), cars below it dimmed
-  (opacity .65); the viewer can move it (`settings.qualifyingCut`, 0 = off; ⚙ Settings, or −/+/× on the line): the
-  cut differs by event and session, so it isn't worked out (owner's call, 23 Oct 2026). Other sessions: no line. Checked on
-  a synthetic qualifying recording only: no real chequered flag outside a race was recorded at that point.
+  dashed **cut-off line**, cars below it dimmed (opacity .65), worked out by `qualifyingCut.ts` (25 Oct 2026, owner
+  asked; it used to be one saved position for every session): F1 from the server's `qualifyingPart`/`qualifyingCut`
+  (F1's `SessionPart`, `NoEntries`); Supercars from the race's sessions in `schedule/supercars.json` (Supercars' 2026
+  formats, cited there: one qualifying + Shootout = top 10; Q1 + Q2 = top 10 in Q1; Q1 + Q2 + Shootout = cars - 6
+  in Q1 (18 of 24), top 10 in Q2; the part from Natsoft's name, else the timetable slot the clock is in; Supercars'
+  article mislabels Race 31, so the timetable decides). Natsoft sends nothing about it. The viewer drags the line
+  (mouse, touch, arrow keys; `CutoffRow.tsx`) for that session and part only (`settings.cutoffOverride`), with Auto
+  to go back and × to remove; without a line a quiet "+ Cut-off line" sits under the tower. ⚙ Settings only turns
+  the lines on or off (`cutoffLines`). Checked on Gold Coast Qualifying (Race 31) and every 2026 timetable case.
 - **Finalist badge** (Supercars only: F1 has no Finals): at a Finals round the car numbers of the drivers still in
   the Finals get a gold ring and sheen (`.car.finalist`, `--gold`), every session of the round, live and replay.
   From the round's official `field` (`finalistCars` in `finals.ts`), so none until a round's field is entered.

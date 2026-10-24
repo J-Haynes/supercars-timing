@@ -99,8 +99,7 @@ export function SessionView({ update, live, history, settings, updateSettings, t
             actions={{ pitGhostCar: settings.pitGhostCar, onPitGhost: (pitGhostCar) => updateSettings({ pitGhostCar }), chart }}
             pitGhost={ghost}
             signals={signals}
-            cutoff={settings.qualifyingCut}
-            onCutoff={(qualifyingCut) => updateSettings({ qualifyingCut })}
+            cutoff={{ lines: settings.cutoffLines === 'auto', override: settings.cutoffOverride, onOverride: (cutoffOverride) => updateSettings({ cutoffOverride }) }}
             finalistBadges={settings.finalistBadges}
           />
           {driverView && (

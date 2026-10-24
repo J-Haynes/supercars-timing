@@ -1114,12 +1114,27 @@ html { scrollbar-gutter: stable; }
 
 /* Qualifying cut-off (the viewer's): a red dashed line under the last car through, as the Finals elimination line. */
 .tower tbody tr.cutoff-row td { padding: 0 10px; height: 20px; border-top: 2px dashed var(--red); background: rgba(255, 77, 79, .05); }
+/* The whole line is the handle: drag it up or down (CutoffRow.tsx). touch-action: none so a drag doesn't scroll;
+   on the cell, since browsers ignore it on table rows. */
+.tower tbody tr.cutoff-row { cursor: grab; user-select: none; }
+.tower tbody tr.cutoff-row td { touch-action: none; }
+.tower tbody tr.cutoff-row:hover td { background: rgba(255, 77, 79, .1); }
+.tower tbody tr.cutoff-row.dragging { cursor: grabbing; }
+.tower tbody tr.cutoff-row.dragging td { background: rgba(255, 77, 79, .16); border-top-style: solid; }
+.cutoff-grip { display: inline-flex; align-items: center; gap: 6px; border-radius: 3px; outline: none; }
+.cutoff-grip:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.cutoff-handle { color: var(--red); font-size: 11px; opacity: .6; }
+.cutoff-row:hover .cutoff-handle, .cutoff-row.dragging .cutoff-handle { opacity: 1; }
 .cutoff-label { color: var(--red); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .cutoff-tools { margin-left: 10px; display: inline-flex; gap: 4px; opacity: 0; transition: opacity .15s; }
-.cutoff-row:hover .cutoff-tools, .cutoff-tools:focus-within { opacity: 1; }
-.cutoff-tools button { width: 18px; height: 16px; padding: 0; line-height: 1; font-size: 12px; border-radius: 3px; border: 1px solid var(--line-strong); background: var(--raise); color: var(--text); cursor: pointer; }
-.cutoff-tools button:disabled { opacity: .4; cursor: default; }
-@media (hover: none) { .cutoff-tools { opacity: 1; } }
+.cutoff-row:hover .cutoff-tools, .cutoff-tools:focus-within, .cutoff-row:focus-within .cutoff-tools { opacity: 1; }
+.cutoff-row.dragging .cutoff-tools { opacity: 0; }
+.cutoff-tools button { min-width: 18px; height: 16px; padding: 0 4px; line-height: 1; font-size: 10px; border-radius: 3px; border: 1px solid var(--line-strong); background: var(--raise); color: var(--text); cursor: pointer; }
+@media (hover: none) { .cutoff-tools { opacity: 1; } .cutoff-handle { opacity: 1; } }
+/* No line in a qualifying session: a quiet button under the tower to add one. */
+.tower tbody tr.cutoff-add td { padding: 2px 10px; border: 0; }
+.cutoff-add button { padding: 2px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: none; border: 1px dashed var(--line-strong); border-radius: 3px; cursor: pointer; opacity: .55; }
+.cutoff-add button:hover, .cutoff-add button:focus-visible { opacity: 1; color: var(--text); }
 .tower tbody tr.below-cut td { opacity: .65; }
 
 /* Narrow maps (the map column at its narrowest, phones): the toolbar leaves the map and becomes a tidy bar above it,

@@ -26,6 +26,9 @@ export interface SessionInfo {
   greenAt?: number
   /** Lap record for this session type at this track, if Natsoft sends one. */
   lapRecord?: LapRecord | null
+  /** F1 qualifying: the part running (1-3; 0 = not qualifying) and how many cars go through to the next (0 = none). */
+  qualifyingPart?: number
+  qualifyingCut?: number
 }
 
 export interface LapRecord {

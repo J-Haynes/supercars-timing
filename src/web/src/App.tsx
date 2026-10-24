@@ -67,8 +67,8 @@ export default function App() {
         onColumns={(columns) => updateSettings({ columns })}
         focusCard={settings.focusCard}
         onFocusCard={(focusCard) => updateSettings({ focusCard })}
-        qualifyingCut={settings.qualifyingCut}
-        onQualifyingCut={(qualifyingCut) => updateSettings({ qualifyingCut })}
+        cutoffLines={settings.cutoffLines}
+        onCutoffLines={(cutoffLines) => updateSettings({ cutoffLines })}
         finalistBadges={settings.finalistBadges}
         onFinalistBadges={(finalistBadges) => updateSettings({ finalistBadges })}
       />

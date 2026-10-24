@@ -1,5 +1,5 @@
 import { isF1, teamStyle } from '../series'
-import type { ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { CarRow, TimingSnapshot } from '../types'
 import { gapText, lapTime, seconds, timeClass } from '../format'
 import { MiniSectors } from './MiniSectors'
@@ -15,6 +15,9 @@ import type { ChartSelection } from '../chartSelection'
 import type { TowerSignals } from '../towerSignals'
 import type { PitGhost } from '../pit/usePitGhost'
 import { PHONE, useMediaQuery } from '../useMediaQuery'
+import { autoCutoff, cutoffKey } from '../qualifyingCut'
+import type { CutoffOverride } from '../settings'
+import { CutoffRow } from './CutoffRow'
 
 /** Per-row buttons on the live race tower (shown on hover): pit rejoin estimate and the race charts. */
 export interface RowActionProps {
@@ -424,7 +427,7 @@ function DriverLaps({ car, minLaps, lapsLeft }: { car: CarRow; minLaps: number; 
   )
 }
 
-export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions, pitGhost = null, signals, cutoff = 0, onCutoff, finalistBadges = false }: {
+export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds = [], clockRate = 1, pinned, onHover, onTogglePin, onOpen, actions, pitGhost = null, signals, cutoff, finalistBadges = false }: {
   timing: TimingSnapshot
   simple: boolean
   /** The viewer's detailed-mode layout per session kind (settings panel). */
@@ -445,9 +448,8 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   pitGhost?: PitGhost | null
   /** Race signals (towerSignals.ts), worked out once in SessionView and shared with the race feed. */
   signals: TowerSignals
-  /** Qualifying cut-off: a line under this position (0 = none), set by the viewer (settings.qualifyingCut). */
-  cutoff?: number
-  onCutoff?: (position: number) => void
+  /** Qualifying cut-off lines (settings.cutoffLines, cutoffOverride): automatic, or the viewer's own for a session. */
+  cutoff?: { lines: boolean; override: CutoffOverride | null; onOverride: (override: CutoffOverride | null) => void }
   /** Gold badge on the car numbers of drivers still in the Finals (settings.finalistBadges; Supercars only). */
   finalistBadges?: boolean
 }) {
@@ -475,22 +477,45 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
   const chequered = finishedCars(timing)
   const finalists = finalistBadges && !isF1 ? finalistCars(timing.session.meeting) : new Set<string>()
 
-  // Qualifying cut-off: who goes through depends on the event (a Shootout, Q2, F1's Q1/Q2...), so the viewer sets
-  // the position. The line goes under that car, with buttons to move or remove it.
-  const cutAt = isQualifying(timing.session.name, timing.session.type) && cutoff > 0 && cutoff < cars.length ? cars[cutoff - 1].id : null
+  // Qualifying cut-off: worked out where we can (qualifyingCut.ts), else the viewer's own line, which they drag
+  // into place. The viewer's line is kept for this session only: the next session (or Q2) starts automatic again.
+  const tbody = useRef<HTMLTableSectionElement>(null)
+  const [cutPreview, setCutPreview] = useState<number | null>(null)
+  const quali = isQualifying(timing.session.name, timing.session.type) && !!cutoff?.lines && cars.length > 1
+  const auto = quali ? autoCutoff(timing.session, timing.now, cars.length) : null
+  const key = cutoffKey(timing.session, auto)
+  const own = cutoff?.override?.session === key ? cutoff.override.position : null
+  const cutoffAt = Math.min(cutPreview ?? own ?? auto?.position ?? 0, cars.length - 1)
+  const setCut = (position: number) => cutoff?.onOverride(position === auto?.position ? null : { session: key, position })
+  const cutAt = quali && cutoffAt > 0 ? cars[cutoffAt - 1].id : null
   // Cars below the line: dimmed a little (out if it ended now), still easy to read.
-  const belowCut = new Set(cutAt ? cars.slice(cutoff).map((c) => c.id) : [])
+  const belowCut = new Set(cutAt ? cars.slice(cutoffAt).map((c) => c.id) : [])
+  // Anywhere but the automatic place (dragging included) it's the viewer's line, and says so.
+  const manual = !auto || cutoffAt !== auto.position
   const cutRow = cutAt && (
-    <tr key="cutoff" className="cutoff-row">
+    <CutoffRow
+      key="cutoff"
+      position={cutoffAt}
+      max={cars.length - 1}
+      colSpan={columns.length}
+      label={manual ? `Your cut-off · top ${cutoffAt}` : `Cut-off · ${auto.label}`}
+      why={manual ? 'Your cut-off line for this session: cars below it would be out if the session ended now' : `${auto.why}: cars below the line would be out if the session ended now`}
+      manual={manual}
+      canReset={manual && !!auto}
+      body={tbody}
+      onPreview={setCutPreview}
+      onSet={setCut}
+      onReset={() => cutoff?.onOverride(null)}
+    />
+  )
+  // No line (none worked out, or the viewer removed it): a quiet way to put one in.
+  const addCutRow = quali && !cutAt && (
+    <tr key="cutoff-add" className="cutoff-add">
       <td colSpan={columns.length}>
-        <span className="cutoff-label" title="Your qualifying cut-off: cars below the line would be out if the session ended now">Cut-off · top {cutoff}</span>
-        {onCutoff && (
-          <span className="cutoff-tools">
-            <button type="button" onClick={() => onCutoff(cutoff - 1)} disabled={cutoff <= 1} aria-label="Move the cut-off line up">−</button>
-            <button type="button" onClick={() => onCutoff(cutoff + 1)} disabled={cutoff >= cars.length - 1} aria-label="Move the cut-off line down">+</button>
-            <button type="button" onClick={() => onCutoff(0)} aria-label="Remove the cut-off line" title="Remove (set it again in Settings)">×</button>
-          </span>
-        )}
+        <button type="button" onClick={() => (auto ? cutoff?.onOverride(null) : setCut(Math.min(10, cars.length - 1)))}
+          title={auto ? 'Put the automatic cut-off line back' : 'Add a cut-off line, then drag it into place'}>
+          + Cut-off line
+        </button>
       </td>
     </tr>
   )
@@ -526,8 +551,9 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
             ))}
           </tr>
         </thead>
-        <tbody>
-          {cars.map((car, i) => [ghostRowAt === car.id && ghostRow, (() => {
+        <tbody ref={tbody}>
+          {/* One flat keyed list, so React moves the cut-off and ghost rows rather than re-creating them. */}
+          {cars.flatMap((car, i) => [ghostRowAt === car.id && ghostRow, (() => {
             const ctx: Ctx = { car, order, segmentBest: timing.segmentBest ?? [], now: timing.now, simple, isFirst: i === 0, rank: race && !finished ? i + 1 : car.position, finished, leader: cars[0], ahead: cars[i - 1], race, best, points: timingPoints, session: timing.session, timing, clockRate, minLaps, lapsLeft, onOpen, actions: rowActions, signals, pitGhost, chequered: chequered.has(car.id), finalist: finalists.has(car.carNumber) }
             const role = signals.battle.get(car.id)
             const classes = [role && `battle-${role}`, car.inPit && 'in-pit', belowCut.has(car.id) && 'below-cut', car.id === hoverId && 'hovered', highlightIds.includes(car.id) && 'highlighted', pinned.includes(car.carNumber) && 'pinned']
@@ -535,6 +561,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
               <tr
                 key={car.id}
                 ref={rowRef(car.id)}
+                data-car={car.id}
                 className={classes.filter(Boolean).join(' ')}
                 onMouseEnter={() => onHover(car.id)}
                 onMouseLeave={() => onHover(null)}
@@ -550,6 +577,7 @@ export function TimingTower({ timing, simple, columnPrefs, hoverId, highlightIds
             )
           })(), cutAt === car.id && cutRow])}
           {ghostRowAt === 'end' && ghostRow}
+          {addCutRow}
         </tbody>
       </table>
     </div>

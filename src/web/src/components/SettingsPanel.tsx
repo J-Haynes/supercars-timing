@@ -10,7 +10,7 @@ export type FocusCard = 'auto' | 'on' | 'off'
  * Settings drawer (live and replay): the on-track card, and which tower columns show in detailed mode,
  * in what order, separately for practice/qualifying and races. Drag a row or use the arrows to move it; untick to hide it.
  */
-export function SettingsPanel({ open, onClose, kind: initialKind, columns, onColumns, focusCard, onFocusCard, qualifyingCut, onQualifyingCut, finalistBadges, onFinalistBadges }: {
+export function SettingsPanel({ open, onClose, kind: initialKind, columns, onColumns, focusCard, onFocusCard, cutoffLines, onCutoffLines, finalistBadges, onFinalistBadges }: {
   open: boolean
   onClose: () => void
   /** Session kind on screen, so the panel opens on the layout the viewer is looking at. */
@@ -19,9 +19,9 @@ export function SettingsPanel({ open, onClose, kind: initialKind, columns, onCol
   onColumns: (columns: Partial<Record<SessionKind, ColumnPrefs>>) => void
   focusCard: FocusCard
   onFocusCard: (value: FocusCard) => void
-  /** Qualifying cut-off line under this position; 0 = none. */
-  qualifyingCut: number
-  onQualifyingCut: (position: number) => void
+  /** Qualifying cut-off lines in the tower: automatic (moved by dragging the line) or none. */
+  cutoffLines: 'auto' | 'off'
+  onCutoffLines: (value: 'auto' | 'off') => void
   /** Gold badge on finalists' car numbers (Supercars only). */
   finalistBadges: boolean
   onFinalistBadges: (on: boolean) => void
@@ -64,12 +64,9 @@ export function SettingsPanel({ open, onClose, kind: initialKind, columns, onCol
           </select>
         </label>
 
-        <label className="focus-select" title="A line in the tower under this position during qualifying sessions. The cut differs by event, so you set it.">
-          Qualifying cut-off line
-          <select value={qualifyingCut} onChange={(e) => onQualifyingCut(Number(e.target.value))}>
-            <option value={0}>Off</option>
-            {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>Top {n}</option>)}
-          </select>
+        <label className="settings-check" title="Qualifying: a line in the tower where cars would be knocked out (F1's timing; Supercars: from the event's format). Drag the line to move it for a session.">
+          <input type="checkbox" checked={cutoffLines === 'auto'} onChange={(e) => onCutoffLines(e.target.checked ? 'auto' : 'off')} />
+          Qualifying cut-off lines (drag a line to move it)
         </label>
 
         {!isF1 && (
