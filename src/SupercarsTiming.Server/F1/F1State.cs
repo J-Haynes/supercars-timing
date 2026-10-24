@@ -55,7 +55,14 @@ public sealed partial class F1State
                 }
                 _sessionKey = key;
             }
-            if ((string?)m.Data["GmtOffset"] is { } offset && TimeSpan.TryParse(offset, out var o)) _gmtOffset = o;
+            if ((string?)m.Data["GmtOffset"] is { } offset && TimeSpan.TryParse(offset, out var o) && o != _gmtOffset)
+            {
+                // Messages before this one were stamped with the old offset (none yet: on connecting, F1 sends the
+                // Heartbeat before SessionInfo). Now only moves forward, so at Austin (UTC-5) that Heartbeat's time
+                // stayed "now" all day: 5 h ahead, the session clock always 0:00 (2026 qualifying).
+                _gmtOffset = o;
+                Now = 0;
+            }
         }
 
         var t = (m.Utc + _gmtOffset).ToUnixTimeMilliseconds() / 1000.0;

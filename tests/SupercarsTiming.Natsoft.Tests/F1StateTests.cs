@@ -44,6 +44,21 @@ public class F1StateTests
     }
 
     [Fact]
+    public void A_heartbeat_before_the_session_info_does_not_put_now_hours_ahead()
+    {
+        // The order F1's hub sends its topics on connecting (2026 United States GP, UTC-5): Heartbeat first.
+        var s = new F1State();
+        s.Apply(Msg(0, "Heartbeat", """{"Utc":"2026-10-10T09:00:00Z"}"""));
+        s.Apply(Msg(0, "SessionInfo", """{"Meeting":{"Name":"United States Grand Prix","Circuit":{"Key":9,"ShortName":"Austin"}},"Key":11392,"Type":"Qualifying","Name":"Qualifying","GmtOffset":"-05:00:00"}"""));
+        s.Apply(Msg(60, "ExtrapolatedClock", """{"Utc":"2026-10-10T09:01:00Z","Remaining":"00:15:00","Extrapolating":true}"""));
+        s.Apply(Msg(70, "Heartbeat", """{"Utc":"2026-10-10T09:01:10Z"}"""));
+
+        var snap = s.Snapshot();
+        Assert.Equal(T0.AddHours(-5).AddSeconds(70).ToUnixTimeSeconds(), snap.Now, 3); // track time
+        Assert.Equal(14 * 60 + 50, snap.Session.ClockRemaining);
+    }
+
+    [Fact]
     public void Learns_mini_sectors_per_sector_from_an_archives_keyed_sectors()
     {
         // 2024 Monaco GP archive: the full lists come as {"0":{...},"1":{...},"2":{...}}, 6/10/5 mini-sectors.

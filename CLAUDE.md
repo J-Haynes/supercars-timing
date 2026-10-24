@@ -489,7 +489,8 @@ the server in live mode by hand.
   counts match the official turns). Run it after `build_track.py`, which writes the file without labels.
 - **Status:** connected to F1's hub isn't live. `F1Store.Status` says "waiting" (no session running) once the
   session's flag is Ended or nothing has arrived for 5 minutes; the hub sends the last session's saved state on
-  connecting, which used to show LIVE all day.
+  connecting, which used to show LIVE all day. F1 also sends the Heartbeat before SessionInfo on connecting: a change of `GmtOffset`
+  resets `F1State.Now`, or west of UTC (Austin) "now" stuck hours ahead and the session clock showed 0:00 all day.
 - **Car positions (Position.z) need an F1 TV login:** not used; see `docs/PLANNING.md` before building on it.
 
 ## Next round: Gold Coast 500 (23-25 Oct 2026)
