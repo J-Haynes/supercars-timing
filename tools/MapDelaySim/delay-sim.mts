@@ -1,18 +1,20 @@
 // Supercars map with a broadcast delay: how often the map guesses (vs knows) where a car is, and how often a dot jumps,
 // goes backwards or stalls, at 0/5/20/40 s of delay. Live snapshots come from a test server's replay endpoint every
 // 0.25 s; each delay's map sees the snapshot from `delay` seconds earlier and places cars like map/useCarPlacement.ts
-// (same functions, 60 frames a second, a perfect session clock). F1 has tools/F1MapEval (scored against real positions).
+// (same functions, 60 frames a second, a perfect session clock). F1 has tools/F1MapEval (scored against real positions),
+// but F1's archive answers 401 since Oct 2026: F1=1 runs this on our own F1 recordings instead (/api/f1, F1 pacing).
 //
 // Run a replay-only server on :5081 (CLAUDE.md, "Commands"), then from src/web:
 //   npx tsx ../../tools/MapDelaySim/delay-sim.mts <session id> <track code> <from natsoft time> <seconds> [label] [samples.json]
 // Race 30, green running and stops:   V8SUPER_20261011_094535-2510 MOUN 1791721779 900
 // Race 30, safety car and restart:    V8SUPER_20261011_094535-2510 MOUN 1791738700 1200
 // Rebuilt 2025 Gold Coast Race 28, green: DELAYS=0,90 ... V8SUPER_20251025_051800_hist-r28-0 SPSC 1761410080 900
+// 2026 Austin qualifying (Q1), F1:      F1=1 DELAYS=0,90 ... F1_11392 F1-9 1792857600 900
 // Findings (Oct 2026) are in docs/PLANNING.md, "Map with a broadcast delay".
 (globalThis as any).window = { location: { pathname: '/' } }
 const W = new URL('../../src/web/src', import.meta.url).pathname
 const { TrackModel } = await import(`${W}/map/trackModel.ts`)
-const { carPosition, cautionPace, SUPERCARS_PACING } = await import(`${W}/map/carPosition.ts`)
+const { carPosition, cautionPace, SUPERCARS_PACING, F1_PACING } = await import(`${W}/map/carPosition.ts`)
 const { CrossingLog, knownPosition } = await import(`${W}/map/crossingLog.ts`)
 const { smoothPosition, TAU, TAU_CAUTION } = await import(`${W}/map/smoothing.ts`)
 const { cautionPeriods, flagKind } = await import(`${W}/session.ts`)
@@ -23,7 +25,9 @@ const [session, code] = [process.argv[2], process.argv[3]]
 const track = JSON.parse(readFileSync(`${W}/tracks/${code}.json`, 'utf8'))
 // Provisional tracks (no timing points yet) are calibrated from the session's pace, as useCarPlacement does: once.
 let model = track.provisional ? null : new TrackModel(track)
-const base = `http://localhost:5081/api/sessions/${session}`
+const f1 = process.env.F1 === '1'
+const pacing = f1 ? F1_PACING : SUPERCARS_PACING
+const base = `http://localhost:5081/api/${f1 ? 'f1/' : ''}sessions/${session}`
 const [from, seconds] = [Number(process.argv[4]), Number(process.argv[5])]
 // Delays to compare (s); a replay's lookahead (ReplayView, 90 s) behaves like a delay of that length.
 const DELAYS = (process.env.DELAYS ?? '0,5,20,40').split(',').map(Number)
@@ -69,7 +73,7 @@ for (let t = from; t <= from + seconds; t += STEP) {
       if (row.retired) continue
       const seen = !row.inPit ? log.latest(row.id, now) : undefined
       const car = rejoined(seen && seen.at > row.lastPointAt ? { ...row, lastPoint: seen.point, lastPointAt: seen.at } : row, now)
-      const state = carPosition(car, model, order, fallback, now, undefined, baseline, caution, SUPERCARS_PACING)
+      const state = carPosition(car, model, order, fallback, now, undefined, baseline, caution, pacing)
       if (state.kind !== 'track') { lastShown.get(d)!.delete(row.id); continue }
       const pair = log.around(car.id, now)
       const kp = knownDistance(model, car, pair, now)

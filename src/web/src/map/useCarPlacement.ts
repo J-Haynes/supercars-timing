@@ -302,7 +302,10 @@ export function leavingPits(
   }
   const total = sim(to) || 1
   const inLane = sim(pit.exit) / total // share of the stretch spent in the pit lane
-  const f = Math.min(sim(distance) / total, 1)
+  const f = sim(distance) / total
+  // Already past the next point: the feed skipped it (F1 often doesn't send Austin's first mini-sector on an out-lap,
+  // 20 m after the pit exit), so the timing's own distance is right. Clamping it held cars at 1.1 for ~3 s.
+  if (f >= 1) return { kind: 'track', distance }
   if (f < inLane) {
     const start = garage ?? pit.length / 2
     return { kind: 'pit', point: model.pitPointAt(start + (pit.length - start) * (f / inLane)) }

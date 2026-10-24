@@ -341,7 +341,8 @@ the server in live mode by hand.
   set by the teams' championship); rounds without one, and F1, by car number. Leaving, a car whose pit lane rejoins partway along its stretch (`leavingPits`) drives from
   its spot to the end of the pit lane for the stretch's simulated time up to the exit, then on from the exit, reaching
   the next point when the timing says (it used to appear on track at the line and race beside the pit lane: Gold Coast
-  P1). `TrackModel.pitLane` orients the lane entry -> exit (Bathurst's file lists it backwards, so its exit was the
+  P1). If the feed skips that next point (F1 rarely sends Austin's 1.1 on an out-lap, 20 m after the pit
+  exit), the car just follows the timing past it: it used to wait at 1.1 for ~3 s, then sprint (Austin Q1, 2026). `TrackModel.pitLane` orients the lane entry -> exit (Bathurst's file lists it backwards, so its exit was the
   entry). Left: live without a delay, Bathurst's pit-out to Pos1 is ~7 s against 12.9 s expected, so the dot is still
   in the pit lane when the crossing comes and steps ~240 m (it stepped ~300 m before).
   Also left: out-lap dots crawl (< 8 m/s) between Int2 and the line on the rebuilt 2025 Gold Coast races, since an
@@ -481,7 +482,8 @@ the server in live mode by hand.
 - **Map pacing** (`F1_PACING` in `carPosition.ts`; Supercars keeps `SUPERCARS_PACING`): no slack, a car 30 % late
   is assumed past a skipped mini-sector (F1 skips ~4 % of crossings; they froze dots), late cars ease in under green
   too. Tuned with `tools/F1MapEval/evalmap.py`, which replays archived races (they include real positions) and scores
-  placements against them: measure any map change there first. Findings: the car's own last time through a
+  placements against them: measure any map change there first. F1's archive answers 401 since Oct 2026 (2025 too), so new races can't be
+  scored there: `F1=1` runs `tools/MapDelaySim` on our own F1 recordings instead (jumps and stalls, not real positions). Findings: the car's own last time through a
   stretch beat smarter pace guesses; knowing the next crossing beats any guess (below).
 - **Corner numbers:** `tools/F1TrackBuilder/corners.py` (MultiViewer's circuit API; checked within 6 m of our tracks,
   counts match the official turns). Run it after `build_track.py`, which writes the file without labels.
