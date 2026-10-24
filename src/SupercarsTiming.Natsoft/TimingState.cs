@@ -65,6 +65,11 @@ public sealed class TimingState
     /// </summary>
     readonly Dictionary<string, CarState> _carryFrom = [];
 
+    /// <summary>The flag has said WaitStart and the session hasn't started since (for the grid, <see cref="TakeGrid"/>).</summary>
+    bool _waitingForStart;
+    /// <summary>The race has just started: take the grid once the message is applied (the cars may be in a snapshot).</summary>
+    bool _gridPending;
+
     /// <summary>True while applying a session snapshot, whose LP values say where each car is but not when it got there.</summary>
     bool _inSnapshot;
 
@@ -93,7 +98,8 @@ public sealed class TimingState
                 try { foreach (var child in root.Elements()) ApplyChild(child); }
                 finally { _inSnapshot = false; }
                 _carryFrom.Clear();
-                if (previous.SessionCode == SessionCode && previous.SessionName == SessionName && SessionName != "")
+                var sameSession = previous.SessionCode == SessionCode && previous.SessionName == SessionName && SessionName != "";
+                if (sameSession)
                 {
                     foreach (var (id, old) in previous.Cars) _carryFrom[id] = old;
                     // Cars listed in the snapshot itself; the rest carry over when they next appear (ApplyCar).
@@ -106,12 +112,29 @@ public sealed class TimingState
                     RaceControl.Clear();
                     FlagHistory.Clear();
                     GreenAt = 0;
+                    // So did a WaitStart (or start) seen before this snapshot.
+                    _waitingForStart = Flag == "WaitStart";
+                    _gridPending = false;
                 }
                 break;
             default:
                 ApplyChild(root);
                 break;
         }
+        if (_gridPending) { _gridPending = false; TakeGrid(); }
+    }
+
+    /// <summary>
+    /// The starting grid: Natsoft's official order just before the start, which is the grid with any grid penalties
+    /// applied (Gold Coast Race 31: #888 7th in the Shootout, 9th after a two-place penalty, 9th here). Natsoft
+    /// doesn't send grid positions; before this they were typed into the frontend's startingGrid.ts by hand.
+    /// </summary>
+    void TakeGrid()
+    {
+        // Natsoft re-sends the session (<New>) as the race starts (Gold Coast Race 31), and its cars follow in a
+        // separate update, so most cars are still waiting to carry over their state from before: use that.
+        foreach (var c in Cars.Values.Concat(_carryFrom.Where(o => !Cars.ContainsKey(o.Key)).Select(o => o.Value)))
+            c.GridPosition = c.Position;
     }
 
     void ApplyChild(XElement e)
@@ -151,8 +174,18 @@ public sealed class TimingState
                 // to green after a safety car (Bathurst 1000: green again at ~17:22 with I = 11:34:38), so it's only
                 // trusted when it's within a few seconds of the message.
                 if (Str(e, "S") is { Length: > 0 } flag && (FlagHistory.Count == 0 || FlagHistory[^1].Flag != flag))
+                {
                     FlagHistory.Add(new FlagChange(Dbl(e, "I") is double at && at > 0 && Now - at is >= 0 and < 10 ? at : Now, flag));
+                }
                 Flag = Str(e, "S") ?? Flag;
+                // The grid: the order as a race leaves WaitStart, for the green flag or the safety car when it starts
+                // behind it (Gold Coast Race 31). Only when we saw it waiting: a snapshot after the start isn't a grid.
+                if (Flag == "WaitStart") _waitingForStart = true;
+                else if (_waitingForStart)
+                {
+                    _waitingForStart = false;
+                    _gridPending = SessionType == "Race" && Flag is "Green" or "Yellow";
+                }
                 // I = when the flag changed. The first green is the race start (later greens follow safety cars).
                 if (Flag == "Green" && GreenAt == 0 && Dbl(e, "I") is double greenAt && greenAt > 0) GreenAt = greenAt;
                 break;
@@ -455,6 +488,8 @@ public sealed class CarState
     public bool CurrentLapDeleted { get; set; }
     /// <summary>Deleted laps seen live this session.</summary>
     public int DeletedLaps { get; set; }
+    /// <summary>Starting position (official order just before a race's start); 0 = not seen.</summary>
+    public int GridPosition { get; set; }
     public double BestLap { get; set; }
     public int BestLapNo { get; set; }
     /// <summary>Gap to the leader in seconds. See <see cref="GapLaps"/> when lapped.</summary>
@@ -557,6 +592,7 @@ public sealed class CarState
         LapsSincePit = old.LapsSincePit;
         DeletedLaps = Math.Max(DeletedLaps, old.DeletedLaps);
         CurrentLapDeleted = old.CurrentLapDeleted;
+        if (GridPosition == 0) GridPosition = old.GridPosition;
         foreach (var (k, v) in old.SegmentSeconds) SegmentSeconds[k] = v;
         foreach (var (k, v) in old.RawSegmentSeconds) RawSegmentSeconds[k] = v;
         foreach (var (k, v) in old.BestSegments) BestSegments[k] = v;

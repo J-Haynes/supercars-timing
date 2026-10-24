@@ -1,9 +1,9 @@
 import type { SessionInfo } from './types'
 
 /**
- * Starting grids by car number, for positions gained/lost. A stopgap until the server sends each car's grid
- * position: this was taken from our own recording (Natsoft's order just before the green flag), so it could be
- * added without restarting the server mid-race. Top ten matches the Top Ten Shootout result.
+ * Starting grids by car number, for positions gained/lost, entered by hand. Since 24 Oct 2026 the server sends each
+ * car's grid position (F1 from F1's data; Supercars from Natsoft's order just before the start, which matched both
+ * grids below exactly), so these are only needed to correct it, e.g. a penalty applied after the start order is set.
  */
 const STARTING_GRIDS: { meeting: RegExp; session: RegExp; grid: Record<string, number> }[] = [
   {
@@ -31,7 +31,7 @@ const STARTING_GRIDS: { meeting: RegExp; session: RegExp; grid: Record<string, n
 
 /** Grid position for a car in this session, or undefined when we don't know the grid. */
 export function startPosition(session: SessionInfo, car: { carNumber: string; gridPosition?: number }): number | undefined {
-  // F1 sends grid positions; Supercars grids are entered by hand below.
-  if (car.gridPosition) return car.gridPosition
-  return STARTING_GRIDS.find((g) => g.meeting.test(session.meeting) && g.session.test(session.name))?.grid[car.carNumber]
+  // A grid entered by hand wins over the server's.
+  const entered = STARTING_GRIDS.find((g) => g.meeting.test(session.meeting) && g.session.test(session.name))?.grid[car.carNumber]
+  return entered ?? (car.gridPosition || undefined)
 }

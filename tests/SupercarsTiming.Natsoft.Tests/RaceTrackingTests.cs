@@ -110,6 +110,42 @@ public class RaceTrackingTests
     }
 
     [Fact]
+    public void The_grid_is_the_order_as_the_race_leaves_WaitStart_even_when_Natsoft_resends_the_session_then()
+    {
+        // Gold Coast Race 31: WaitStart, then at the start a fresh <New> of the same session, the safety car flag
+        // (the race started behind it), and only then the cars, in a separate update.
+        const string Session = """
+            <M D="2026 Boost Mobile Gold Coast 500" Y="Cars" />
+            <E C="R7" D="2026 Repco Supercars Championship - Race 31" Y="Race" L="85" />
+            <RL><R ID="1" N="88" V="Ford Mustang GT"><V ID="1" N="Broc Feeney" /></R>
+                <R ID="2" N="888" V="Ford Mustang GT"><V ID="1" N="Will Brown" /></R></RL>
+            """;
+        var s = new TimingState();
+        s.Apply($"""<New T="1000.0000">{Session}<S T="1000.0000" S="WaitStart" I="0.0000" /></New>""");
+        s.Apply("""<L T="1000.0000" Y="f"><P L="1" C="1" D="1"><D L="0" /></P><P L="2" C="2" D="1"><D L="0" /></P></L>""");
+        Assert.All(s.Cars.Values, c => Assert.Equal(0, c.GridPosition));   // not before the start
+
+        s.Apply($"""<New T="1300.0000">{Session}</New>""");
+        s.Apply("""<S T="1300.0000" S="Yellow" I="1300.0000" />""");
+        s.Apply("""<L T="1300.0000" Y="f"><P L="1" C="1" D="1"><D L="0" /></P><P L="2" C="2" D="1"><D L="0" /></P></L>""");
+        Assert.Equal(1, s.Cars["1"].GridPosition);
+        Assert.Equal(2, s.Cars["2"].GridPosition);
+
+        // Positions change; the grid doesn't, nor at the green after the safety car.
+        s.Apply("""<L T="1400.0000" Y="p"><P L="1" C="2" D="1"><D L="2" /></P><P L="2" C="1" D="1"><D L="2" /></P></L>""");
+        s.Apply("""<S T="1700.0000" S="Green" I="1300.0000" />""");
+        Assert.Equal(2, TimingSnapshot.From(s).Cars.Single(c => c.CarNumber == "888").GridPosition);
+    }
+
+    [Fact]
+    public void Connecting_after_the_start_gives_no_grid()
+    {
+        var s = Fresh();   // a race snapshot with no WaitStart: it has already started
+        s.Apply("""<S T="1100.0000" S="Green" I="1100.0000" />""");
+        Assert.Equal(0, s.Cars["22"].GridPosition);
+    }
+
+    [Fact]
     public void Scheduled_laps_come_from_the_session_element()
     {
         Assert.Equal(161, Fresh().ScheduledLaps);

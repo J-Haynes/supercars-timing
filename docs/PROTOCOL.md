@@ -92,7 +92,7 @@ Session types seen in `<E Y>`: `Practice`, `Race`, and `OverrideQual` for the Ba
 (`D="2026 Repco Supercars Championship - Top Ten Shootout Race 30"`). In the Shootout, cars appear in the
 leaderboard as they come out rather than all at once.
 
-Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Red`, `Checkered`, `Ended`. `Yellow` and `Red` were seen in support races on 10 Oct; the session flag is the only safety car / full-course yellow signal found so far.
+Flags seen in `S`: `WaitStart`, `Green`, `Yellow`, `Red`, `Checkered`, `Ended`. **At a race start Natsoft re-sends the session**: Gold Coast Race 31 (24 Oct 2026, started behind the safety car) sent a fresh `<New>` of the same session at the start, then `<S S="Yellow">`, then the cars in `<L Y="f">`; another `<New>` came at 05:27 mid-race. Natsoft sends no grid positions: the official order (`<P L>`) while `WaitStart` is the grid with grid penalties applied (#888's two-place penalty was in it); `TimingState.TakeGrid` keeps it as each car's `GridPosition`. `Yellow` and `Red` were seen in support races on 10 Oct; the session flag is the only safety car / full-course yellow signal found so far.
 
 ## Snapshot (`<New>`) children
 

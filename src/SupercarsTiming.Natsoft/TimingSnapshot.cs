@@ -61,6 +61,7 @@ public sealed record TimingSnapshot(
                     c.PitLog.Select(p => new PitStopRow(p.Lap, p.InAt, p.OutAt, Math.Round(p.Seconds, 1), Name(p.DriverIn), Name(p.DriverOut))).ToArray(),
                     c.RoadPosition,
                     penalties[e?.CarNumber ?? c.Id].ToArray(),
+                    GridPosition: c.GridPosition,
                     LastLineAt: c.LastLineCrossing,
                     LastLapDeleted: c.LastLapDeleted, DeletedLaps: c.DeletedLaps);
             })
@@ -207,12 +208,12 @@ public sealed record CarRow(
     int RoadPosition,
     /// <summary>Penalties from race control messages, e.g. "5 seconds".</summary>
     IReadOnlyList<string> Penalties,
-    // F1 only (Natsoft doesn't send these; the defaults keep the Supercars snapshot unchanged):
+    // F1 only (Natsoft doesn't send these; the defaults keep the Supercars snapshot unchanged), except GridPosition:
     /// <summary>Current tyre compound ("SOFT", "INTERMEDIATE", ...) and laps on that set.</summary>
     string Tyre = "", int TyreLaps = 0,
     /// <summary>Team colour as hex without '#', e.g. "F47600".</summary>
     string TeamColour = "",
-    /// <summary>Starting grid position; 0 = unknown.</summary>
+    /// <summary>Starting grid position; 0 = unknown. F1 sends it; for Natsoft it's the order just before the start.</summary>
     int GridPosition = 0,
     bool Retired = false,
     /// <summary>Time of the car's last control-line crossing (Natsoft's D/@T), pit lane included; 0 = not seen. Unlike

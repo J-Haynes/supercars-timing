@@ -247,8 +247,9 @@ the server in live mode by hand.
   a deleted lap (kerb hop, chicane cut) shows DELETED in the Last column (×N if more than one this session) and in
   Focus; races only show the missing time (owner: not needed for races, where it's an allowance and the stewards). Driver markers (hollow white = primary, green =
   co-driver), SWAP badge, PIT timer in races (smooth count from pit-in, then Natsoft's PT for 8 s; practice and qualifying just say PIT, owner's call), penalty badges (+5s, PLP;
-  served ones leave the tower), fastest-lap stopwatch badge, positions gained (`startingGrid.ts`: hand-entered grid,
-  stopgap until the server sends grid positions), driver laps vs the minimum (60 at the Bathurst 1000, 2026; from
+  served ones leave the tower), fastest-lap stopwatch badge, positions gained (`CarRow.GridPosition`: Natsoft's
+  official order as a race leaves WaitStart, `TimingState.TakeGrid`, matched both hand-entered grids exactly; none if
+  we connected after the start; `startingGrid.ts` entries override it), driver laps vs the minimum (60 at the Bathurst 1000, 2026; from
   `LCD`), stint laps, mini-sectors.
 - **Finished cars and the qualifying cut-off** (Oct 2026, both series, live and replay): in practice, qualifying and
   the Shootout a chequered flag icon marks each car that has finished (`finishedCars` in `session.ts`). Neither feed
@@ -502,8 +503,8 @@ the server in live mode by hand.
   article). For Sandown add a `TEAMS_ROUNDS` entry with its published order and the teams' standings after the Gold
   Coast (Supercars re-orders the pit lane after each event).
 - **Before the weekend:** done: the Enduro Cup winner (Brown, #888) and the official starting points are in
-  `finals.ts`. A `startingGrid.ts` entry for each race once the grid is known: **without one the +/- column is
-  empty** (Race 31's was added mid-race; take Natsoft's order before the first flag from the recording). For Sandown, add a `FINALS_ROUNDS` entry with its official
+  `finals.ts`. Grids are automatic (server, since 24 Oct 2026); a `startingGrid.ts` entry is only needed to
+  correct one. For Sandown, add a `FINALS_ROUNDS` entry with its official
   field after the Gold Coast.
 - **After Practice 1 (done, 23 Oct):** map rebuilt from the recording as `SPSC` (lap 76.9 s; the control line is still
   estimated mid Gold Coast Highway). Watch in Practice 2 that cars cross the points as the tower updates.
@@ -556,7 +557,7 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
 1. Gold Coast weekend (above), then Sandown and Adelaide entries in `finals.ts`. Their track maps exist (provisional):
    when Supercars publishes their event maps, run `tools/OfficialMap` for official corners and pit lanes.
 2. Back up `data/recordings` (off the laptop; TrueNAS on the tailnet when it's online, or an external drive).
-3. Grid positions from the server (replacing hand-entered `startingGrid.ts`); championship standings after each round.
+3. Championship standings after each round (grid positions from the server: done, Oct 2026).
 4. Pit strategy: the rejoin ghost is built (experimental; tune it on `tools/PitLoss/demo-server.sh` and the backtest).
    Still ideas ("Circle of Doom" view, undercut/clear-air alerts, cheap stops under caution; research and measurements
    in `docs/PLANNING.md`, "Pit strategy features"), pit windows / stops remaining, follow-a-driver card with notifications, co-driver planner,

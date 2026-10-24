@@ -49,6 +49,7 @@ public class RecordingRegressionTests
     const string Practice6 = "Practice 6 (All Drivers)";
     const string GoldCoastPractice1 = "Supercars Championship - Practice 1";
     const string GoldCoastShootout = "Top Ten Shoot Out Race 31";
+    const string GoldCoastRace31 = "Supercars Championship - Race 31";
 
     [RecordingFact(Race)]
     public void Race_pit_log_matches_Natsofts_pit_count_with_no_duplicates_or_stuck_stops()
@@ -157,6 +158,25 @@ public class RecordingRegressionTests
         Assert.All(s.Cars.Values.SelectMany(c => c.LapHistory).Where(l => l.Deleted), l => Assert.Equal(0, l.Time));
         // 21 with I="?" at the line, more since S3-only and mid-lap "?" count too (32 on 24 Oct 2026).
         Assert.InRange(s.Cars.Values.Sum(c => c.DeletedLaps), 25, 40);
+    }
+
+    [RecordingFact(Race)]
+    public void Bathurst_grid_is_natsofts_order_before_the_green()
+    {
+        // The grid entered by hand for Race 30 (startingGrid.ts) came from the same order.
+        var grid = TimingSnapshot.From(Recordings.Replay(Race)).Cars.OrderBy(c => c.GridPosition).Select(c => c.CarNumber);
+        Assert.Equal(["10", "17", "18", "99", "4", "888", "31", "48", "7", "19", "26", "88", "55", "6", "8", "1", "9", "3", "14",
+            "96", "34", "15", "777", "11", "38", "2"], grid);
+    }
+
+    [RecordingFact(GoldCoastRace31)]
+    public void Gold_Coast_grid_has_the_grid_penalty_and_survives_natsoft_resending_the_session_at_the_start()
+    {
+        // Started behind the safety car, with a fresh <New> at the start. #888 Brown: 7th in the Shootout, 9th on the
+        // grid after a two-place penalty (Supercars).
+        var cars = TimingSnapshot.From(Recordings.Replay(GoldCoastRace31)).Cars;
+        Assert.All(cars, c => Assert.InRange(c.GridPosition, 1, 24));
+        Assert.Equal(["88", "1", "18", "8", "19", "55", "6", "26", "888", "2"], cars.OrderBy(c => c.GridPosition).Take(10).Select(c => c.CarNumber));
     }
 
     [RecordingFact(Practice6)]
