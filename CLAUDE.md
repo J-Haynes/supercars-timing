@@ -262,8 +262,9 @@ the server in live mode by hand.
   dashed **cut-off line**, cars below it dimmed (opacity .65), worked out by `qualifyingCut.ts` (25 Oct 2026, owner
   asked; it used to be one saved position for every session): F1 from the server's `qualifyingPart`/`qualifyingCut`
   (`F1State.QualifyingCut`: F1's `SessionPart`, `NoEntries`; 2026 US GP: Q1 16, Q2 10, Q3 none); Supercars from the race's sessions in `schedule/supercars.json` (Supercars' 2026
-  formats, cited there: one qualifying + Shootout = top 10; Q1 + Q2 = top 10 in Q1; Q1 + Q2 + Shootout = cars - 6
-  in Q1 (18 of 24), top 10 in Q2; the part from Natsoft's name, else the timetable slot the clock is in; Supercars'
+  formats, cited there: one qualifying + Shootout = top 10; Q1 + Q2 = top 10 in Q1; Q1 + Q2 + Shootout = top 18
+  in Q1 (fixed: live snapshots list cars only as they come out), top 10 in Q2; the part from Natsoft's name, else the
+  timetable slot the clock is in (Race 32: "Qualifying Race 32", no part; a later part only from its start); Supercars'
   article mislabels Race 31, so the timetable decides). Natsoft sends nothing about it. The viewer drags the line
   (mouse, touch, arrow keys; `CutoffRow.tsx`) for that session and part only (`settings.cutoffOverride`), with Auto
   to go back and × to remove; without a line a quiet "+ Cut-off line" sits under the tower. ⚙ Settings only turns
