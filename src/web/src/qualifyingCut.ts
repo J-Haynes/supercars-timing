@@ -77,13 +77,15 @@ function partFromName(name: string): number | null {
 }
 
 /**
- * The qualifying part on the clock: the last one that's due to have started (10 min early counts: the feed opens a
- * session before its green), while it's within 30 min of its scheduled end (sessions run late).
+ * The qualifying part on the clock: the last one that's due to have started, while it's within 30 min of its
+ * scheduled end (sessions run late). Only the first part counts from 10 min early (the feed opens a session before
+ * its green; Natsoft named Race 32's "Qualifying Race 32", no part, from 11:19 for an 11:20 Q1): a later part waits
+ * for its own start, since the one before can still be running (Gold Coast Q1 ended 11:32, Q2 started 11:40).
  */
 function partFromClock(quali: EventSession[], now: number): number | null {
   const at = (local: string) => Date.parse(`${local}:00Z`) / 1000 // track-local time, like the feed's `now`
   let i = -1
-  quali.forEach((s, k) => { if (now >= at(s.start) - 600) i = k })
+  quali.forEach((s, k) => { if (now >= at(s.start) - (k === 0 ? 600 : 0)) i = k })
   const end = quali[i]?.end
   return i >= 0 && end && now <= at(end) + 1800 ? i + 1 : null
 }
