@@ -35,6 +35,15 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
     public TimeSpan NotFoundDelay { get; init; } = TimeSpan.FromSeconds(30);
     public TimeSpan ErrorDelay { get; init; } = TimeSpan.FromSeconds(10);
 
+    /// <summary>
+    /// While a session is running (last flag Green, Yellow or Red), this long without a message means the connection
+    /// has stalled: drop it and reconnect. Natsoft sends something every second then (the clock); the longest gap
+    /// in our recordings under those flags is 11 s. On 25 Oct 2026 (Gold Coast, Race 32 Q1) the socket went silent
+    /// for 4 minutes without closing and the red flag never arrived. Between sessions minutes of silence are
+    /// normal, so there's no limit then (no extra reconnects).
+    /// </summary>
+    public TimeSpan StallTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
     public string Meeting { get; } = meeting;
     public Uri StartUri => new($"{Host}/LiveMeeting/{Meeting}");
 
@@ -50,6 +59,7 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
     {
         var uri = StartUri;
         string? token = null;
+        var running = false; // a session running (see StallTimeout), from the last flag seen
         while (!ct.IsCancellationRequested)
         {
             var delay = ErrorDelay;
@@ -65,7 +75,7 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
             var connected = await TryConnectAsync(ws, WithToken(uri, token), ct);
             if (connected)
             {
-                var reader = ReadMessagesAsync(ws, ct).GetAsyncEnumerator(ct);
+                var reader = ReadMessagesAsync(ws, () => running ? StallTimeout : null, ct).GetAsyncEnumerator(ct);
                 while (true)
                 {
                     NatsoftMessage msg;
@@ -82,6 +92,7 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
                         break;
                     }
 
+                    running = SessionRunning(msg.Xml, running);
                     yield return msg;
 
                     if (msg.IsNotFound) { delay = NotFoundDelay; uri = StartUri; token = null; break; }
@@ -165,13 +176,32 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
         return http;
     }
 
-    static async IAsyncEnumerable<NatsoftMessage> ReadMessagesAsync(ClientWebSocket ws, [EnumeratorCancellation] CancellationToken ct)
+    /// <summary>
+    /// Whether a session is running after this message: its flag (<c>&lt;S S="..."&gt;</c>) if it has one, else as
+    /// before. A <c>&lt;New&gt;</c> or <c>&lt;NotFound&gt;</c> without a flag ends it.
+    /// </summary>
+    internal static bool SessionRunning(string xml, bool running)
+    {
+        if (FlagState().Match(xml) is { Success: true } m) return m.Groups[1].Value is "Green" or "Yellow" or "Red";
+        return !xml.StartsWith("<New") && !xml.StartsWith("<NotFound") && running;
+    }
+
+    static async IAsyncEnumerable<NatsoftMessage> ReadMessagesAsync(ClientWebSocket ws, Func<TimeSpan?> stallAfter, [EnumeratorCancellation] CancellationToken ct)
     {
         var buf = new byte[64 * 1024];
         using var msg = new MemoryStream();
         while (ws.State == WebSocketState.Open)
         {
-            var r = await ws.ReceiveAsync(buf, ct);
+            // Cancelling a receive aborts the socket, which is what a stalled one needs: the caller reconnects.
+            var limit = stallAfter();
+            using var stall = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            if (limit is { } l) stall.CancelAfter(l);
+            WebSocketReceiveResult r;
+            try { r = await ws.ReceiveAsync(buf, stall.Token); }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                throw new TimeoutException($"Nothing from Natsoft for {limit?.TotalSeconds}s while a session was running");
+            }
             if (r.MessageType == WebSocketMessageType.Close) yield break;
             msg.Write(buf, 0, r.Count);
             if (!r.EndOfMessage) continue;
@@ -181,6 +211,10 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
             yield return NatsoftMessage.FromRaw(DateTimeOffset.UtcNow, raw);
         }
     }
+
+    // The flag in <S T="..." S="Green" I="..." ...>, not SN= or other attributes.
+    [GeneratedRegex("<S\\b[^>]*\\sS=\"(\\w+)\"")]
+    private static partial Regex FlagState();
 
     [GeneratedRegex("URL=\"([^\"]+)\"")]
     private static partial Regex RedirectUrl();

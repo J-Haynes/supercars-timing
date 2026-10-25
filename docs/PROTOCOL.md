@@ -32,6 +32,12 @@ are not covered here.
 - On connect the server sends a full snapshot (`<New>`), then incremental updates.
 - `<NotFound />` = the meeting isn't live. The browser client waits and retries; we retry every 30 s.
 - `<Redirect URL="..." />` = reconnect to that URL.
+- **A connection can stall without closing.** Gold Coast, Race 32 Q1 (25 Oct 2026): nothing at all (not even the
+  1 s clock `<C>`) from 12:23:40 to a manual reconnect at 12:27:40, the socket still open; a red flag came and went
+  in that time, and the snapshot on reconnecting only had the current flag (Green). While a session runs Natsoft sends
+  every second (longest gap in our recordings under Green/Yellow/Red: 11 s; under the Bathurst Practice 6 red
+  flag 264 messages in 2 minutes), so `NatsoftClient.StallTimeout` (30 s, only while the last flag is Green, Yellow
+  or Red) drops and reconnects. Between sessions minutes of silence are normal.
 - Latency from Natsoft timestamp to receipt is about 0.02 s.
 - **The meeting follows the track, not the category.** Support categories (e.g. SuperUtes) run on the
   same `V8SUPER` feed, each session starting with its own `<New>` snapshot.
