@@ -24,7 +24,7 @@ export interface AutoCut {
  * - Format 1, one qualifying session: sets the grid; at events with a Top Ten Shootout the top 10 go into it.
  * - Format 2, "two-part knockout qualifying, where the top 10 drivers from Q1 go through to Q2 to decide pole".
  * - Format 3, "three-part knockout qualifying, where six cars are knocked out in Q1, eight cars in Q2", then the
- *   Top Ten Shootout: top 18 in Q1 (of 24 cars), top 10 in Q2.
+ *   Top Ten Shootout: top 18 in Q1 (24 cars, so 18 in Q2), top 10 in Q2.
  * That article isn't right round by round (it gives the Gold Coast's Race 31 Format 3; its timetable had one
  * qualifying session and a Shootout), so the timetable decides, not the article's list.
  */
@@ -66,7 +66,9 @@ function supercarsCut(session: SessionInfo, now: number, cars: number): AutoCut 
     return part === 1 ? fit(10, 'Q1 · top 10', 'Top 10 go through to Q2 (Supercars Format 2: timetable has Q1 and Q2)') : null
   }
   // Format 3: six out in Q1, eight in Q2, the last 10 into the Shootout.
-  if (part === 1) return fit(cars - 6, `Q1 · top ${cars - 6}`, 'Six cars are knocked out in Q1 (Supercars Format 3: Q1, Q2, Top Ten Shootout)')
+  // 18 go through, not "cars - 6": the snapshot only lists cars as they come out (10 of 24 at Race 32's green), and
+  // Q2 is 18 cars either way (eight out, ten into the Shootout).
+  if (part === 1) return fit(18, 'Q1 · top 18', 'Top 18 go through to Q2 (Supercars Format 3: Q1, Q2, Top Ten Shootout)')
   if (part === 2) return fit(10, 'Q2 · top 10', 'Top 10 go through to the Top Ten Shootout (Supercars Format 3)')
   return null
 }
