@@ -391,6 +391,23 @@ from the real numbers.
 car's best-lap split at the same point (the position it holds so far). The projection goes on to the whole lap, so it
 also counts where the car tends to gain or lose later in the lap; the card could use it in step 3.
 
+## Natsoft reconnect after a network change: slow (25 Oct 2026, not fixed)
+
+Since #32 the client drops its connection as soon as the local address it used disappears (docs/PROTOCOL.md,
+"Transport"). Tested live between Race 32 Q2 and the Shootout: connected over Wi-Fi (192.168.1.111), dock plugged in
+(no reconnect, as intended), Wi-Fi turned off at 12:57:33.187; the client noticed at 12:57:33.210 and logged
+"Reconnecting in 2s", but only logged "Connected" at 12:57:53.9, over ethernet: **about 20 s, not 2**. Nothing was
+logged in between (no failed connect, no "couldn't load the page" warning), so the time went inside the reconnect
+without an error.
+
+Not known yet which step: loading the meeting page for the token (`FetchTokenAsync`, a shared static `HttpClient`
+whose pooled connection may still be on the old address; its timeout is 15 s), DNS (the resolver may still have tried
+Wi-Fi's DNS server), or the WebSocket connect itself. Owner's call: an edge case that reconnected well enough, leave it.
+
+If it's picked up: first log how long each step of a reconnect takes (token fetch, DNS, connect), reproduce by turning
+Wi-Fi off while connected over it, outside a session, then fix what's slow (e.g. a fresh `HttpClient`/pool after a
+network change, or `PooledConnectionLifetime`). Never tighten the retry delays to hide it (Natsoft rule).
+
 ## Ideas not built yet
 
 From the Bathurst brainstorm (built: safety car mode, charts, battle graph, finals ladder, phone layout, regression
