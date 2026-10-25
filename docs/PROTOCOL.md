@@ -38,6 +38,10 @@ are not covered here.
   every second (longest gap in our recordings under Green/Yellow/Red: 11 s; under the Bathurst Practice 6 red
   flag 264 messages in 2 minutes), so `NatsoftClient.StallTimeout` (30 s, only while the last flag is Green, Yellow
   or Red) drops and reconnects. Between sessions minutes of silence are normal.
+  The cause (system journal): the laptop's USB ethernet dropped off at 12:23:40.85, 0.09 s after the last message, and
+  the default route moved to Wi-Fi; the socket was bound to the ethernet address, so nothing ever closed it. The
+  client now also reconnects when the address its connection uses is no longer on any interface that's up
+  (`NetworkChange.NetworkAddressChanged`), which works between sessions too.
 - Latency from Natsoft timestamp to receipt is about 0.02 s.
 - **The meeting follows the track, not the category.** Support categories (e.g. SuperUtes) run on the
   same `V8SUPER` feed, each session starting with its own `<New>` snapshot.

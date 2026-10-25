@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -10,7 +13,8 @@ namespace SupercarsTiming.Natsoft;
 /// <summary>
 /// Connects to Natsoft's public live timing WebSocket and yields every message.
 /// Reconnects on its own: every 30s while the meeting isn't live (&lt;NotFound/&gt;),
-/// after 10s on errors, and immediately on &lt;Redirect/&gt;.
+/// after 10s on errors, and immediately on &lt;Redirect/&gt;. Also when the connection has stalled
+/// (<see cref="StallTimeout"/>) or the laptop's address it was using has gone (a network change).
 /// </summary>
 /// <remarks>
 /// Keep this to a single connection, the same as one browser tab on the classic timing page.
@@ -44,6 +48,14 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
     /// </summary>
     public TimeSpan StallTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// How long to wait before reconnecting when the address the connection was using has gone. On 25 Oct 2026 the
+    /// laptop's USB ethernet dropped off at 12:23:40.85 (Race 32 Q1) and NetworkManager moved the default route to
+    /// Wi-Fi; the socket, bound to the ethernet address, never heard another thing and never closed. A short pause
+    /// lets the new route settle; a failed connect then falls back to <see cref="ErrorDelay"/>.
+    /// </summary>
+    public TimeSpan NetworkChangeDelay { get; init; } = TimeSpan.FromSeconds(2);
+
     public string Meeting { get; } = meeting;
     public Uri StartUri => new($"{Host}/LiveMeeting/{Meeting}");
 
@@ -70,12 +82,25 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
             ws.Options.SetRequestHeader("Origin", Origin);
             ws.Options.SetRequestHeader("User-Agent", UserAgent);
             ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
+            // Our own handler, only to learn which local address the connection uses (see AddressGone).
+            IPAddress? local = null;
+            using var invoker = new HttpMessageInvoker(LocalAddressHandler(a => local = a));
 
             // C# can't yield inside try/catch, so connect separately and read through a helper.
-            var connected = await TryConnectAsync(ws, WithToken(uri, token), ct);
+            var connected = await TryConnectAsync(ws, invoker, WithToken(uri, token), ct);
             if (connected)
             {
-                var reader = ReadMessagesAsync(ws, () => running ? StallTimeout : null, ct).GetAsyncEnumerator(ct);
+                // The laptop's address for this connection gone (cable or dock out, Wi-Fi off): the socket would wait
+                // forever, so cancel the read and reconnect over whatever network is left.
+                using var gone = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                NetworkAddressChangedEventHandler onChange = (_, _) =>
+                {
+                    // Raised on another thread, possibly just as this connection is being torn down.
+                    try { if (local is { } a && AddressGone(a, UpAddresses())) gone.Cancel(); }
+                    catch (ObjectDisposedException) { }
+                };
+                NetworkChange.NetworkAddressChanged += onChange;
+                var reader = ReadMessagesAsync(ws, () => running ? StallTimeout : null, gone.Token).GetAsyncEnumerator(gone.Token);
                 while (true)
                 {
                     NatsoftMessage msg;
@@ -84,7 +109,14 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
                         if (!await reader.MoveNextAsync()) break;
                         msg = reader.Current;
                     }
-                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { yield break; }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                    catch (OperationCanceledException) when (gone.IsCancellationRequested)
+                    {
+                        _log.LogWarning("Network changed: this machine no longer has {Address}, the address the Natsoft connection used; reconnecting", local);
+                        Error?.Invoke(new IOException($"Local address {local} gone"));
+                        delay = NetworkChangeDelay;
+                        break;
+                    }
                     catch (Exception ex)
                     {
                         _log.LogWarning(ex, "Natsoft connection dropped");
@@ -104,6 +136,7 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
                         break;
                     }
                 }
+                NetworkChange.NetworkAddressChanged -= onChange;
                 await reader.DisposeAsync();
             }
 
@@ -117,11 +150,11 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
         }
     }
 
-    async Task<bool> TryConnectAsync(ClientWebSocket ws, Uri uri, CancellationToken ct)
+    async Task<bool> TryConnectAsync(ClientWebSocket ws, HttpMessageInvoker invoker, Uri uri, CancellationToken ct)
     {
         try
         {
-            await ws.ConnectAsync(uri, ct);
+            await ws.ConnectAsync(uri, invoker, ct);
             // Logged and reported without the query, so the token never reaches the logs or /api/health.
             var shown = WithoutQuery(uri);
             _log.LogInformation("Connected to {Uri}", shown);
@@ -167,6 +200,37 @@ public sealed partial class NatsoftClient(string meeting = NatsoftClient.Default
     }
 
     static Uri WithoutQuery(Uri uri) => new(uri.GetLeftPart(UriPartial.Path));
+
+    /// <summary>A handler that connects like the default one and reports the socket's local address.</summary>
+    static SocketsHttpHandler LocalAddressHandler(Action<IPAddress> local) => new()
+    {
+        ConnectCallback = async (context, ct) =>
+        {
+            var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
+            try
+            {
+                await socket.ConnectAsync(context.DnsEndPoint, ct);
+                if (socket.LocalEndPoint is IPEndPoint ep) local(ep.Address.IsIPv4MappedToIPv6 ? ep.Address.MapToIPv4() : ep.Address);
+                return new NetworkStream(socket, ownsSocket: true);
+            }
+            catch
+            {
+                socket.Dispose();
+                throw;
+            }
+        },
+    };
+
+    /// <summary>Addresses on this machine's interfaces that are up (IPv4-mapped ones as IPv4).</summary>
+    static IEnumerable<IPAddress> UpAddresses() =>
+        NetworkInterface.GetAllNetworkInterfaces()
+            .Where(n => n.OperationalStatus == OperationalStatus.Up)
+            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+            .Select(u => u.Address);
+
+    /// <summary>Whether the connection's local address is no longer on any interface that's up.</summary>
+    internal static bool AddressGone(IPAddress local, IEnumerable<IPAddress> up) =>
+        !IPAddress.IsLoopback(local) && !up.Any(a => a.Equals(local));
 
     static HttpClient CreateHttp()
     {
