@@ -119,8 +119,12 @@ export function projectedFinish(timing: TimingSnapshot): CarRow[] {
   const leader = cars[0]
   if (!leader) return []
   if (raceFinished(timing)) return cars
-  const lead = cars.filter((c) => c.gapLaps === 0)
-  const lapped = cars.filter((c) => c.gapLaps > 0)
+  // On the lead lap: no laps down, and within a lap of the leader's count. A car in the garage keeps the gap it had
+  // when it stopped (#9 at the Gold Coast, Race 32: in the pits from lap 9, still "0 laps" down): sorted by that gap it
+  // came 3rd, and gave Wood and De Pasquale the wrong points in the Finals table.
+  const onLeadLap = (c: CarRow) => c.gapLaps === 0 && leader.laps - c.laps <= 1
+  const lead = cars.filter(onLeadLap)
+  const lapped = cars.filter((c) => !onLeadLap(c))
   const gap = (c: CarRow) => (c === leader ? 0 : liveGap(c, leader, order) ?? (c.liveGapLaps === 0 && c.liveGap > 0 ? c.liveGap : c.gap))
   const adjusted = lead.map((c, i) => ({ c, t: gap(c) + unservedSeconds(c, timing), i })).sort((a, b) => a.t - b.t || a.i - b.i).map((x) => x.c)
   return [...adjusted, ...lapped]
