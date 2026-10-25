@@ -53,4 +53,18 @@ public class NatsoftClientTests
         // SN="0" and other S-something attributes aren't the flag.
         Assert.False(NatsoftClient.SessionRunning("""<SP C="1" SN="Green" />""", false));
     }
+
+    [Fact]
+    public void Notices_when_the_connections_address_has_gone()
+    {
+        // 25 Oct 2026: the connection was on the USB ethernet's 192.168.1.112; when it dropped off only Wi-Fi's
+        // 192.168.1.111 was left.
+        var ethernet = System.Net.IPAddress.Parse("192.168.1.112");
+        var wifi = System.Net.IPAddress.Parse("192.168.1.111");
+        Assert.False(NatsoftClient.AddressGone(ethernet, [System.Net.IPAddress.Loopback, ethernet, wifi]));
+        Assert.True(NatsoftClient.AddressGone(ethernet, [System.Net.IPAddress.Loopback, wifi]));
+        // Ethernet plugged back in while connected over Wi-Fi: Wi-Fi's address is still there, so no reconnect.
+        Assert.False(NatsoftClient.AddressGone(wifi, [wifi, ethernet]));
+        Assert.False(NatsoftClient.AddressGone(System.Net.IPAddress.Loopback, []));
+    }
 }

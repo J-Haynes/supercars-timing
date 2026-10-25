@@ -57,8 +57,9 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 
 - `src/SupercarsTiming.Natsoft` (no ASP.NET dependency; protocol and domain logic):
   - `NatsoftDecoder`: XOR-chain frame decoding. `NatsoftClient`: the WebSocket client (reconnects: 30 s while not
-    live, 10 s after errors or after 30 s of silence while a session runs, which is a stalled socket: Race 32 Q1 lost
-    its red flag that way; immediately on `<Redirect/>`). Since 23 Oct 2026 it needs the meeting page's
+    live, 10 s after errors or after 30 s of silence while a session runs (a stalled socket), 2 s after the local
+    address the connection used disappears (USB ethernet unplugged: the socket hangs without closing; Race 32 Q1 lost
+    its red flag that way), immediately on `<Redirect/>`). Since 23 Oct 2026 it needs the meeting page's
     `gsLiveToken` as `?Token=`, sent with the page request's User-Agent, or Natsoft says `<NotFound/>` (docs/PROTOCOL.md).
   - `Recording` (`RecordingWriter`, `RecordingReader`): JSON Lines recordings.
   - `SessionIndex`: finds sessions in recordings (split at `<New>`/`<NotFound>`, merged across restarts), `Replay()`
