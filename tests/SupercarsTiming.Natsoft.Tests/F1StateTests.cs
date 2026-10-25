@@ -59,6 +59,23 @@ public class F1StateTests
     }
 
     [Fact]
+    public void Qualifying_cut_off_comes_from_the_session_part_and_entries()
+    {
+        // 2026 United States GP qualifying (our recording, 24 Oct 2026): the snapshot carries NoEntries and the part,
+        // later patches only the part.
+        var s = new F1State();
+        s.Apply(Msg(0, "SessionInfo", """{"Meeting":{"Name":"United States Grand Prix","Circuit":{"Key":9,"ShortName":"Austin"}},"Key":11392,"Type":"Qualifying","Name":"Qualifying","GmtOffset":"-05:00:00"}"""));
+        s.Apply(Msg(0, "TimingData", """{"NoEntries":[22,16,10],"SessionPart":1,"CutOffTime":"","CutOffPercentage":"","Lines":{}}"""));
+        Assert.Equal((1, 16), (s.Snapshot().Session.QualifyingPart, s.Snapshot().Session.QualifyingCut));
+        s.Apply(Msg(1000, "TimingData", """{"SessionPart":2}"""));
+        Assert.Equal((2, 10), (s.Snapshot().Session.QualifyingPart, s.Snapshot().Session.QualifyingCut));
+        s.Apply(Msg(2000, "TimingData", """{"SessionPart":3}"""));
+        Assert.Equal((3, 0), (s.Snapshot().Session.QualifyingPart, s.Snapshot().Session.QualifyingCut));
+        // Not in a race.
+        Assert.Equal(0, Session().Snapshot().Session.QualifyingCut);
+    }
+
+    [Fact]
     public void Learns_mini_sectors_per_sector_from_an_archives_keyed_sectors()
     {
         // 2024 Monaco GP archive: the full lists come as {"0":{...},"1":{...},"2":{...}}, 6/10/5 mini-sectors.

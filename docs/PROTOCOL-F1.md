@@ -47,6 +47,10 @@ against the Singapore GP weekend. Update this whenever you learn something (the 
   "LAP 20"), `IntervalToPositionAhead.Value`, `NumberOfLaps`, `LastLapTime.Value`, `BestLapTime.{Value,Lap}`,
   `Sectors[0..2].Value`, `Speeds.ST`, `InPit`, `PitOut`, `NumberOfPitStops`, `Retired`, `Stopped`. In practice and
   qualifying the gaps are `TimeDiffToFastest` / `Stats[]`.
+- **TimingData, qualifying** (top level, beside `Lines`): `SessionPart` (1-3, patched alone as each part starts) and
+  `NoEntries`, the cars in each part (`[22,16,10]` in 2026, United States GP), so Q1 cuts at
+  `NoEntries[1]`, Q2 at `NoEntries[2]`; also `CutOffTime` and `CutOffPercentage` (the 107 % time). The server sends
+  the part and cut as `SessionInfo.QualifyingPart`/`QualifyingCut` for the tower's cut-off line.
 - **Mini-sectors:** `Sectors[s].Segments[i].Status` (8 per sector at Singapore; Monaco 6/10/5). In archive files
   the full state's `Sectors` is an object keyed `"0"`, `"1"`, `"2"`, not an array (read both; until Oct 2026 the
   server only read arrays and labelled Monaco's mini-sectors 8/8/8). Non-zero = the car has finished
