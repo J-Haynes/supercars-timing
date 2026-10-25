@@ -44,6 +44,9 @@ function StandingsTable({ round, rows, live, onHighlight }: {
         <span className="standings-driver">
           {r.driver}{r.carNumber && <span className="standings-car"> #{r.carNumber}</span>}
           {r.cup && <span className="standings-tag"> · {r.cup}</span>}
+          {finalists.some((o) => o !== r && o.total === r.total) && finalist && (
+            <span className="standings-tag" title="Level on points: split by the order in the latest race here (Operations Manual D14.1.5.1)"> · level, split by race order</span>
+          )}
           {finalist && r.wins > 0 && <span className="standings-tag" title="Won a race at this round: through to the next round, whatever the points"> · won here, through</span>}
           {finalist && live && r.leading && r.wins === 0 && <span className="standings-tag" title="Leading this race: a win puts a finalist through, whatever the points"> · leading: through if it ends now</span>}
           {live && r.finish > 0 && <span className="standings-tag" title="Running position in this race"> · P{r.finish}</span>}

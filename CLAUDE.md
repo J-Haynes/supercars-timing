@@ -326,7 +326,9 @@ the server in live mode by hand.
   from the green flag** (owner's rule): their own "Race" column, ▲/▼ against the standings now, running position;
   otherwise only earned points. Points on offer per finishing place (`PointsOnOffer`). Top 7 advance, then 4 to the
   Grand Final, except **win and you're in**: a finalist who wins a race at the round is through whatever their points
-  (live: the leader), and the next lowest goes out instead (`StandingRow.out`, sources in finals.ts). Races here only
+  (live: the leader), and the next lowest goes out instead (`StandingRow.out`, sources in finals.ts). Ties: the order
+  in the round's latest race (live: the running order), Operations Manual 2026 D14.1.5.1; the 2026 Operations Manual
+  (supercars.com/rules-and-regulations, Division D, D14.4 for the Finals) is the source for Finals rules. Races here only
   count once finished, one per race (`finishedRaces`): a 4-minute pre-start fragment of Race 31 (split by a restart)
   once gave Feeney a "win" and the running Race 32 counted as a result. Points go by car number, so driver changes
   go in `STANDINGS_AFTER_BATHURST`'s `car` (Murray #36, Hughes #99 from round 12). Checked 25 Oct 2026: all 10

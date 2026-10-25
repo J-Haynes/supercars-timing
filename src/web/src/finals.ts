@@ -6,6 +6,8 @@ import { flagKind } from './session'
  * Finals rounds (2026): the top 10 after Bathurst go to the Finals. At each Finals round their points reset and
  * a bonus is added by championship position going in; after the round the bottom three are eliminated.
  *
+ * The rulebook: Operations Manual 2026, Division D, D14.4 "The Finals" (https://www.supercars.com/rules-and-regulations):
+ * reset to 3000/4000/5000, the bonus scales below, and win and you're in (D14.4.1.4, D14.4.2.3), as below.
  * Sources (checked 11 Oct 2026):
  * - Race points for Rounds 12-13 (Gold Coast 500, Sandown 500), all races, and the Enduro scale: 2026 season page,
  *   https://en.wikipedia.org/wiki/2026_Supercars_Championship
@@ -148,8 +150,19 @@ export function roundStandings(round: FinalsRound, earlierRaces: string[][], liv
   })
   // Finalists always rank above everyone else (Finals points start at 3000, ordinary points end below 2500 here, but
   // rank them as groups anyway).
+  // Ties: Operations Manual 2026, Division D, D14.1.5.1: "Ties for points position at an Event and/or Round will be
+  // resolved by allocating finishing positions in the order of the classification in the last race of that Event
+  // and/or Round" (https://www.supercars.com/rules-and-regulations, "Operations Manual"). So the latest race here: the
+  // race on now for the provisional order, else the last one run; the seed only before any race here.
+  const placeIn = (order: string[] | undefined, car?: string) => {
+    const i = order && car ? order.indexOf(car) : -1
+    return i >= 0 ? i : Infinity
+  }
+  const lastRun = earlierRaces.at(-1)
   const rankBy = (key: 'points' | 'total', set: 'rankNow' | 'rank') => {
-    const tie = (a: StandingRow, b: StandingRow) => (a.seed ?? 99) - (b.seed ?? 99)
+    const decider = key === 'total' && live ? live : lastRun
+    const tie = (a: StandingRow, b: StandingRow) =>
+      (decider && placeIn(decider, a.carNumber) - placeIn(decider, b.carNumber)) || (a.seed ?? 99) - (b.seed ?? 99)
     const group = (rows: StandingRow[]) => [...rows].sort((a, b) => b[key] - a[key] || tie(a, b))
     ;[...group(finalists), ...group(rest)].forEach((r, i) => { r[set] = i + 1 })
   }
