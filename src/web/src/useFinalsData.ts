@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { RecordedSession, TimingSnapshot } from './types'
-import { racesOf, resultOrder, type FinalsRound } from './finals'
+import { finishedRaces, racesOf, resultOrder, type FinalsRound } from './finals'
 
 /** Re-check for newly finished races this often during a Finals round. */
 const REFRESH_MS = 60_000
@@ -10,6 +10,9 @@ const REFRESH_MS = 60_000
  * (GET /api/sessions, /api/sessions/{id}/results): the points drivers have earned there so far. Only races that
  * started before `currentSession` (in a replay of Race 31, Race 32 hasn't happened yet); all of them when it's empty
  * (the event page). Null until loaded.
+ *
+ * Only races that finished count (finishedRaces): the recordings also hold pieces of a race, e.g. Race 31's first
+ * 4 minutes before a restart (still on the grid: its order gave Feeney a win and 150 points), and the race on now.
  */
 export function useFinalsData(round: FinalsRound | undefined, currentSession: string) {
   const [data, setData] = useState<{ earlier: string[][] } | null>(null)
@@ -20,11 +23,11 @@ export function useFinalsData(round: FinalsRound | undefined, currentSession: st
     const load = async () => {
       try {
         const sessions = (await (await fetch('/api/sessions')).json()) as RecordedSession[]
-        const races = racesOf(sessions, round.meeting)
-        const current = races.find((s) => s.name === currentSession)
-        const earlier = races.filter((s) => s.name !== currentSession && (!current || s.start < current.start))
-        const orders = await Promise.all(earlier.map(async (s) => resultOrder(await results(s))))
-        if (!cancelled) setData({ earlier: orders })
+        const races = await Promise.all(racesOf(sessions, round.meeting).map(async (session) => ({ session, results: await results(session) })))
+        const done = finishedRaces(races)
+        const current = races.find((r) => r.session.name === currentSession)?.session
+        const earlier = done.filter((r) => r.session.name !== currentSession && (!current || r.session.start < current.start))
+        if (!cancelled) setData({ earlier: earlier.map((r) => resultOrder(r.results)) })
       } catch {
         /* keep what we have */
       }

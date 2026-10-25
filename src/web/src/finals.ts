@@ -1,5 +1,6 @@
 import type { RecordedSession, TimingSnapshot } from './types'
 import { STANDINGS_AFTER_BATHURST, inPointsSeason } from './championship'
+import { flagKind } from './session'
 
 /**
  * Finals rounds (2026): the top 10 after Bathurst go to the Finals. At each Finals round their points reset and
@@ -11,6 +12,14 @@ import { STANDINGS_AFTER_BATHURST, inPointsSeason } from './championship'
  * - Bonus 150/120/96/78 for the top four at every Finals round, three eliminated per round, eliminated drivers revert
  *   to ordinary points: https://adelaidegrandfinal.com.au/latest-news/2026-finals-rule-changes-explained/ and
  *   https://www.v8sleuth.com.au/supercars-finalises-2026-tweaks-to-playoffs-points/
+ * - Win and you're in (checked 25 Oct 2026): "Any of the 10 finalists who wins either Gold Coast race is automatically
+ *   through to Sandown", the same at Sandown for the Grand Final; "the three worst-placed drivers on points (8th, 9th,
+ *   10th) will be eliminated" unless "they win either race on Saturday or Sunday, in which case the next worst-placed
+ *   driver will be eliminated"; a non-finalist's win earns no place. Eliminated drivers "revert to the championship
+ *   points they held after Bathurst, plus points scored in subsequent races".
+ *   https://autoaction.com.au/2026/10/21/supercars-finals-2026-explained-format-points ,
+ *   https://speedcafe.com/supercars-news-2026-finals-series-explained-guide-points-permuations-gold-coast-sandown-adelaide-grand-final/
+ *   Supercars' own table after Race 31 matches start + race points exactly (Payne 3277, Mostert "advanced" on 3189).
  * - Sprint Cup and Enduro Cup winners: automatic entry and 25 bonus points into the Finals:
  *   https://speedcafe.com/supercars-news-adelaide-grand-final-championship-rules-points-changes-2026-explained/
  * - Reset to 3000 at the Gold Coast (4000 Sandown, 5000 Adelaide, "5150, 5120, 5096 and 5078" for the grand
@@ -102,6 +111,12 @@ export interface StandingRow {
   /** Position in the standings now, and with the provisional points. */
   rankNow: number
   rank: number
+  /** Races won at this round (finalists: win and you're in). */
+  wins: number
+  /** Leading the race on now: through if it finished now. */
+  leading: boolean
+  /** Finalists: eliminated if the round ended now (the lowest on points among those without a win here). */
+  out: boolean
 }
 
 /**
@@ -117,18 +132,19 @@ export function roundStandings(round: FinalsRound, earlierRaces: string[][], liv
   const earned = (car?: string) => (car ? earlierRaces.reduce((s, r) => s + (scored(r, round.points).get(car) ?? 0), 0) : 0)
   const today = live ? scored(live, round.points) : new Map<string, number>()
   const finishOf = (car?: string) => (car && live ? live.indexOf(car) + 1 : 0)
+  const winsOf = (car?: string) => (car ? earlierRaces.filter((r) => r[0] === car).length : 0)
   const cupOf = (car: string) => [car === round.cupWinners.sprint && 'Sprint Cup', car === round.cupWinners.enduro && 'Enduro Cup'].filter(Boolean).join(', ') || undefined
 
   const finalists: StandingRow[] = field.map((f, i) => {
     const driver = STANDINGS_AFTER_BATHURST.find((d) => d.car === f.car)?.driver ?? `Car ${f.car}`
     const points = f.start + earned(f.car)
     const l = today.get(f.car) ?? 0
-    return { carNumber: f.car, driver, finalist: true, seed: i + 1, cup: cupOf(f.car), points, live: l, finish: finishOf(f.car), total: points + l, rankNow: 0, rank: 0 }
+    return { carNumber: f.car, driver, finalist: true, seed: i + 1, cup: cupOf(f.car), points, live: l, finish: finishOf(f.car), total: points + l, rankNow: 0, rank: 0, wins: winsOf(f.car), leading: finishOf(f.car) === 1, out: false }
   })
   const rest: StandingRow[] = STANDINGS_AFTER_BATHURST.filter((d) => !field.some((f) => f.car === d.car)).map((d) => {
     const points = d.points + earned(d.car)
     const l = (d.car && today.get(d.car)) || 0
-    return { carNumber: d.car, driver: d.driver, finalist: false, points, live: l, finish: finishOf(d.car), total: points + l, rankNow: 0, rank: 0 }
+    return { carNumber: d.car, driver: d.driver, finalist: false, points, live: l, finish: finishOf(d.car), total: points + l, rankNow: 0, rank: 0, wins: winsOf(d.car), leading: finishOf(d.car) === 1, out: false }
   })
   // Finalists always rank above everyone else (Finals points start at 3000, ordinary points end below 2500 here, but
   // rank them as groups anyway).
@@ -140,6 +156,10 @@ export function roundStandings(round: FinalsRound, earlierRaces: string[][], liv
   rankBy('points', 'rankNow')
   rankBy('total', 'rank')
   const rows = [...finalists, ...rest].sort((a, b) => a.rank - b.rank)
+  // Win and you're in: the eliminated are the lowest on points (with this race as it stands) among finalists who
+  // haven't won here, or aren't leading the race on now.
+  const contenders = rows.filter((r) => r.finalist && r.wins === 0 && !r.leading)
+  contenders.slice(Math.max(0, contenders.length - round.eliminate)).forEach((r) => { r.out = true })
   return { rows, advance: round.finalists - round.eliminate }
 }
 
@@ -153,4 +173,18 @@ export function resultOrder(results: TimingSnapshot): string[] {
 export function racesOf(sessions: RecordedSession[], meeting: RegExp): RecordedSession[] {
   return sessions.filter((s) => meeting.test(s.meeting) && inPointsSeason(s.meeting) && /race/i.test(s.type) && /supercars championship - race \d+$/i.test(s.name))
     .sort((a, b) => a.start.localeCompare(b.start))
+}
+
+/**
+ * The races that finished (flag chequered or ended, laps run), one per race: a race whose recording was split by a
+ * restart is several sessions with the same name, of which only the last has the result. Oldest first.
+ */
+export function finishedRaces<T extends { session: RecordedSession; results: TimingSnapshot }>(races: T[]): T[] {
+  const done = races.filter((r) => flagKind(r.results.session.flag) === 'finished' && r.results.cars.some((c) => c.position > 0 && c.laps > 0))
+  const latest = new Map<string, T>()
+  for (const r of done) {
+    const seen = latest.get(r.session.name)
+    if (!seen || r.session.start > seen.session.start) latest.set(r.session.name, r)
+  }
+  return [...latest.values()].sort((a, b) => a.session.start.localeCompare(b.session.start))
 }

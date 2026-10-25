@@ -15,24 +15,28 @@ const POINTS_RACE = /supercars championship - race \d+$/i
  * ordinary points. `live` adds the race on now as provisional points in their own column; outside a race the table
  * only shows points already earned.
  */
-function StandingsTable({ round, rows, advance, live, onHighlight }: {
+function StandingsTable({ round, rows, live, onHighlight }: {
   round: FinalsRound
   rows: StandingRow[]
-  advance: number
   live: boolean
   onHighlight?: (carNumber: string | undefined) => void
 }) {
   const finalists = rows.filter((r) => r.finalist)
+  const through = finalists.filter((r) => !r.out)
+  const out = finalists.filter((r) => r.out)
   const rest = rows.filter((r) => !r.finalist)
-  // Inside the cut: points clear of the first finalist out; outside: points short of the last one in.
-  const lastIn = finalists[advance - 1]?.total ?? 0
-  const firstOut = finalists[advance]?.total ?? 0
-  const cut = (r: StandingRow, i: number) => (i < advance ? `${r.total - firstOut} clear` : `${lastIn - r.total} behind`)
+  // Win and you're in (finals.ts): a race winner is through whatever their points, so the cut is between the lowest
+  // finalist through on points and the highest one out.
+  const onPoints = through.filter((r) => r.wins === 0 && !r.leading)
+  const lastIn = onPoints.at(-1)?.total ?? 0
+  const firstOut = out[0]?.total ?? 0
+  const cut = (r: StandingRow) =>
+    r.out ? `${lastIn - r.total} behind` : r.wins > 0 ? 'won · through' : r.leading ? 'leading' : out.length ? `${r.total - firstOut} clear` : ''
 
-  const row = (r: StandingRow, i: number, finalist: boolean) => {
+  const row = (r: StandingRow, finalist: boolean) => {
     const moved = live ? r.rankNow - r.rank : 0
     return (
-      <div key={r.driver} className={`standings-row${live ? ' live' : ''}${finalist && i >= advance ? ' out' : ''}${finalist ? '' : ' plain'}${r.carNumber ? '' : ' absent'}`}
+      <div key={r.driver} className={`standings-row${live ? ' live' : ''}${finalist && r.out ? ' out' : ''}${finalist ? '' : ' plain'}${r.carNumber ? '' : ' absent'}`}
         onMouseEnter={() => onHighlight?.(r.carNumber)}
         title={[r.seed && `Seed ${r.seed} going into the Finals`, r.cup && `${r.cup} winner (+${round.cupBonus})`, !r.carNumber && 'Not entered in this round (co-driver or wildcard)'].filter(Boolean).join(' · ') || undefined}>
         <span className="standings-pos">{r.rank}</span>
@@ -40,11 +44,13 @@ function StandingsTable({ round, rows, advance, live, onHighlight }: {
         <span className="standings-driver">
           {r.driver}{r.carNumber && <span className="standings-car"> #{r.carNumber}</span>}
           {r.cup && <span className="standings-tag"> · {r.cup}</span>}
+          {finalist && r.wins > 0 && <span className="standings-tag" title="Won a race at this round: through to the next round, whatever the points"> · won here, through</span>}
+          {finalist && live && r.leading && r.wins === 0 && <span className="standings-tag" title="Leading this race: a win puts a finalist through, whatever the points"> · leading: through if it ends now</span>}
           {live && r.finish > 0 && <span className="standings-tag" title="Running position in this race"> · P{r.finish}</span>}
         </span>
         {live && <span className="standings-now">{r.points}</span>}
         <span className="standings-extra">
-          {live ? (r.live ? `+${r.live}` : '') : finalist ? <span className={i < advance ? 'clear' : 'behind'}>{cut(r, i)}</span> : ''}
+          {live ? (r.live ? `+${r.live}` : '') : finalist ? <span className={r.out ? 'behind' : 'clear'}>{cut(r)}</span> : ''}
         </span>
         <span className="standings-points">{r.total}</span>
       </div>
@@ -63,15 +69,15 @@ function StandingsTable({ round, rows, advance, live, onHighlight }: {
       </div>
       <div className="ladder-finals">
         <div className="ladder-finals-label">Finalists · through to the next round if it ended now</div>
-        {finalists.slice(0, advance).map((r, i) => row(r, i, true))}
+        {through.map((r) => row(r, true))}
       </div>
       <div className="ladder-elimination">
         <div className="ladder-elimination-label">Finalists · eliminated if it ended now</div>
-        {finalists.slice(advance).map((r, i) => row(r, advance + i, true))}
+        {out.map((r) => row(r, true))}
       </div>
       <details className="standings-rest" open>
         <summary>Rest of the championship ({rest.length}) · ordinary points</summary>
-        {rest.map((r, i) => row(r, finalists.length + i, false))}
+        {rest.map((r) => row(r, false))}
       </details>
     </div>
   )
@@ -182,10 +188,11 @@ export function FinalsField({ meeting }: { meeting: string }) {
         The top {round.finalists} after Bathurst are the finalists. Their points were reset for the Finals: {round.reset} plus
         a bonus for where they finished the regular season (up to {round.bonus[0]}), and {round.cupBonus} more for the Sprint
         and Enduro Cup winners. After the two races here the bottom {round.eliminate} finalists are eliminated and {advance} go
-        on to Sandown; three more go out there and 4 contest the Grand Final in Adelaide. Everyone else, and eliminated
+        on to Sandown, except that a finalist who wins a race here is through whatever their points (the next lowest goes
+        out instead); three more go out there and 4 contest the Grand Final in Adelaide. Everyone else, and eliminated
         drivers, race on with their ordinary points for 11th and below.
       </p>
-      <StandingsTable round={round} rows={rows} advance={advance} live={false} />
+      <StandingsTable round={round} rows={rows} live={false} />
       <PointsOnOffer round={round} />
       <p className="ladder-note">
         Points now: Supercars' official Finals standings for the finalists, the championship after Bathurst (Speedcafe)
@@ -235,7 +242,7 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
         </span>
       </h2>
       {teams && <ChampionshipTabs tab={tab} onTab={setTab} />}
-      <StandingsTable round={round} rows={standings.rows} advance={standings.advance} live={!!live} onHighlight={highlight} />
+      <StandingsTable round={round} rows={standings.rows} live={!!live} onHighlight={highlight} />
       <PointsOnOffer round={round} open={false} />
       <p className="ladder-note">
         {live && 'Now: points earned before this race. Race: points for the position each car is running in. '}

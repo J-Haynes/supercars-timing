@@ -32,8 +32,13 @@ export const ENDURO_POINTS = [300, 276, 254, 234, 215, 198, 182, 167, 154, 142, 
  * Drivers' standings after the Bathurst 1000 (Round 11), the end of the regular season: Speedcafe's championship
  * table (https://speedcafe.com/bathurst-1000-race/, read 14 Oct 2026). Checked: each full-time driver's gain over the
  * standings after Round 10 (above) is exactly ENDURO_POINTS for where our Race 30 recording has them finishing
- * (Kostecki 1st +300 ... Wood 24th +44; De Pasquale and Mostert, 25th and 26th, +0). `car` for the 24 full-time
- * entries (car numbers from the timing feed); co-drivers and wildcards have points but no car of their own.
+ * (Kostecki 1st +300 ... Wood 24th +44; De Pasquale and Mostert, 25th and 26th, +0). `car` is the car each driver
+ * races at the Finals rounds (car numbers from the timing feed; the Finals standings add race points by car number);
+ * co-drivers and wildcards have points but no car of their own.
+ * Driver changes for rounds 12-14 (2026 season page's entry list, https://en.wikipedia.org/wiki/2026_Supercars_Championship;
+ * the Gold Coast timing feed agrees): Cooper Murray moved from #99 to #36, Jarrod Hughes drives #99. Hughes isn't in
+ * the Speedcafe table we copied; his 187 after Bathurst is the season page's 220 after Race 31 minus the 33 for his
+ * 19th there (our recording). Not resolved: that page has Ben Gomersall on 220, Speedcafe after Bathurst 105.
  */
 export const STANDINGS_AFTER_BATHURST: { driver: string; car?: string; points: number }[] = [
   { car: '19', driver: 'Matt Payne', points: 2490 }, { car: '88', driver: 'Broc Feeney', points: 2285 },
@@ -44,12 +49,13 @@ export const STANDINGS_AFTER_BATHURST: { driver: string; car?: string; points: n
   { car: '8', driver: 'André Heimgartner', points: 1433 }, { car: '55', driver: 'Thomas Randle', points: 1404 },
   { car: '7', driver: 'James Golding', points: 1393 }, { car: '31', driver: 'Jayden Ojeda', points: 1363 },
   { car: '48', driver: 'David Reynolds', points: 1114 }, { car: '10', driver: 'Zach Bates', points: 1069 },
-  { car: '14', driver: 'Cameron Hill', points: 1045 }, { car: '99', driver: 'Cooper Murray', points: 972 },
+  { car: '14', driver: 'Cameron Hill', points: 1045 }, { car: '36', driver: 'Cooper Murray', points: 972 },
   { car: '38', driver: 'Rylan Gray', points: 968 }, { car: '3', driver: 'Aaron Cameron', points: 873 },
   { car: '777', driver: 'Declan Fraser', points: 788 }, { car: '96', driver: 'Macauley Jones', points: 767 },
   { car: '9', driver: 'Jobe Stewart', points: 725 }, { car: '11', driver: 'Jackson Walls', points: 711 },
   { driver: 'Todd Hazelwood', points: 441 }, { driver: 'Aaron Seton', points: 438 }, { driver: 'Reuben Goodall', points: 328 },
   { driver: 'Bayley Hall', points: 309 }, { driver: 'Craig Lowndes', points: 262 }, { driver: 'Mark Winterbottom', points: 224 },
+  { car: '99', driver: 'Jarrod Hughes', points: 187 },
   { driver: 'Ben Gomersall', points: 105 }, { driver: 'James Moffat', points: 67 },
 ]
 
