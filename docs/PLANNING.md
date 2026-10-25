@@ -353,6 +353,44 @@ pit times are estimates too. Check against Race 31's real stops (CLAUDE.md, "Nex
   stops) on the results Summary and as the feed's last item.
 - Finals: when a driver's live position moves them across the elimination cut (FinalsStandings has it).
 
+## Qualifying: projected laps (24 Oct 2026, step 1 built)
+
+Make qualifying more exciting by showing cars "on a lap" and where the lap would put them, especially across the
+cut-off line. Agreed design, in four steps (frontend only, both series, live and replay):
+
+1. **Projection + backtest** (built): `src/web/src/qualiProjection.ts`, `tools/QualiProjection/backtest.mts`.
+2. Tower: `→ 1:10.62 · P7` under the best lap for cars on a push lap (muted and dashed, like other estimates; green if
+   it beats the car's best, purple the session best), and a dashed "would go here" row like the pit rejoin ghost. Across
+   the cut-off: "↑ into the top 10" on the car and "↓ at risk" on the car it would push out.
+3. An "On a lap" panel above the tower in qualifying: 2-4 cars on push laps, sorted by who reaches the line next, with
+   the lap clock, a stretch strip, the gap to their best and the projection. After the chequered flag it's the "last
+   chances" list. The Shootout keeps its card.
+4. Extras: "P7?" on the map dot, a short log of improvements.
+
+**The projection** (`projectLap`): time to the last timing point crossed + the rest of the car's own best lap from that
+point (basis `best-lap`). Best lap set before we connected (splits only at the intermediates): its best stretches
+(`best-stretches`). No timed lap yet: the field's median best stretches (`field`, rough). **Pushing**: 2+ points crossed
+this lap and no more than 1.0 s behind its own best at the last point (1.5 s on a run's first flying lap; nothing to
+compare with = pushing). An `optimistic` figure (best stretches so far) goes alongside, but it isn't a floor: drivers
+improve through a session.
+
+**Finding:** Natsoft's stretch bests (`bestSegments`) include out-laps, so before a car's first timed lap they're out-lap
+times. Projections from them were 20 s+ slow; a car's own stretches only count once it has a timed lap, and the field
+figure only uses cars with one.
+
+**Backtest** (`cd src/web && npx tsx ../../tools/QualiProjection/backtest.mts <session id> [server] [step] [--f1]`, uses
+the replay API, on the laptop): error by point on push laps (bias, median, p90 per basis), push-lap detection (precision
+and recall for a range of thresholds, judged at point 2 and half a lap, "push lap" = within 1 % of the car's session
+best), and how often the optimistic figure was beaten. **So far only run on a synthetic session** (12 cars, out/push/
+cool laps with noise and mistakes; not real data): median error 0.06-0.15 s, p90 0.14-0.48 s, no bias; the thresholds
+couldn't be told apart (synthetic cool laps are too obviously slow). **To do:** run it on Bathurst Practice 5/6, the
+Shootout and the Gold Coast practice/qualifying recordings, then set `PROJECTION_TUNING` and the ± the tower shows
+from the real numbers.
+
+**Relation to the Shootout card's "Running P3":** that compares the car's split at its last point with every other
+car's best-lap split at the same point (the position it holds so far). The projection goes on to the whole lap, so it
+also counts where the car tends to gain or lose later in the lap; the card could use it in step 3.
+
 ## Ideas not built yet
 
 From the Bathurst brainstorm (built: safety car mode, charts, battle graph, finals ladder, phone layout, regression
