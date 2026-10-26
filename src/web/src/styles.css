@@ -473,6 +473,11 @@ header.session { justify-content: flex-start; }
 .menu-item.active { border-color: var(--accent); background: var(--accent-fill); }
 .menu-item:first-of-type { flex-direction: row; align-items: center; gap: 8px; }
 .menu-item.session { flex-direction: column; align-items: flex-start; gap: 2px; }
+/* Races stand out from practice and qualifying (they're opened most): a chequered flag and heavier, larger type.
+   No colour: each colour already means something (styles "Look" in CLAUDE.md). */
+.menu-item.session .session-name svg { flex: none; }
+.menu-item.race .session-name { display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700; }
+.menu-item.race .session-meta { padding-left: 20px; }
 .session-name { font-weight: 600; }
 .session-meta { color: var(--muted); font-size: 12px; }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 6px var(--red); }

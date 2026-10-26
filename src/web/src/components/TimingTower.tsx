@@ -18,6 +18,7 @@ import { PHONE, useMediaQuery } from '../useMediaQuery'
 import { autoCutoff, cutoffKey } from '../qualifyingCut'
 import type { CutoffOverride } from '../settings'
 import { CutoffRow } from './CutoffRow'
+import { ChequerIcon } from './ChequerIcon'
 
 /** Per-row buttons on the live race tower (shown on hover): pit rejoin estimate and the race charts. */
 export interface RowActionProps {
@@ -380,16 +381,6 @@ function StopwatchIcon() {
 }
 
 /** A small chequered flag (2 x 3 squares on a pole) for cars that have finished. */
-function ChequerIcon() {
-  return (
-    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
-      <path d="M2.5 1.5v13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <rect x="3.5" y="2" width="11" height="7.5" fill="none" stroke="currentColor" strokeWidth="1" />
-      <path d="M3.5 2h3.67v2.5H3.5zM10.83 2h3.67v2.5h-3.67zM7.17 4.5h3.66V7H7.17zM3.5 7h3.67v2.5H3.5zM10.83 7h3.67v2.5h-3.67z" fill="currentColor" />
-    </svg>
-  )
-}
-
 /** "5 seconds" -> "+5s", "plp" (pit lane penalty) -> "PLP", "Drive Through" -> "DT"; anything else -> "PEN". */
 function penaltyBadge(penalty: string): string {
   const seconds = penalty.match(/(\d+)\s*sec/i)
