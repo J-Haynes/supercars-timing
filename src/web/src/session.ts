@@ -128,3 +128,13 @@ export function flagPeriods(history: { time: number; flag: string }[] | undefine
   }
   return out
 }
+
+/**
+ * A recorded session's name in two parts: "2026 Repco Supercars Championship - Race 32" -> series "Repco Supercars
+ * Championship", session "Race 32". Natsoft doesn't always space the dash ("... Championship -Top Ten Shoot Out Race
+ * 32"), so any " -" splits. F1's names have no series part ("Race"): series is empty then.
+ */
+export function splitSessionName(name: string): { series: string; session: string } {
+  const [series, ...rest] = name.replace(/^\d{4}\s+/, '').split(/\s+-\s*/)
+  return rest.length ? { series, session: rest.join(' - ') } : { series: '', session: series }
+}

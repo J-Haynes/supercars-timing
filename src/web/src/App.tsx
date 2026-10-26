@@ -14,7 +14,7 @@ import { SessionView } from './components/SessionView'
 import { NextSession } from './components/NextSession'
 import type { UpcomingEvent } from './calendar'
 import { SettingsPanel } from './components/SettingsPanel'
-import { flagKind, isRace, isSupercarsSession } from './session'
+import { flagKind, isRace, isSupercarsSession, splitSessionName } from './session'
 import type { RecordedSession, TimingUpdate } from './types'
 import { isF1 } from './series'
 import { paths, useRecordedSession, useRoute } from './routes'
@@ -179,6 +179,5 @@ function headerView(preview: UpcomingEvent | null, results: RecordedSession | nu
 
 /** "2026 Repco Supercars Championship - Race 32" -> "Race 32" (the session part of a recorded session's name). */
 function sessionLabel(session: RecordedSession): string {
-  const [series, ...rest] = session.name.replace(/^\d{4}\s+/, '').split(' - ')
-  return rest.join(' - ') || series
+  return splitSessionName(session.name).session
 }

@@ -3,6 +3,7 @@ import type { RecordedSession } from '../types'
 import { SERIES_UPCOMING, eventEnd, eventStart, type UpcomingEvent } from '../calendar'
 import { hasScenery, trackManifest } from '../tracks'
 import { isF1, API_BASE } from '../series'
+import { splitSessionName } from '../session'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
 export function Menu({ open, onClose, resultsId, previewName, onWatchLive, onResults, onPreview }: {
@@ -60,7 +61,7 @@ export function Menu({ open, onClose, resultsId, previewName, onWatchLive, onRes
                 <div key={day}>
                   <div className="menu-day">{day}</div>
                   {daySessions.map((s) => {
-                    const { session } = splitName(s.name)
+                    const { session } = splitSessionName(s.name)
                     return (
                       <button key={s.id} type="button" className={`menu-item session${s.id === resultsId ? ' active' : ''}`}
                         onClick={() => { onResults(s); onClose() }}>
@@ -155,11 +156,6 @@ function groupBy<T>(items: T[], key: (t: T) => string): Record<string, T[]> {
 }
 
 /** "2026 Repco Supercars Championship - Practice 6 (All Drivers)" -> series + session. */
-function splitName(name: string) {
-  const [series, ...rest] = name.replace(/^\d{4}\s+/, '').split(' - ')
-  return rest.length ? { series, session: rest.join(' - ') } : { series: '', session: series }
-}
-
 const dayLabel = (iso: string) => new Date(iso).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })
 const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 

@@ -7,7 +7,7 @@ import { MapView } from './MapView'
 import { ColumnSplitter } from './ColumnSplitter'
 import { ErrorBoundary } from './ErrorBoundary'
 import { gapText, lapTime, clock } from '../format'
-import { isRace } from '../session'
+import { isRace, splitSessionName } from '../session'
 import { startPosition } from '../startingGrid'
 import { carPenalties } from '../penalties'
 import { raceSummary } from '../raceSummary'
@@ -50,7 +50,8 @@ export function ResultsView({ session, onLive, onReplay }: { session: RecordedSe
   }, [session.id])
 
   const race = isRace(session.type)
-  const [series] = session.name.replace(/^\d{4}\s+/, '').split(' - ')
+  // F1 names are only the session ("Race"): shown as they are.
+  const series = splitSessionName(session.name).series || session.name
   const when = new Date(session.start).toLocaleString(undefined, { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
   const tabs: [Tab, string][] = race
     // No F1 standings yet: F1 races have no Championship tab.
