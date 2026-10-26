@@ -51,14 +51,16 @@ export function NextSession({ detail, onOpenEvent }: { detail?: string | null; o
             <h2 className="next-event">{event.name}</h2>
             <div className="next-venue">{event.venue}</div>
             <div className="next-name">{session?.name ?? 'Race weekend'}</div>
+            {/* The switch comes first: its label changes width ("your time (AEDT)" / "track time (UTC+11:00)"), and a
+                switch after it moved under the pointer on every click. */}
             <div className="next-when">
-              <span>{when.day} · {when.time} <span className="next-zone">{zone === 'mine' ? `your time (${mine.short})` : `track time (UTC${event.utcOffset})`}</span></span>
               <div className="segmented small" role="radiogroup" aria-label="Show times in">
                 <button type="button" role="radio" aria-checked={zone === 'mine'} className={zone === 'mine' ? 'active' : ''} onClick={() => setZone('mine')}
                   title={`Your time zone: ${mine.id}`}>Your time</button>
                 <button type="button" role="radio" aria-checked={zone === 'track'} className={zone === 'track' ? 'active' : ''} onClick={() => setZone('track')}
                   title={`At the track: UTC${event.utcOffset}`}>Track time</button>
               </div>
+              <span>{when.day} · {when.time} <span className="next-zone">{zone === 'mine' ? `your time (${mine.short})` : `track time (UTC${event.utcOffset})`}</span></span>
             </div>
           </div>
           <div className="next-countdown" role="timer" aria-label={under ? 'Under way' : `Starts in ${countdown(startsAt.getTime() - now)}`}>
