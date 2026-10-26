@@ -82,7 +82,7 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
     `Sessions/ReplayService`: one `SessionReplay` cursor per viewer and session (idle 10 min, max 16).
 - `src/web` (React 19 + Vite + TypeScript, strict). `src/types.ts` mirrors the C# DTOs **by hand**: update it when
   `CarRow`/`TimingSnapshot`/`SessionInfo` change. Key modules:
-  - Data/logic: `useTiming.ts` (SignalR), `useDelayedUpdate.ts` (broadcast delay), `liveGaps.ts` (live gaps, road
+  - Data/logic: `routes.ts` (page URLs), `useTiming.ts` (SignalR), `useDelayedUpdate.ts` (broadcast delay), `liveGaps.ts` (live gaps, road
     order, `raceOrder`), `insights.ts` (race feed), `battles.ts`, `chartSelection.ts`, `penalties.ts`, `championship.ts` + `finals.ts` + `teams.ts` (points data, cited),
     `startingGrid.ts`, `raceSummary.ts`, `chartData.ts`, `driverStats.ts` (stints, recent pace), `session.ts` (`isRace`, `flagKind`, `raceLaps`,
     `minDriverLaps`, `cautionPeriods`), `calendar.ts` (upcoming events and session times), `towerLayout.ts`.
@@ -441,6 +441,13 @@ the server in live mode by hand.
 
 ## Results, replay and event pages
 
+- **URLs** (`routes.ts`, React Router in declarative mode, Oct 2026; owner asked): `/` live, `/results/:sessionId`,
+  `/results/:sessionId/replay`, `/events/:slug` (from the event's name), all under `/f1` in the F1 app (the router's
+  basename). The page on screen comes from the URL (`useRoute`), never from App state, so refresh, Back and shared
+  links work; navigate with `paths.*`. A results URL finds its session in the menu's navigation state, else in
+  `/sessions?all=true`. Replay URLs show the results through the tunnel. The server already serves index.html for any
+  path (`MapFallbackToFile`); session ids must stay free of dots (a dot looks like a file). Tabs, settings and the
+  replay time aren't in the URL (Back would step through every click).
 - **Results** (`ResultsView.tsx`, from the menu): Classification (positions gained, laps down, badges, driver laps),
   Summary (`raceSummary.ts`: winner and race time, laps led, lead changes, safety cars, movers, fastest stop,
   penalties, cars well down), Charts, Pit stops, Race control, Championship. Data: `/api/sessions/{id}/results` + `/laps`.
