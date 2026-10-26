@@ -5,11 +5,13 @@ import { hasScenery, trackManifest } from '../tracks'
 import { isF1, API_BASE } from '../series'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
-export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPreview }: {
+export function Menu({ open, onClose, resultsId, previewName, onWatchLive, onResults, onPreview }: {
   open: boolean
   onClose: () => void
-  /** Session whose results are on screen, or null for live timing. */
+  /** Session whose results are on screen, or null. */
   resultsId: string | null
+  /** Upcoming event whose page is on screen, or null. Live timing is on screen when neither is set. */
+  previewName: string | null
   onWatchLive: () => void
   onResults: (session: RecordedSession) => void
   /** Open an upcoming event's page (timetable and map). */
@@ -84,7 +86,7 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
 
         <section>
           <h2>Live</h2>
-          <button type="button" className={`menu-item${resultsId ? '' : ' active'}`} onClick={() => { onWatchLive(); onClose() }}>
+          <button type="button" className={`menu-item${resultsId || previewName ? '' : ' active'}`} onClick={() => { onWatchLive(); onClose() }}>
             <span className="live-dot" /> Live timing
           </button>
         </section>
@@ -109,7 +111,7 @@ export function Menu({ open, onClose, resultsId, onWatchLive, onResults, onPrevi
             const map = e.trackCode ? trackManifest[e.trackCode] : undefined
             const underWay = eventStart(e).getTime() <= now
             return (
-              <button key={e.name} type="button" className="upcoming" onClick={() => { onPreview(e); onClose() }} title="Open the event: session times and map">
+              <button key={e.name} type="button" className={`upcoming${e.name === previewName ? ' active' : ''}`} onClick={() => { onPreview(e); onClose() }} title="Open the event: session times and map">
                 <span className="upcoming-top">
                   <span className="upcoming-name">{e.name}</span>
                   <span className="soon">{underWay ? 'This weekend' : 'Coming soon'}</span>
