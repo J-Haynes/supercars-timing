@@ -50,10 +50,19 @@ public class SessionScheduleTests
     public void An_event_without_a_full_timetable_is_covered_all_day()
     {
         var s = Real();
-        // Sandown: only the Shootouts and races are timed, so 07:00-19:00 AEDT on every event day.
-        Assert.NotNull(s.Current(At(11, 6, 9, 0, Aedt)));
-        Assert.Null(s.Current(At(11, 6, 6, 59, Aedt)));
-        Assert.Null(s.Current(At(11, 8, 19, 1, Aedt)));
+        // Bathurst was never fully timed in the file (complete=false), so 07:00-19:00 AEDT on every event day.
+        Assert.NotNull(s.Current(At(10, 8, 9, 0, Aedt)));
+        Assert.Null(s.Current(At(10, 8, 6, 59, Aedt)));
+        Assert.Null(s.Current(At(10, 11, 19, 1, Aedt)));
+    }
+
+    [Fact]
+    public void Sandown_practice_sessions_20_min_apart_are_one_connection()
+    {
+        var s = Real();
+        // Practice 1 14:40-15:05 AEDT, Practice 2 15:25-15:50 (Supercars, correct as of 30 Sep): 14:10 to 16:20.
+        Assert.Null(s.Current(At(11, 6, 14, 9, Aedt)));
+        Assert.Equal(At(11, 6, 16, 20, Aedt), s.Current(At(11, 6, 14, 10, Aedt))!.End);
     }
 
     [Fact]

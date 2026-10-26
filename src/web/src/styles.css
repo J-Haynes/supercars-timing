@@ -965,6 +965,7 @@ button.upcoming { width: 100%; text-align: left; font: inherit; color: inherit; 
 button.upcoming > span { display: block; }
 button.upcoming > .upcoming-top, button.upcoming > .upcoming-bottom { display: flex; }
 button.upcoming:hover { border-color: var(--muted); }
+button.upcoming.active { border-color: var(--accent); background: var(--accent-fill); } /* the event page on screen, like .menu-item.active */
 .event-preview .results-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
 .event-preview h2 { margin: 2px 0; font-size: 20px; }
 .event-sessions { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 10px 14px; align-self: start; }

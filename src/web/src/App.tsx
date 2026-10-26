@@ -52,6 +52,7 @@ export default function App() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         resultsId={results?.id ?? null}
+        previewName={preview?.name ?? null}
         onWatchLive={() => { setResults(null); setPreview(null); setReplaying(false) }}
         onResults={(s) => { setResults(s); setPreview(null); setReplaying(false) }}
         onPreview={(e) => { setPreview(e); setResults(null) }}
