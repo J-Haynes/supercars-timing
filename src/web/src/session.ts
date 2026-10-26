@@ -46,9 +46,9 @@ const KNOWN_RACE_LAPS: { meeting: RegExp; race?: RegExp; laps: number }[] = [
   { meeting: /bathurst 1000/i, laps: 161 },
   // Both Gold Coast races: "85 laps or 1 lap after" a time limit (Supercars schedule, 16 Sep 2026).
   { meeting: /gold coast/i, laps: 85 },
-  // Sandown, two 250 km races: "500 km race distance and 81 laps" (https://travel.supercars.com/2026-sandown); 81-lap
-  // races in 2025 too. Supercars hadn't published the 2026 track schedule yet (12 Oct 2026): check it when it is.
-  { meeting: /sandown/i, laps: 81 },
+  // Sandown, two 250 km races of 79 laps (81 in 2025). Supercars track schedule, "correct as of Wednesday September 30":
+  // https://www.supercars.com/news/supercars-news-2026-sandown-500-track-schedule-race-start-times-tickets-tv-enduro-cup-sessions
+  { meeting: /sandown/i, laps: 79 },
   // Adelaide: Race 35 (Friday, 100 km) 32 laps, Races 36 and 37 (250 km) 78 laps. Supercars track schedule, "correct as
   // of Wednesday July 1": https://www.supercars.com/news/supercars-news-2026-adelaide-grand-final-track-schedule-revealed-times-racing-super2-series-finals-supports
   { meeting: /adelaide/i, race: /race 35\b/i, laps: 32 },

@@ -98,7 +98,7 @@ const SUPERCARS_EVENTS: Omit<UpcomingEvent, 'startDate' | 'endDate' | 'utcOffset
       stakes: 'Seven drivers left after the Gold Coast. Points reset again with the same bonus for the top four (150, 120, 96, 78); after the two races the bottom three are eliminated, leaving four for the Grand Final.',
       facts: [
         { label: 'Circuit', value: 'Sandown permanent circuit, 3.1 km (National Circuit, 13 turns)' },
-        { label: 'Races', value: '2 × 250 km, 81 laps each (Races 33 and 34)' },
+        { label: 'Races', value: '2 × 250 km, 79 laps each (Races 33 and 34)' },
         { label: 'Tyres', value: 'Saturday Super Soft, Sunday Soft' },
         { label: 'Pit stops', value: '2 mandatory per race' },
         { label: 'Lap record', value: '1:07.2078, Will Davison (2022)' },
@@ -107,7 +107,7 @@ const SUPERCARS_EVENTS: Omit<UpcomingEvent, 'startDate' | 'endDate' | 'utcOffset
       trackMap: { note: "Supercars hasn't published the 2026 event map yet (checked 12 Oct). The Gold Coast's came out three weeks before its event." },
       sources: [
         { label: 'Supercars: event page (length, lap record, featured sessions)', url: 'https://www.supercars.com/events/2026-sandown' },
-        { label: 'Supercars Travel: 81 laps', url: 'https://travel.supercars.com/2026-sandown' },
+        { label: 'Supercars: track schedule (79 laps)', url: 'https://www.supercars.com/news/supercars-news-2026-sandown-500-track-schedule-race-start-times-tickets-tv-enduro-cup-sessions' },
         { label: 'Wikipedia: Sandown Raceway (13 turns)', url: 'https://en.wikipedia.org/wiki/Sandown_Raceway' },
         FORMATS, FINALS_RULES, ELIMINATIONS, SEASON,
         { label: 'Autosport: 2025 Sandown 500 results', url: 'https://www.autosport.com/supercars/results/2025/sandown-500-659853/?st=RACE1' },

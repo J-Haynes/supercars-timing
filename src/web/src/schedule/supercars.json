@@ -69,30 +69,61 @@
       "startDate": "2026-11-06",
       "endDate": "2026-11-08",
       "utcOffset": "+11:00",
-      "sessionsSource": "https://www.supercars.com/events/2026-sandown",
-      "sessionsNote": "Only the Shootouts and races are published so far; practice and qualifying times will follow.",
+      "sessionsSource": "https://www.supercars.com/news/supercars-news-2026-sandown-500-track-schedule-race-start-times-tickets-tv-enduro-cup-sessions",
       "sessions": [
         {
+          "name": "Practice 1",
+          "start": "2026-11-06T14:40",
+          "end": "2026-11-06T15:05"
+        },
+        {
+          "name": "Practice 2",
+          "start": "2026-11-06T15:25",
+          "end": "2026-11-06T15:50"
+        },
+        {
+          "name": "Qualifying 1 (Race 33)",
+          "start": "2026-11-07T11:20",
+          "end": "2026-11-07T11:32"
+        },
+        {
+          "name": "Qualifying 2 (Race 33)",
+          "start": "2026-11-07T11:40",
+          "end": "2026-11-07T11:52"
+        },
+        {
           "name": "Top Ten Shootout (Race 33)",
-          "start": "2026-11-07T12:05"
+          "start": "2026-11-07T12:05",
+          "end": "2026-11-07T12:30"
         },
         {
           "name": "Race 33",
           "start": "2026-11-07T15:30",
-          "laps": 81
+          "laps": 79
+        },
+        {
+          "name": "Qualifying 1 (Race 34)",
+          "start": "2026-11-08T11:20",
+          "end": "2026-11-08T11:32"
+        },
+        {
+          "name": "Qualifying 2 (Race 34)",
+          "start": "2026-11-08T11:40",
+          "end": "2026-11-08T11:52"
         },
         {
           "name": "Top Ten Shootout (Race 34)",
-          "start": "2026-11-08T12:05"
+          "start": "2026-11-08T12:05",
+          "end": "2026-11-08T12:30"
         },
         {
           "name": "Race 34",
           "start": "2026-11-08T15:30",
-          "laps": 81
+          "laps": 79
         }
       ],
-      "complete": false,
-      "asOf": "Only the featured sessions are on the event page so far (checked 12 Oct 2026); the full track schedule isn't out."
+      "complete": true,
+      "asOf": "\"All times AEDT, correct as of Wednesday September 30\" (Supercars); times can still change."
     },
     {
       "name": "bp Adelaide Grand Final",
