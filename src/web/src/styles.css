@@ -1057,6 +1057,12 @@ button.upcoming.active { border-color: var(--accent); background: var(--accent-f
 /* The other series' logo is greyed until hovered. */
 .series-switch a:not(.active) .series-logo { filter: grayscale(1) brightness(2.6); opacity: .5; transition: opacity .15s, filter .15s; }
 .series-switch a:not(.active):hover .series-logo { filter: none; opacity: 1; }
+/* In the menu: full width, with names. The series already open isn't a link that does anything (SeriesSwitch). */
+.series-switch.in-menu { display: flex; width: 100%; height: 40px; }
+.series-switch.in-menu a { flex: 1; width: auto; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.series-switch.in-menu a.active { color: var(--text); }
+.series-switch.in-menu a:not(.active):hover { color: var(--text); background: var(--raise); }
+.series-switch a.active { cursor: default; }
 
 /* Menu button and series switch share a row (on phones the header stacks). */
 .session-nav { display: flex; align-items: center; gap: 8px; flex: none; }

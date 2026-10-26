@@ -7,6 +7,7 @@ import { SessionHeader } from './components/SessionHeader'
 import { Controls } from './components/Controls'
 import { TipsPanel } from './components/TipsPanel'
 import { Menu } from './components/Menu'
+import { opensMenu } from './components/SeriesSwitch'
 import { ResultsView } from './components/ResultsView'
 import { EventPreview } from './components/EventPreview'
 import { ReplayView } from './components/ReplayView'
@@ -25,7 +26,8 @@ export default function App() {
   const { settings, update: updateSettings, togglePinned } = useSettings()
   // Everything below shows the delayed update, so the tower, map and clock stay in sync with the broadcast.
   const { update, buffered } = useDelayedUpdate(latest, settings.delay)
-  const [menuOpen, setMenuOpen] = useState(false)
+  // Open as the page loads when the other series was chosen in the menu (SeriesSwitch): the viewer was in the menu.
+  const [menuOpen, setMenuOpen] = useState(opensMenu)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // The page on screen comes from the URL (routes.ts): live timing, a session's results or replay, or an upcoming event.
   const route = useRoute()

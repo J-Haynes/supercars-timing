@@ -1,10 +1,5 @@
-import { isF1, SERIES, SERIES_HOME, SERIES_LABEL, type Series } from '../series'
-// Logos: F1 from Wikimedia Commons (File:F1.svg); the Supercars "S" mark cropped from the championship logo on
-// Wikipedia (File:Supercars_Championship_Logo_2021.png). Trademarks of their owners; used here for a personal app.
-import f1Logo from '../assets/f1-logo.svg'
-import supercarsMark from '../assets/supercars-mark.png'
-
-const SERIES_LOGO: Record<Series, string> = { v8: supercarsMark, f1: f1Logo }
+import { isF1 } from '../series'
+import { SeriesSwitch } from './SeriesSwitch'
 import type { FeedStatus, TimingUpdate } from '../types'
 import type { ConnectionState } from '../useTiming'
 import { clock } from '../format'
@@ -103,22 +98,5 @@ export function SessionHeader({ update: liveUpdate, feed, connection, onMenu, hi
         )}
       </div>
     </header>
-  )
-}
-
-/** Master switch between the Supercars app (/) and the F1 app (/f1). Remembered for the next visit to /. */
-function SeriesSwitch() {
-  const choose = (s: Series) => {
-    try { localStorage.setItem('supercars-timing:series', s) } catch { /* private mode: not remembered */ }
-  }
-  return (
-    <nav className="series-switch" aria-label="Series">
-      {(['v8', 'f1'] as const).map((s) => (
-        <a key={s} href={SERIES_HOME[s]} className={s === SERIES ? 'active' : ''} onClick={() => choose(s)}
-          title={SERIES_LABEL[s]} aria-current={s === SERIES ? 'page' : undefined}>
-          <img src={SERIES_LOGO[s]} alt={SERIES_LABEL[s]} className={`series-logo series-logo-${s}`} />
-        </a>
-      ))}
-    </nav>
   )
 }

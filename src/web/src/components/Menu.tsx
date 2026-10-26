@@ -4,6 +4,7 @@ import { SERIES_UPCOMING, eventEnd, eventStart, type UpcomingEvent } from '../ca
 import { hasScenery, trackManifest } from '../tracks'
 import { isF1, API_BASE } from '../series'
 import { splitSessionName } from '../session'
+import { SeriesSwitch } from './SeriesSwitch'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
 export function Menu({ open, onClose, resultsId, previewName, onWatchLive, onResults, onPreview }: {
@@ -84,6 +85,11 @@ export function Menu({ open, onClose, resultsId, previewName, onWatchLive, onRes
           <span>{isF1 ? 'F1 Timing' : 'Supercars Timing'}</span>
           <button type="button" onClick={onClose} aria-label="Close menu">×</button>
         </div>
+
+        <section>
+          <h2>Series</h2>
+          <SeriesSwitch inMenu />
+        </section>
 
         <section>
           <h2>Live</h2>
