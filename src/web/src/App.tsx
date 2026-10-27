@@ -7,6 +7,7 @@ import { SessionHeader } from './components/SessionHeader'
 import { Controls } from './components/Controls'
 import { TipsPanel } from './components/TipsPanel'
 import { Menu } from './components/Menu'
+import { opensMenu } from './components/SeriesSwitch'
 import { ResultsView } from './components/ResultsView'
 import { EventPreview } from './components/EventPreview'
 import { ReplayView } from './components/ReplayView'
@@ -14,7 +15,7 @@ import { SessionView } from './components/SessionView'
 import { NextSession } from './components/NextSession'
 import type { UpcomingEvent } from './calendar'
 import { SettingsPanel } from './components/SettingsPanel'
-import { flagKind, isRace, isSupercarsSession } from './session'
+import { flagKind, isRace, isSupercarsSession, splitSessionName } from './session'
 import type { RecordedSession, TimingUpdate } from './types'
 import { isF1 } from './series'
 import { paths, useRecordedSession, useRoute } from './routes'
@@ -25,7 +26,8 @@ export default function App() {
   const { settings, update: updateSettings, togglePinned } = useSettings()
   // Everything below shows the delayed update, so the tower, map and clock stay in sync with the broadcast.
   const { update, buffered } = useDelayedUpdate(latest, settings.delay)
-  const [menuOpen, setMenuOpen] = useState(false)
+  // Open as the page loads when the other series was chosen in the menu (SeriesSwitch): the viewer was in the menu.
+  const [menuOpen, setMenuOpen] = useState(opensMenu)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // The page on screen comes from the URL (routes.ts): live timing, a session's results or replay, or an upcoming event.
   const route = useRoute()
@@ -179,6 +181,5 @@ function headerView(preview: UpcomingEvent | null, results: RecordedSession | nu
 
 /** "2026 Repco Supercars Championship - Race 32" -> "Race 32" (the session part of a recorded session's name). */
 function sessionLabel(session: RecordedSession): string {
-  const [series, ...rest] = session.name.replace(/^\d{4}\s+/, '').split(' - ')
-  return rest.join(' - ') || series
+  return splitSessionName(session.name).session
 }

@@ -84,8 +84,8 @@ body {
 .app { min-height: 100vh; display: flex; flex-direction: column; }
 main { flex: 1; padding: 0 16px 24px; }
 
-/* Header */
-.session {
+/* Header. header.session, not .session: the menu's results list has .menu-item.session buttons, which got the brand rule. */
+header.session {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -96,7 +96,7 @@ main { flex: 1; padding: 0 16px 24px; }
   margin-bottom: 12px;
 }
 .meeting { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-.session h1 { margin: 2px 0; font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight);
+header.session h1 { margin: 2px 0; font-family: var(--display); font-style: var(--display-style); font-weight: var(--display-weight);
   font-size: var(--display-size); line-height: 30px; letter-spacing: .005em; } /* same height in both apps */
 .track { color: var(--muted); font-size: 13px; }
 .session-status { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
@@ -189,7 +189,7 @@ main { flex: 1; padding: 0 16px 24px; }
 }
 
 @media (max-width: 700px) {
-  .session { flex-direction: column; align-items: flex-start; }
+  header.session { flex-direction: column; align-items: flex-start; }
   .session-status { justify-content: flex-start; }
 }
 
@@ -440,7 +440,7 @@ body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 /* Header menu button and status */
 .menu-button { align-self: center; background: none; border: 1px solid var(--line); color: var(--text); border-radius: 6px; width: 36px; height: 36px; font-size: 18px; cursor: pointer; flex: none; }
 .menu-button:hover { border-color: var(--muted); }
-.session { justify-content: flex-start; }
+header.session { justify-content: flex-start; }
 .session-status { margin-left: auto; }
 .dot-paused { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text); }
 
@@ -473,6 +473,11 @@ body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 .menu-item.active { border-color: var(--accent); background: var(--accent-fill); }
 .menu-item:first-of-type { flex-direction: row; align-items: center; gap: 8px; }
 .menu-item.session { flex-direction: column; align-items: flex-start; gap: 2px; }
+/* Races stand out from practice and qualifying (they're opened most): a chequered flag and heavier, larger type.
+   No colour: each colour already means something (styles "Look" in CLAUDE.md). */
+.menu-item.session .session-name svg { flex: none; }
+.menu-item.race .session-name { display: inline-flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 700; }
+.menu-item.race .session-meta { padding-left: 20px; }
 .session-name { font-weight: 600; }
 .session-meta { color: var(--muted); font-size: 12px; }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 6px var(--red); }
@@ -879,9 +884,9 @@ body:has(.map-height-handle.dragging) { cursor: row-resize; user-select: none; }
 @media (max-width: 760px) {
   .race-charts.empty { display: block; padding: 16px 12px; }
   /* Header and controls take less room so the tabs and tower start higher. */
-  .session { padding: 8px 8px 6px; gap: 6px; }
-  .session .meeting, .session .track { display: none; }
-  .session h1 { font-size: 16px; }
+  header.session { padding: 8px 8px 6px; gap: 6px; }
+  header.session .meeting, header.session .track { display: none; }
+  header.session h1 { font-size: 16px; }
   .clock { font-size: 18px; }
   .controls .focus-select, .controls .delay input[type="range"], .controls .delay-label { display: none; }
   .controls .mfr-key { display: none; }
@@ -1057,6 +1062,12 @@ button.upcoming.active { border-color: var(--accent); background: var(--accent-f
 /* The other series' logo is greyed until hovered. */
 .series-switch a:not(.active) .series-logo { filter: grayscale(1) brightness(2.6); opacity: .5; transition: opacity .15s, filter .15s; }
 .series-switch a:not(.active):hover .series-logo { filter: none; opacity: 1; }
+/* In the menu: full width, with names. The series already open isn't a link that does anything (SeriesSwitch). */
+.series-switch.in-menu { display: flex; width: 100%; height: 40px; }
+.series-switch.in-menu a { flex: 1; width: auto; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.series-switch.in-menu a.active { color: var(--text); }
+.series-switch.in-menu a:not(.active):hover { color: var(--text); background: var(--raise); }
+.series-switch a.active { cursor: default; }
 
 /* Menu button and series switch share a row (on phones the header stacks). */
 .session-nav { display: flex; align-items: center; gap: 8px; flex: none; }

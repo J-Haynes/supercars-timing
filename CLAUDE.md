@@ -490,8 +490,10 @@ the server in live mode by hand.
 
 ## F1
 
-- **Two apps, one project:** Supercars at `/`, F1 at `/f1`; the header's switch (the two logos, `src/web/src/assets`,
-  sources in `SessionHeader.tsx`) is a link (full page load) and `/` remembers the last choice. Keep the header
+- **Two apps, one project:** Supercars at `/`, F1 at `/f1`; the switch (`SeriesSwitch.tsx`: the two logos in the
+  header, logos and names at the top of the menu; sources for the logos there) is a link (full page load) and `/`
+  remembers the last choice. From the menu the other app opens with its menu open (`?menu`, taken off the address);
+  the series already open does nothing (owner, Oct 2026: it used to reload). Keep the header
   identical in both apps (it always has three title lines; `scrollbar-gutter: stable`) so nothing moves on switching. Everything branches on `isF1` from `series.ts`; settings are stored
   per series. The F1 menu has Live, Results, Past seasons and Upcoming (`F1_UPCOMING` in `calendar.ts`, from the Jolpica API,
   cited; `SERIES_UPCOMING` picks the series). F1 results have no Championship tab (no F1 standings). The F1 app hides
