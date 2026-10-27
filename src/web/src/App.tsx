@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Navigate, useNavigate } from 'react-router'
 import { useTiming } from './useTiming'
 import { useDelayedUpdate } from './useDelayedUpdate'
 import { useSettings } from './settings'
@@ -16,6 +17,7 @@ import { SettingsPanel } from './components/SettingsPanel'
 import { flagKind, isRace, isSupercarsSession } from './session'
 import type { RecordedSession, TimingUpdate } from './types'
 import { isF1 } from './series'
+import { paths, useRecordedSession, useRoute } from './routes'
 import { useFeatures } from './features'
 
 export default function App() {
@@ -25,12 +27,13 @@ export default function App() {
   const { update, buffered } = useDelayedUpdate(latest, settings.delay)
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  // null = live timing; otherwise the recorded session whose results are on screen.
-  const [results, setResults] = useState<RecordedSession | null>(null)
-  // An upcoming event's page (timetable and map), opened from the menu.
-  const [preview, setPreview] = useState<UpcomingEvent | null>(null)
-  // Replaying the results session (from its results page).
-  const [replaying, setReplaying] = useState(false)
+  // The page on screen comes from the URL (routes.ts): live timing, a session's results or replay, or an upcoming event.
+  const route = useRoute()
+  const navigate = useNavigate()
+  const results = useRecordedSession(route.page === 'results' ? route.key : null)
+  const preview = route.page === 'event' ? route.event : null
+  const replaying = route.page === 'results' && route.replay
+  const live = route.page === 'live'
   // The replay's current moment, reported by ReplayView, for the header.
   const [replayUpdate, setReplayUpdate] = useState<TimingUpdate | null>(null)
   // Replays are local only: not offered through the Cloudflare Tunnel (features.ts).
@@ -41,21 +44,32 @@ export default function App() {
   const supportSession = !isF1 && !!timing?.session.name && !isSupercarsSession(timing.session.name)
   const hasCars = !!timing && timing.cars.length > 0 && !supportSession
   // Red / yellow (safety car, full-course yellow) flags frame the whole screen while they're out.
-  const kind = !results && !supportSession && timing ? flagKind(timing.session.flag) : undefined
+  const kind = live && !supportSession && timing ? flagKind(timing.session.flag) : undefined
   const frame = kind === 'red' ? ' flag-frame flag-frame-red' : kind === 'caution' ? ' flag-frame flag-frame-yellow' : ''
+
+  // The tab's title names the page, so history, bookmarks and tabs can tell them apart.
+  const title = preview ? preview.name
+    // F1 sessions are just "Race", "Qualifying": the meeting says which.
+    : results ? `${sessionLabel(results)} · ${results.meeting} · ${replaying && replayAllowed ? 'Replay' : 'Results'}`
+    : null
+  useEffect(() => {
+    const app = isF1 ? 'F1 Timing' : 'Supercars Timing'
+    document.title = title ? `${title} · ${app}` : app
+  }, [title])
 
   return (
     <div className={`app${frame}`}>
       <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} hideSession={supportSession}
-        viewing={headerView(preview, results, replaying ? replayUpdate : null)} />
+        viewing={headerView(preview, results ?? null, replaying ? replayUpdate : null)} />
       <Menu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         resultsId={results?.id ?? null}
         previewName={preview?.name ?? null}
-        onWatchLive={() => { setResults(null); setPreview(null); setReplaying(false) }}
-        onResults={(s) => { setResults(s); setPreview(null); setReplaying(false) }}
-        onPreview={(e) => { setPreview(e); setResults(null) }}
+        onWatchLive={() => navigate(paths.live)}
+        // The session goes along as the navigation's state, so the page needn't look it up (useRecordedSession).
+        onResults={(s) => navigate(paths.results(s), { state: s })}
+        onPreview={(e) => navigate(paths.event(e))}
       />
       {/* Settings: live and replay (same settings; opens on the layout of the session on screen). */}
       <SettingsPanel
@@ -73,12 +87,27 @@ export default function App() {
         finalistBadges={settings.finalistBadges}
         onFinalistBadges={(finalistBadges) => updateSettings({ finalistBadges })}
       />
-      {preview ? (
-        <main><EventPreview event={preview} onLive={() => setPreview(null)} /></main>
-      ) : results && replaying && replayAllowed ? (
-        <main><ReplayView session={results} onBack={() => setReplaying(false)} onUpdate={setReplayUpdate} onSettings={() => setSettingsOpen(true)} /></main>
-      ) : results ? (
-        <main><ResultsView session={results} onLive={() => setResults(null)} onReplay={replayAllowed ? () => setReplaying(true) : undefined} /></main>
+      {route.page === 'unknown' ? (
+        <Navigate to={paths.live} replace />
+      ) : route.page === 'event' ? (
+        <main>
+          {preview
+            ? <EventPreview event={preview} onLive={() => navigate(paths.live)} />
+            : <NotFound what="That event isn't in the calendar (it may be over)." onLive={() => navigate(paths.live)} />}
+        </main>
+      ) : route.page === 'results' ? (
+        <main>
+          {results === undefined ? <div className="empty">Loading…</div>
+            : results === null ? <NotFound what="There's no recorded session with that link." onLive={() => navigate(paths.live)} />
+            // A link by id (the first form of these URLs): show it at the session's readable address instead.
+            : route.page === 'results' && route.key !== results.slug
+              ? <Navigate to={replaying ? paths.replay(results) : paths.results(results)} replace state={results} />
+            // Through the tunnel replays are off: the replay link shows the results instead.
+            : replaying && replayAllowed
+              ? <ReplayView session={results} onBack={() => navigate(paths.results(results), { state: results })} onUpdate={setReplayUpdate} onSettings={() => setSettingsOpen(true)} />
+              : <ResultsView session={results} onLive={() => navigate(paths.live)}
+                  onReplay={replayAllowed ? () => navigate(paths.replay(results), { state: results }) : undefined} />}
+        </main>
       ) : (
         <>
           <Controls simple={settings.simple} onSimple={(simple) => updateSettings({ simple })} delay={settings.delay} buffered={buffered} onDelay={(delay) => updateSettings({ delay })} onSettings={() => setSettingsOpen(true)} />
@@ -87,19 +116,27 @@ export default function App() {
               <SessionView update={update} live={latest} settings={settings} updateSettings={updateSettings} togglePinned={togglePinned} tips />
             ) : (
               <EmptyState state={latest?.feed.state} detail={latest?.feed.detail} connection={connection} support={supportSession ? timing?.session.name : undefined}
-                onOpenEvent={setPreview} />
+                onOpenEvent={(e) => navigate(paths.event(e))} />
             )}
           </main>
         </>
       )}
       {/* In the live view the tips sit under the tower instead. */}
-      {!(hasCars && !results) && (
+      {!(hasCars && live) && (
         <TipsPanel
           open={!settings.tipDismissed}
           onClose={() => updateSettings({ tipDismissed: true })}
           onOpen={() => updateSettings({ tipDismissed: false })}
         />
       )}
+    </div>
+  )
+}
+
+function NotFound({ what, onLive }: { what: string; onLive: () => void }) {
+  return (
+    <div className="empty">
+      {what} <button type="button" className="link-button" onClick={onLive}>Back to live timing</button>
     </div>
   )
 }
@@ -136,9 +173,12 @@ function headerView(preview: UpcomingEvent | null, results: RecordedSession | nu
     const rate = replay.feed.clockRate
     return { update: replay, status: rate > 0 ? `Replay · ${rate}×` : 'Replay · paused', clock: true }
   }
-  if (results) {
-    const [series, ...rest] = results.name.replace(/^\d{4}\s+/, '').split(' - ')
-    return { update: stopped(results.meeting, rest.join(' - ') || series, results.track, results.trackCode), status: 'Results', clock: false }
-  }
+  if (results) return { update: stopped(results.meeting, sessionLabel(results), results.track, results.trackCode), status: 'Results', clock: false }
   return null
+}
+
+/** "2026 Repco Supercars Championship - Race 32" -> "Race 32" (the session part of a recorded session's name). */
+function sessionLabel(session: RecordedSession): string {
+  const [series, ...rest] = session.name.replace(/^\d{4}\s+/, '').split(' - ')
+  return rest.join(' - ') || series
 }

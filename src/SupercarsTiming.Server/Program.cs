@@ -37,13 +37,19 @@ app.MapGet("/api/snapshot", (TimingStore store) => Results.Ok(new TimingUpdate(s
 // Lap history for the charts: large, so it's fetched on its own every few seconds rather than pushed with each update.
 app.MapGet("/api/laps", (TimingStore store) => Results.Ok(store.Laps()));
 // Recorded sessions, newest first. Supercars Championship only unless ?all=true (support categories are recorded too).
-app.MapGet("/api/sessions", (SessionCatalog catalog, bool? all) => Results.Ok(catalog.List()
-    .Where(s => all == true || SessionIndex.IsSupercarsChampionship(s.Name))
-    .Select(s => new
-    {
-        s.Id, s.Meeting, s.Name, s.Type, s.Track, s.TrackCode, s.Start, s.End,
-        DurationSeconds = Math.Round(s.DurationSeconds), s.Messages,
-    })));
+// Slug: the session's readable address for the web app's URLs (SessionSlug), worked out over every session.
+app.MapGet("/api/sessions", (SessionCatalog catalog, bool? all) =>
+{
+    var sessions = catalog.List();
+    var slugs = SessionSlug.Assign(sessions);
+    return Results.Ok(sessions
+        .Where(s => all == true || SessionIndex.IsSupercarsChampionship(s.Name))
+        .Select(s => new
+        {
+            s.Id, Slug = slugs[s.Id], s.Meeting, s.Name, s.Type, s.Track, s.TrackCode, s.Start, s.End,
+            DurationSeconds = Math.Round(s.DurationSeconds), s.Messages,
+        }));
+});
 // Final classification of a recorded session.
 app.MapGet("/api/sessions/{id}/results", (SessionCatalog catalog, string id) =>
     catalog.Results(id) is { } results ? Results.Ok(results) : Results.NotFound());
@@ -62,12 +68,16 @@ app.MapGet("/api/f1/snapshot", (F1Store store) => Results.Ok(new TimingUpdate(st
 app.MapGet("/api/f1/laps", (F1Store store) => Results.Ok(store.Laps()));
 // F1 results and replays: the same endpoints and shapes as the Supercars ones above (F1Sessions.cs), so the results
 // and replay pages work for both series with only the API base changed.
-app.MapGet("/api/f1/sessions", (F1SessionCatalog catalog) => Results.Ok(catalog.List()
-    .Select(s => new
+app.MapGet("/api/f1/sessions", (F1SessionCatalog catalog) =>
+{
+    var sessions = catalog.List();
+    var slugs = SessionSlug.Assign(sessions);
+    return Results.Ok(sessions.Select(s => new
     {
-        s.Id, s.Meeting, s.Name, s.Type, s.Track, s.TrackCode, s.Start, s.End,
+        s.Id, Slug = slugs[s.Id], s.Meeting, s.Name, s.Type, s.Track, s.TrackCode, s.Start, s.End,
         DurationSeconds = Math.Round(s.DurationSeconds), s.Messages,
-    })));
+    }));
+});
 app.MapGet("/api/f1/sessions/{id}/results", (F1SessionCatalog catalog, string id) =>
     catalog.Results(id) is { } results ? Results.Ok(results) : Results.NotFound());
 app.MapGet("/api/f1/sessions/{id}/replay/info", (F1ReplayService replays, string id) =>
