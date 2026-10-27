@@ -36,7 +36,8 @@ dotnet test --configuration Release --no-build     # RecordingRegressionTests sk
 cd src/web && npm run build                          # strict tsc (no unused locals) + vite
 ```
 
-- `RecordingRegressionTests` only run on the owner's laptop, where `data/recordings/` exists. CI and cloud sessions
+- `RecordingRegressionTests` only run where `data/recordings/` exists: the home server (both checkouts) and the
+  owner's laptop (daily backup copy). CI and cloud sessions
   skip them (6 skipped is normal). If the change touches protocol, state, replay or session code, say in the PR
   that the owner should run `dotnet test` locally before merging.
 - Cloud sessions get .NET 10 and the npm packages from `.claude/hooks/session-start.sh`. If `dotnet` is missing,
@@ -73,7 +74,8 @@ cd src/web && npm run build                          # strict tsc (no unused loc
 - **Merge only when the owner says so**, and only with **Rebase and merge** (`gh pr merge --rebase`, or merge
   method `rebase` with the GitHub tools). Never squash (it would collapse one-commit-per-feature) and never use a
   merge commit.
-- After merging, on the laptop: `git checkout main && git pull`, then deploy:
+- After merging, deploy on the home server's **live checkout** (`ssh jack@homeserver`, `cd ~/Dev/supercars-timing`,
+  always on `main`; CLAUDE.md "Where it runs"): `git pull`, then:
   - frontend only: `cd src/web && npm run build` (the running service serves the new `wwwroot`; viewers refresh);
   - C# changes: `dotnet build src/SupercarsTiming.Server -c Release`, then **ask the owner** before
     `systemctl --user restart supercars-timing`, especially during a session (restart takes about 5 s, warm start keeps state).
@@ -85,5 +87,6 @@ cd src/web && npm run build                          # strict tsc (no unused loc
 
 ## Race-weekend exception
 
-Race-weekend hotfixes and one-liners skip the PR: fast-forward `main` locally, deploy, push afterwards. The bar
+Race-weekend hotfixes and one-liners skip the PR: fast-forward `main` in a development checkout, push, then pull and
+deploy in the live checkout (never edit the live checkout directly). The bar
 doesn't drop: the checks above still run. On a session day, ask before anything that needs a server restart.

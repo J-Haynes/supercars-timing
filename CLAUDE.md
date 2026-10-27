@@ -12,7 +12,8 @@ Guidance for Claude Code (and other agents) working in this repo.
 Unofficial live timing dashboard for the Repco Supercars Championship (F1-dashboard style), for personal use.
 Data comes from Natsoft's public live timing WebSocket, the same feed behind supercars.com's free "classic" live
 timing. Since 11 Oct 2026 there's also a separate **F1 app** at `/f1` (see "F1" below) on F1's public live timing,
-served by the same server and frontend build. The owner runs it as a systemd service on their laptop and views it on their tailnet (see `deploy/`).
+served by the same server and frontend build. Since 27 Oct 2026 it runs as a systemd service on the owner's **home
+server** (`homeserver`, see "Where it runs" below and `deploy/`), on their tailnet and publicly through a Cloudflare Tunnel.
 
 Owner: a junior developer working in React, .NET/C# and SQL. Prefer clear, idiomatic code over clever code, and
 explain non-obvious decisions in comments and commit messages.
@@ -37,15 +38,17 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   the orphan branch `pr-assets` (`<branch>/<name>.png`, never on `main`) and link
   `https://github.com/J-Haynes/supercars-timing/raw/pr-assets/<branch>/<name>.png`. The repo is public: screenshots with
   real timing are the owner's call. Merge with **Rebase and merge** (never squash: it loses one commit per feature),
-  only when the owner says (`gh pr merge --rebase`), then pull `main` and deploy (build below). Rebasing rewrites the
-  hashes: a PR stacked on the merged one needs `git rebase --onto origin/main <old base> <branch>` and a force-push.
-  CI can't run `RecordingRegressionTests` (recordings are only on the laptop): run `dotnet test` locally too.
+  only when the owner says (`gh pr merge --rebase`), then pull `main` in the server's live checkout and deploy ("Where
+  it runs"). Rebasing rewrites the hashes: a PR stacked on the merged one needs `git rebase --onto origin/main <old base> <branch>` and a force-push.
+  CI can't run `RecordingRegressionTests` (recordings are only on the home server and the laptop's backup): run
+  `dotnet test` there too.
   The whole PR routine (commits, checks before a push, description, reviews, merging) is in the `steward` skill
   (`.claude/skills/steward/SKILL.md`); keep it in step with this section.
-  **Race-weekend hotfixes and one-liners** skip the PR: fast-forward `main` locally, deploy, push afterwards.
+  **Race-weekend hotfixes and one-liners** skip the PR: fast-forward `main` in a development checkout, push,
+  then pull and deploy in the live checkout.
 - **Commit trailer** (from the session's attribution settings): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- **Frontend-only changes don't need a server restart:** `cd src/web && npm run build` writes into the server's
-  `wwwroot`, which the running service serves; viewers refresh. **Server (C#) changes need a restart**: ask the owner
+- **Frontend-only changes don't need a server restart:** `cd src/web && npm run build` **in the live checkout**
+  writes into the server's `wwwroot`, which the running service serves; viewers refresh. **Server (C#) changes need a restart**: ask the owner
   first, especially during a session. A restart takes ~5 s and loses nothing (warm start, below).
 - **Measure before fixing.** Many fixes this season started with a wrong guess. Reproduce with real data first
   (recordings, the live API, or the app's own code run in a script), then fix, then measure again.
@@ -133,7 +136,8 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   (the F1 feed), `docs/PLANNING.md`
   (data-use considerations, deployment, ideas).
 - `data/recordings/f1/F1_*.jsonl`: F1 recordings (`{utc, topic, snapshot, data}` per line), a new file per start.
-- `data/recordings/*.jsonl`: real captures, git-ignored, **only on this machine (no backup yet)**. Bathurst weekend:
+- `data/recordings/*.jsonl`: real captures, git-ignored, **written on the home server** (live checkout), copied daily to
+  the laptop ("Where it runs"); no third copy yet. Bathurst weekend:
   Practice 5, Practice 6 (red flag), Top Ten Shootout, Warm Up (last minutes only), Race 30 (complete), plus support races.
   Also git-ignored there: `natsoft-results/` (2025 Gold Coast, Sandown and Adelaide race reports saved by hand from
   Natsoft's results site, for `tools/PitLoss`) and `f1-archive/` (topics downloaded from F1's archive: 2025 races for
@@ -174,8 +178,32 @@ python3 tools/F1TrackBuilder/corners.py 61:2026 9:2025 ...   # then T1..Tn from 
 dotnet run --project tools/TrackBuilder -- --code MOUN ...   # full commands for every track (scenery, terrain) in tools/TrackBuilder/README.md
 ```
 
-Only one process may hold port 5080 and only one connection to Natsoft may exist: stop the service before running
-the server in live mode by hand.
+Only one process may hold port 5080 and only one connection to Natsoft may exist: the home server's service is that
+connection. Never run the server in live mode anywhere else (development copy, laptop): use replay mode on :5081.
+
+## Where it runs (home server, since 27 Oct 2026)
+
+Moved off the laptop (issue #36: the public site went down whenever the laptop slept or sat on a network that blocks
+the tunnel's port 7844). `homeserver` is a Lenovo ThinkCentre M90q (i5-10500T, 16 GB, 238 GB SSD) running Ubuntu Server
+26.04, user `jack`, SSH by key only, reached as `homeserver` on the tailnet. Setup and every unit file: `deploy/README.md`.
+
+- **Two checkouts on the server, on purpose:**
+  - `~/Dev/supercars-timing` is the **live site**: always on `main`, never edited by hand. The service runs it
+    (`dotnet run` builds whatever is checked out there) and `npm run build` there updates the public site at once.
+    Deploy after a merge: `cd ~/Dev/supercars-timing && git pull`, then `cd src/web && npm run build` (frontend) and/or
+    `dotnet build src/SupercarsTiming.Server -c Release` + `systemctl --user restart supercars-timing` (C#; ask first).
+    `data/recordings` lives here.
+  - `~/Code/supercars-timing` is for **development** (branches, Claude sessions, VS Code Remote-SSH). Its
+    `data/recordings` is a symlink to the live checkout's, so tests and replays see every recording. Run servers here
+    only in replay mode on :5081 (Commands), never live; a `npm run build` here writes this checkout's own `wwwroot`.
+- **Services** (systemd user units, linger on): `supercars-timing` (this repo's `deploy/supercars-timing.service`) and
+  `claude-rc` (Claude Code Remote Control in a tmux session `claude`, `~/server`). System: `cloudflared` (the tunnel,
+  token in `/etc/cloudflared/token`). Tailnet: `https://homeserver.tail138704.ts.net` → 5080 (`tailscale serve`).
+- **The laptop** no longer runs the service or the tunnel (both disabled; never re-enable them, one Natsoft
+  connection). It pulls `data/recordings` from the server daily into its own checkout (`recordings-backup.timer`,
+  rsync without `--delete`), so laptop development and its `dotnet test` have the recordings too.
+- **Headless browser checks** (Firefox + geckodriver, "Verifying changes") are set up on the laptop only.
+- Development on the server is ~1.5x slower than the laptop (`dotnet test`: 12 s vs 8 s); fine for this repo.
 
 ## Verifying changes
 
@@ -582,7 +610,7 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
   parallel connections or tighter retry loops. **Keep the timetable up to date**: a session missing from it isn't
   recorded. `Feed:Schedule=Always` restores the old always-connected mode. See `docs/PLANNING.md` on data use.
 - **Never commit recordings or `.har` files** (git-ignored; recordings are Natsoft's data, HAR files contain login tokens).
-- **Remote access (owner's decision, 19 Oct 2026):** the laptop serves everything; a Cloudflare Tunnel to
+- **Remote access (owner's decision, 19 Oct 2026):** the home server (the laptop until 27 Oct 2026) serves everything; a Cloudflare Tunnel to
   `localhost:5082` gives live timing, results and upcoming events remotely, **never replays** (`RemoteAccess.cs`:
   replay endpoints are `.LocalOnly()`, 403 on `Remote:Port` or with Cloudflare's `CF-Connecting-IP` header; the frontend hides Replay via `/api/features`). Any new
   heavy or per-viewer endpoint should be `.LocalOnly()` too. Replays stay on localhost and the tailnet (port 5080).
@@ -595,7 +623,8 @@ and pit-lane time can't show it (Payne's serving stop was a normal 66.1 s, yet t
 
 1. Gold Coast weekend (above), then Sandown and Adelaide entries in `finals.ts`. Their track maps exist (provisional):
    when Supercars publishes their event maps, run `tools/OfficialMap` for official corners and pit lanes.
-2. Back up `data/recordings` (off the laptop; TrueNAS on the tailnet when it's online, or an external drive).
+2. A third copy of `data/recordings` (the server has them, the laptop pulls a daily copy): one of the old HDDs in the
+   server, or an encrypted off-site copy (restic). They're Natsoft's data: never public.
 3. Championship standings after each round (grid positions from the server: done, Oct 2026).
 4. Pit strategy: the rejoin ghost is built (experimental; tune it on `tools/PitLoss/demo-server.sh` and the backtest).
    Still ideas ("Circle of Doom" view, undercut/clear-air alerts, cheap stops under caution; research and measurements
