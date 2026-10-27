@@ -9,24 +9,27 @@ import type { RecordedSession } from './types'
  * own URL, so a refresh keeps the page, Back works, and a page can be bookmarked or shared. Paths are relative to the
  * series (main.tsx sets the router's basename to /f1 in the F1 app), so they're the same in both apps:
  *
- *   /                          live timing
- *   /results/:sessionId        a recorded session's results
- *   /results/:sessionId/replay its replay (local only: the server refuses replays through the tunnel, RemoteAccess.cs)
- *   /events/:slug              an upcoming event (timetable, map), e.g. /events/penrite-oil-sandown-500
+ *   /                                     live timing
+ *   /results/2026/gold-coast-500/race-32         a recorded session's results (the session's slug)
+ *   /results/2026/gold-coast-500/race-32/replay  its replay (local only: the server refuses replays through the tunnel)
+ *   /events/penrite-oil-sandown-500              an upcoming event (timetable, map)
  *
- * The server sends index.html for any path that isn't an API or a file (MapFallbackToFile in Program.cs). Session ids
- * are letters, digits, `_` and `-` (V8SUPER_20261025_151501-0, F1_11396): a dot would make the path look like a file.
+ * Session slugs come from the server (SessionSlug.cs: year, round, support series, session; a-z, 0-9, '-', '/'). A
+ * results URL with the session's id instead (/results/V8SUPER_20261025_151501-0, the first form of these links) still
+ * works: App redirects it to the slug. The server sends index.html for any path that isn't an API or a file
+ * (MapFallbackToFile in Program.cs); a dot would make the path look like a file, so slugs and ids have none.
  */
 export const paths = {
   live: '/',
-  results: (sessionId: string) => `/results/${encodeURIComponent(sessionId)}`,
-  replay: (sessionId: string) => `/results/${encodeURIComponent(sessionId)}/replay`,
+  results: (session: RecordedSession) => `/results/${session.slug}`,
+  replay: (session: RecordedSession) => `/results/${session.slug}/replay`,
   event: (event: UpcomingEvent) => `/events/${eventSlug(event)}`,
 }
 
 export type Route =
   | { page: 'live' }
-  | { page: 'results'; sessionId: string; replay: boolean }
+  /** `key`: the session's slug, or its id in an older link. */
+  | { page: 'results'; key: string; replay: boolean }
   | { page: 'event'; slug: string; event: UpcomingEvent | null }
   | { page: 'unknown' }
 
@@ -34,10 +37,13 @@ export type Route =
 export function useRoute(): Route {
   const { pathname } = useLocation()
   if (pathname === '/' || pathname === '') return { page: 'live' }
-  const results = matchPath('/results/:sessionId', pathname)
-  if (results) return { page: 'results', sessionId: results.params.sessionId!, replay: false }
-  const replay = matchPath('/results/:sessionId/replay', pathname)
-  if (replay) return { page: 'results', sessionId: replay.params.sessionId!, replay: true }
+  // A slug has several levels ("2026/gold-coast-500/race-32"), so everything after /results/ is the key.
+  const results = matchPath('/results/*', pathname)
+  if (results) {
+    const rest = results.params['*']!.replace(/\/$/, '')
+    const replay = rest.endsWith('/replay')
+    return { page: 'results', key: replay ? rest.slice(0, -'/replay'.length) : rest, replay }
+  }
   const event = matchPath('/events/:slug', pathname)
   if (event) {
     const slug = event.params.slug!
@@ -52,32 +58,35 @@ export function eventSlug(event: UpcomingEvent): string {
 }
 
 /**
- * The recorded session a results or replay URL names. The menu passes the session it was clicked on as the
- * navigation's state, so that's shown at once; otherwise (a refresh, a shared link) it comes from the session list.
- * `undefined` while loading, `null` if there's no such session.
+ * The recorded session a results or replay URL names, by slug (or by id, in an older link). The menu passes the
+ * session it was clicked on as the navigation's state, so that's shown at once; otherwise (a refresh, a shared link)
+ * it comes from the session list. `undefined` while loading, `null` if there's no such session.
  */
-export function useRecordedSession(sessionId: string | null): RecordedSession | null | undefined {
+export function useRecordedSession(key: string | null): RecordedSession | null | undefined {
   const { state } = useLocation()
-  const passed = isSession(state) && state.id === sessionId ? state : null
-  const [found, setFound] = useState<{ id: string; session: RecordedSession | null } | null>(null)
+  const matches = (s: RecordedSession) => s.slug === key || s.id === key
+  const passed = isSession(state) && matches(state) ? state : null
+  const [found, setFound] = useState<{ key: string; session: RecordedSession | null } | null>(null)
 
   useEffect(() => {
-    if (!sessionId || passed) return
+    if (!key || passed) return
     let current = true
     // ?all=true: support categories too (Supercars; F1 ignores it), so a link to any recorded session works.
     fetch(`${API_BASE}/sessions?all=true`)
       .then((r) => (r.ok ? r.json() : []))
       .catch(() => [])
-      .then((list: RecordedSession[]) => { if (current) setFound({ id: sessionId, session: list.find((s) => s.id === sessionId) ?? null }) })
+      .then((list: RecordedSession[]) => {
+        if (current) setFound({ key, session: list.find((s) => s.slug === key) ?? list.find((s) => s.id === key) ?? null })
+      })
     return () => { current = false }
-  }, [sessionId, passed])
+  }, [key, passed])
 
-  if (!sessionId) return null
+  if (!key) return null
   if (passed) return passed
-  return found?.id === sessionId ? found.session : undefined
+  return found?.key === key ? found.session : undefined
 }
 
 function isSession(value: unknown): value is RecordedSession {
   return typeof value === 'object' && value !== null && typeof (value as RecordedSession).id === 'string'
-    && typeof (value as RecordedSession).meeting === 'string'
+    && typeof (value as RecordedSession).slug === 'string'
 }

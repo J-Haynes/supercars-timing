@@ -30,7 +30,7 @@ export default function App() {
   // The page on screen comes from the URL (routes.ts): live timing, a session's results or replay, or an upcoming event.
   const route = useRoute()
   const navigate = useNavigate()
-  const results = useRecordedSession(route.page === 'results' ? route.sessionId : null)
+  const results = useRecordedSession(route.page === 'results' ? route.key : null)
   const preview = route.page === 'event' ? route.event : null
   const replaying = route.page === 'results' && route.replay
   const live = route.page === 'live'
@@ -64,11 +64,11 @@ export default function App() {
       <Menu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        resultsId={route.page === 'results' ? route.sessionId : null}
+        resultsId={results?.id ?? null}
         previewName={preview?.name ?? null}
         onWatchLive={() => navigate(paths.live)}
         // The session goes along as the navigation's state, so the page needn't look it up (useRecordedSession).
-        onResults={(s) => navigate(paths.results(s.id), { state: s })}
+        onResults={(s) => navigate(paths.results(s), { state: s })}
         onPreview={(e) => navigate(paths.event(e))}
       />
       {/* Settings: live and replay (same settings; opens on the layout of the session on screen). */}
@@ -99,11 +99,14 @@ export default function App() {
         <main>
           {results === undefined ? <div className="empty">Loading…</div>
             : results === null ? <NotFound what="There's no recorded session with that link." onLive={() => navigate(paths.live)} />
+            // A link by id (the first form of these URLs): show it at the session's readable address instead.
+            : route.page === 'results' && route.key !== results.slug
+              ? <Navigate to={replaying ? paths.replay(results) : paths.results(results)} replace state={results} />
             // Through the tunnel replays are off: the replay link shows the results instead.
             : replaying && replayAllowed
-              ? <ReplayView session={results} onBack={() => navigate(paths.results(results.id), { state: results })} onUpdate={setReplayUpdate} onSettings={() => setSettingsOpen(true)} />
+              ? <ReplayView session={results} onBack={() => navigate(paths.results(results), { state: results })} onUpdate={setReplayUpdate} onSettings={() => setSettingsOpen(true)} />
               : <ResultsView session={results} onLive={() => navigate(paths.live)}
-                  onReplay={replayAllowed ? () => navigate(paths.replay(results.id), { state: results }) : undefined} />}
+                  onReplay={replayAllowed ? () => navigate(paths.replay(results), { state: results }) : undefined} />}
         </main>
       ) : (
         <>

@@ -174,6 +174,8 @@ export interface TimingUpdate {
 /** A recorded session (GET /api/sessions); its results come from GET /api/sessions/{id}/results. */
 export interface RecordedSession {
   id: string
+  /** Readable address for URLs, "2026/gold-coast-500/race-32" (SessionSlug.cs on the server). */
+  slug: string
   meeting: string
   name: string
   type: string

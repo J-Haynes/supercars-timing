@@ -143,7 +143,7 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 ## Endpoints
 
 `GET /api/health` · `GET /api/features` (`{replay}`: false through the Cloudflare Tunnel, both series) · `GET /api/snapshot` (`TimingUpdate`) · `GET /api/laps` (live lap history) · hub `/hubs/timing`
-(method `snapshot`) · `GET /api/sessions` (Supercars only; `?all=true` for support categories) ·
+(method `snapshot`) · `GET /api/sessions` (Supercars only; `?all=true` for support categories; each with its URL `slug`) ·
 `GET /api/sessions/{id}/results` · `GET /api/sessions/{id}/laps` · `GET /api/sessions/{id}/replay/info` ·
 `GET /api/sessions/{id}/replay?t=<natsoft time>&viewer=<id>`.
 F1: `GET /api/f1/health` · `GET /api/f1/snapshot` · `GET /api/f1/laps` · hub `/hubs/f1` (same `snapshot` method) ·
@@ -441,13 +441,19 @@ the server in live mode by hand.
 
 ## Results, replay and event pages
 
-- **URLs** (`routes.ts`, React Router in declarative mode, Oct 2026; owner asked): `/` live, `/results/:sessionId`,
-  `/results/:sessionId/replay`, `/events/:slug` (from the event's name), all under `/f1` in the F1 app (the router's
-  basename). The page on screen comes from the URL (`useRoute`), never from App state, so refresh, Back and shared
-  links work; navigate with `paths.*`. A results URL finds its session in the menu's navigation state, else in
-  `/sessions?all=true`. Replay URLs show the results through the tunnel. The server already serves index.html for any
-  path (`MapFallbackToFile`); session ids must stay free of dots (a dot looks like a file). Tabs, settings and the
-  replay time aren't in the URL (Back would step through every click).
+- **URLs** (`routes.ts`, React Router in declarative mode, Oct 2026; owner asked): `/` live,
+  `/results/2026/gold-coast-500/race-32` (+ `/replay`), `/events/:slug` (from the event's name), all under `/f1` in the
+  F1 app (the router's basename). The page on screen comes from the URL (`useRoute`), never from App state, so
+  refresh, Back and shared links work; navigate with `paths.*`. Session URLs use the server's **slug** (owner chose
+  readable paths over ids): `SessionSlug.cs` (Natsoft library) makes year/round/session from the meeting and session
+  names, with title sponsors off (`Sponsors`: add only for rounds not yet recorded, or published links change),
+  "Shoot Out" = "Shootout", "(All Drivers)" dropped, support categories as an extra level
+  (`.../aussie-racing-cars-series/race-4`); sessions sharing a name: the most messages gets the plain slug, others
+  `-2`, `-3` (Race 31's 4-minute pre-start piece is `race-31-2`). Links by id (`/results/V8SUPER_...`) redirect to the
+  slug. A results URL finds its session in the menu's navigation state, else in `/sessions?all=true`. Replay URLs
+  show the results through the tunnel. The server already serves index.html for any path (`MapFallbackToFile`); slugs
+  and ids must stay free of dots (a dot looks like a file). Tabs, settings and the replay time aren't in the URL (Back
+  would step through every click).
 - **Results** (`ResultsView.tsx`, from the menu): Classification (positions gained, laps down, badges, driver laps),
   Summary (`raceSummary.ts`: winner and race time, laps led, lead changes, safety cars, movers, fastest stop,
   penalties, cars well down), Charts, Pit stops, Race control, Championship. Data: `/api/sessions/{id}/results` + `/laps`.
