@@ -44,7 +44,8 @@ We haven't found published terms for the feed. If Natsoft or Supercars ask us to
 
 ## Deployment (not planned yet; personal app for now)
 
-**Built (19 Oct 2026):** remote access from this laptop through a Cloudflare Tunnel (`deploy/README.md`): live timing,
+**Moved (27 Oct 2026):** the server, recordings and tunnel now run on an always-on home server (CLAUDE.md "Where it
+runs"), not the laptop. **Built (19 Oct 2026):** remote access from this laptop through a Cloudflare Tunnel (`deploy/README.md`): live timing,
 results and upcoming events, no replays (they cost the laptop CPU per viewer and ~3 Mbit/s each; measured on Race 30:
 a new cursor near the end 0.55 s, a backwards seek 0.2 s, a snapshot 56 KB, 11 KB gzipped). Still worth doing before
 many remote viewers: response compression (the server sends JSON uncompressed) and a slower or delta live feed for

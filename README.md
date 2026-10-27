@@ -7,7 +7,7 @@ full replays of every session it has recorded.
 
 There's an F1 version too, at `/f1`, on F1's public live timing. Same server, same frontend.
 
-It's a personal project: it runs on my laptop as a service and I watch it on my tailnet over race weekends. It
+It's a personal project: it runs as a service on a small home server and I watch it on my tailnet over race weekends. It
 followed the 2026 Bathurst 1000 from the first lap to the flag, safety car and penalties included.
 
 ![Bathurst 1000 replay: timing tower, race feed and the 3D map of Mount Panorama](docs/images/bathurst-replay.png)
