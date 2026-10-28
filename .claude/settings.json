@@ -1,4 +1,5 @@
 {
+  "outputStyle": "Learning",
   "hooks": {
     "SessionStart": [
       {

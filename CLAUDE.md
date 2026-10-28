@@ -18,6 +18,10 @@ server** (`homeserver`, see "Where it runs" below and `deploy/`), on their tailn
 Owner: a junior developer working in React, .NET/C# and SQL. Prefer clear, idiomatic code over clever code, and
 explain non-obvious decisions in comments and commit messages.
 
+**The owner is learning this codebase** so they can explain it in interviews (owner's decision, 28 Oct 2026): every
+feature is also a lesson. When building or changing a feature, follow the `learn` skill
+(`.claude/skills/learn/SKILL.md`), and keep `docs/LEARNING.md` (what they can and can't explain yet) current.
+
 **Status (12 Oct 2026):** the Bathurst 1000 (Race 30) was followed live end to end and is fully recorded,
 including a safety car and two penalties. The F1 app was built the same evening for the Singapore GP. Since then:
 3D maps with scenery for every track (Bathurst on its terrain), battles on the maps, the server connecting to
