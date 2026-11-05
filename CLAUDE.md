@@ -135,6 +135,10 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 - `docs/PROTOCOL.md` (the feed, field by field: **update it whenever you learn something**), `docs/PROTOCOL-F1.md`
   (the F1 feed), `docs/PLANNING.md`
   (data-use considerations, deployment, ideas).
+- `docs/LEARNING-SERVER-OPS.md`: the owner's learning plan for running and investigating the live server themselves
+  (SSH, systemd, journald, disk, network, restarts, incident write-ups). When they ask for help with it, explain the
+  commands and their output and let them type them; don't run the investigation for them. Keep its commands in step
+  with `deploy/` and "Where it runs".
 - `data/recordings/f1/F1_*.jsonl`: F1 recordings (`{utc, topic, snapshot, data}` per line), a new file per start.
 - `data/recordings/*.jsonl`: real captures, git-ignored, **written on the home server** (live checkout), copied daily to
   the laptop ("Where it runs"); no third copy yet. Bathurst weekend:
