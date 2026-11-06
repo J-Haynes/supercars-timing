@@ -359,7 +359,10 @@ the tunnel's port 7844). `homeserver` is a Lenovo ThinkCentre M90q (i5-10500T, 1
   (supercars.com/rules-and-regulations, Division D, D14.4 for the Finals) is the source for Finals rules. Races here only
   count once finished, one per race (`finishedRaces`): a 4-minute pre-start fragment of Race 31 (split by a restart)
   once gave Feeney a "win" and the running Race 32 counted as a result. Points go by car number, so driver changes
-  go in `STANDINGS_AFTER_BATHURST`'s `car` (Murray #36, Hughes #99 from round 12). Checked 25 Oct 2026: all 10
+  go in `STANDINGS_AFTER_BATHURST`'s `car` (Murray #36, Hughes #99 from round 12). Everyone outside a round's field
+  (non-finalists, drivers eliminated earlier) also gets the earlier Finals rounds' races (`FinalsRound.previous`, from
+  our recordings, on that round's points scale); at Sandown Jones #96 (834) and Walls #11 (789) match Supercars' one-car
+  team totals exactly. Checked 25 Oct 2026: all 10
   finalists and 11th-24th match the official standings after Race 31 except Heimgartner (+10 here, no source found). A **Drivers | Teams** switch (owner's request) shows the teams' championship (`teams.ts`: Supercars'
   standings after Bathurst, cited, each entry's cars and garages; races at the round aren't added) wherever the round
   has a `TEAMS_ROUNDS` entry. Only this season's races count (`racesOf`: last year's rebuilt Gold Coast races matched too).
@@ -567,12 +570,13 @@ the tunnel's port 7844). `homeserver` is a Lenovo ThinkCentre M90q (i5-10500T, 1
   Natsoft's code for the track is `SPSC`: the map, scenery, pit-loss figures and calendar now use it (they were `SURF`,
   and the pit rejoin ghost fell back to its wide guess). The rebuilt 2025 races use `SPSC` and the live IDs 3/6 too.
 - **Teams and pit lane order:** `teams.ts` has the standings after Bathurst and the Gold Coast garage order (Supercars'
-  article). For Sandown add a `TEAMS_ROUNDS` entry with its published order and the teams' standings after the Gold
-  Coast (Supercars re-orders the pit lane after each event).
+  article), and since 6 Nov 2026 the standings after the Gold Coast with Sandown's order (V8 Sleuth's provisional one).
+  Supercars re-orders the pit lane after each event: **every round needs its own `TEAMS_ROUNDS` entry**.
 - **Before the weekend:** done: the Enduro Cup winner (Brown, #888) and the official starting points are in
   `finals.ts`. Grids are automatic (server, since 24 Oct 2026); a `startingGrid.ts` entry is only needed to
-  correct one. For Sandown, add a `FINALS_ROUNDS` entry with its official
-  field after the Gold Coast.
+  correct one. **Every Finals round needs its own `FINALS_ROUNDS` entry** (official field and starting points, `previous`
+  rounds): without one the live page shows no championship standings or finalist badges (Sandown P1 started without
+  one; added 6 Nov 2026). Adelaide still needs one once Sandown's Final Four and their points are published.
 - **After Practice 1 (done, 23 Oct):** map rebuilt from the recording as `SPSC` (lap 76.9 s; the control line is still
   estimated mid Gold Coast Highway). Watch in Practice 2 that cars cross the points as the tower updates.
 - `championship.ts` only knows the Bathurst 1000; the Finals ladder takes over at Finals rounds.
