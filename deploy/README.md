@@ -78,6 +78,21 @@ Not built (owner's call, 27 Oct 2026): public SSH to the server through the tunn
 the phone without anything public; if it's ever needed, put it behind Cloudflare Access with "Protect with Access"
 (JWT enforcement) on the route.
 
+## Restart after .NET upgrades
+
+Unattended upgrades replace .NET under the running server, which then fails the next time it loads a runtime DLL
+(6 Nov 2026: down during Sandown Practice 1). An apt hook restarts the service right after any upgrade that deleted
+files it has loaded, and does nothing otherwise. Install once (root runs it, so it is copied to root-owned paths):
+
+```bash
+sudo install -m 755 deploy/restart-after-dotnet-upgrade.sh /usr/local/sbin/restart-supercars-after-dotnet-upgrade
+sudo install -m 644 deploy/99restart-supercars-timing /etc/apt/apt.conf.d/99restart-supercars-timing
+```
+
+Re-run the first line after changing the script. Check it any time with
+`DRY_RUN=1 deploy/restart-after-dotnet-upgrade.sh` (no output = nothing to restart); its log is
+`journalctl -t supercars-dotnet-hook`. `Restart=always` in the unit is the backstop if it ever misses.
+
 ## Other services on the server
 
 - **Claude Code Remote Control** (`~/.config/systemd/user/claude-rc.service`): `claude remote-control --name
