@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { RecordedSession, TimingSnapshot } from './types'
-import { finishedRaces, racesOf, resultOrder, type FinalsRound } from './finals'
+import { finishedRaces, priorFinalsSessions, resultOrder, type FinalsRound } from './finals'
 
 /** Re-check for newly finished races this often during a Finals round. */
 const REFRESH_MS = 60_000
@@ -14,8 +14,9 @@ const REFRESH_MS = 60_000
  * Only races that finished count (finishedRaces): the recordings also hold pieces of a race, e.g. Race 31's first
  * 4 minutes before a restart (still on the grid: its order gave Feeney a win and 150 points), and the race on now.
  */
-export function useFinalsData(round: FinalsRound | undefined, currentSession: string) {
-  const [data, setData] = useState<{ earlier: string[][] } | null>(null)
+export function useFinalsData(round: FinalsRound | undefined, currentSession = '', currentMeeting = '') {
+  const key = `${round?.firstRace}/${currentMeeting}/${currentSession}`
+  const [data, setData] = useState<{ key: string; earlier: string[][]; raceNumbers: number[] } | null>(null)
   useEffect(() => {
     if (!round) return
     let cancelled = false
@@ -23,11 +24,11 @@ export function useFinalsData(round: FinalsRound | undefined, currentSession: st
     const load = async () => {
       try {
         const sessions = (await (await fetch('/api/sessions')).json()) as RecordedSession[]
-        const races = await Promise.all(racesOf(sessions, round.meeting).map(async (session) => ({ session, results: await results(session) })))
-        const done = finishedRaces(races)
-        const current = races.find((r) => r.session.name === currentSession)?.session
-        const earlier = done.filter((r) => r.session.name !== currentSession && (!current || r.session.start < current.start))
-        if (!cancelled) setData({ earlier: earlier.map((r) => resultOrder(r.results)) })
+        const candidates = priorFinalsSessions(sessions, round, currentSession ? { name: currentSession, meeting: currentMeeting } : undefined)
+        const races = await Promise.all(candidates.map(async (session) => ({ session, results: await results(session) })))
+        const earlier = finishedRaces(races)
+        if (!cancelled) setData({ key, earlier: earlier.map((r) => resultOrder(r.results)),
+          raceNumbers: earlier.map(r => Number(/race (\d+)$/i.exec(r.session.name)?.[1])) })
       } catch {
         /* keep what we have */
       }
@@ -35,6 +36,6 @@ export function useFinalsData(round: FinalsRound | undefined, currentSession: st
     load()
     const id = window.setInterval(load, REFRESH_MS)
     return () => { cancelled = true; window.clearInterval(id) }
-  }, [round, currentSession])
-  return data
+  }, [round, currentSession, currentMeeting, key])
+  return data?.key === key ? data : null
 }

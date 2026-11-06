@@ -9,6 +9,11 @@ import { ColumnSplitter } from './ColumnSplitter'
 import { ErrorBoundary } from './ErrorBoundary'
 import { isF1, SERIES_LABEL, SERIES } from '../series'
 import { FinalsField } from './FinalsStandings'
+import { useWeekend } from '../useWeekend'
+import { BroadcastTimetable, ChampionshipPanel, EventTabs, WeekendTimetable } from './WeekendPanels'
+import { weekendSessions } from '../weekend'
+
+type EventTab = 'overview' | 'weekend' | 'coverage' | 'standings'
 
 /** "3d 4h", "2h 10m", "5m"; past times as "Done". */
 function until(ms: number): string {
@@ -25,6 +30,8 @@ function until(ms: number): string {
  */
 export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: () => void }) {
   const track = useTrack(event.trackCode, event.venue)
+  const weekend = useWeekend(event)
+  const [tab, setTab] = useState<EventTab>('overview')
   const { settings, update: updateSettings } = useSettings()
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => { const id = window.setInterval(() => setNow(Date.now()), 30_000); return () => window.clearInterval(id) }, [])
@@ -40,8 +47,14 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
   // Times in the viewer's zone or the track's: one setting for the whole site (timeZone.ts).
   const [zone, setZone] = useTimeZoneChoice()
   const mine = browserTimeZone()
-  const sessions = event.sessions ?? []
-  const next = sessions.find((s) => sessionTime(event, s.end ?? s.start).getTime() > now)
+  const sessions = weekendSessions(event, weekend).filter(s => s.main).map(s => ({ ...s,
+    laps: event.sessions?.find(old => sessionTime(event, old.start).getTime() === Date.parse(s.start))?.laps,
+  }))
+  const next = sessions.find((s) => Date.parse(s.end ?? s.start) > now)
+  const sessionsSource = weekend?.scheduleSource ?? event.sessionsSource
+  // .NET and browsers accept different URL grammars (for example scoped IPv6 hosts).
+  const sourceLabel = sessionsSource && URL.canParse?.(sessionsSource)
+    ? new URL(sessionsSource).hostname.replace(/^www\./, '') : 'the published schedule'
 
   return (
     <div className="event-preview">
@@ -53,11 +66,14 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
         </div>
         <button type="button" className="link-button" onClick={onLive}>Back to live timing</button>
       </div>
+      <EventTabs id="event" label="Event sections" tab={tab} onTab={setTab} items={[
+        ['overview', 'Overview'], ['weekend', 'Weekend timetable'], ['coverage', 'TV coverage'], ['standings', 'Standings'],
+      ]} />
       <div className={`layout${settings.mapWidth ? ' sized' : ''}`}
         style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
         <section className="event-sessions">
           <div className="event-sessions-head">
-            <h3>{SERIES_LABEL[SERIES]} sessions <span className="ladder-live">provisional · {zone === 'mine' ? `your time (${mine.short})` : `track time (UTC${event.utcOffset})`}</span></h3>
+            <h3>{tab === 'overview' ? `${SERIES_LABEL[SERIES]} sessions` : 'Weekend information'} <span className="ladder-live">{zone === 'mine' ? `your time (${mine.id})` : `track time (UTC${event.utcOffset})`}</span></h3>
             <div className="segmented small" role="radiogroup" aria-label="Show times in">
               <button type="button" role="radio" aria-checked={zone === 'mine'} className={zone === 'mine' ? 'active' : ''} onClick={() => setZone('mine')}
                 title={`Your time zone: ${mine.id}`}>Your time</button>
@@ -65,20 +81,21 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
                 title={`At the track: UTC${event.utcOffset}`}>Track time</button>
             </div>
           </div>
+          <div id="event-panel-overview" role="tabpanel" aria-labelledby="event-tab-overview" hidden={tab !== 'overview'} tabIndex={0}>
           {sessions.length === 0 ? (
             <p className="menu-muted">The session times haven't been published yet. The event starts in {until(eventStart(event).getTime() - now) || 'under a day'}.</p>
           ) : (
             <table className="event-table">
               <tbody>
                 {sessions.map((s) => {
-                  const start = sessionTime(event, s.start)
-                  const done = sessionTime(event, s.end ?? s.start).getTime() <= now
+                  const start = new Date(s.start)
+                  const done = Date.parse(s.end ?? s.start) <= now
                   const from = formatSessionTime(start, zone, event.utcOffset)
-                  const to = s.end ? formatSessionTime(sessionTime(event, s.end), zone, event.utcOffset).time : null
+                  const to = s.end ? formatSessionTime(new Date(s.end), zone, event.utcOffset) : null
                   return (
                     <tr key={s.name} className={[done ? 'done' : '', s === next ? 'next' : '', s.laps ? 'race' : ''].join(' ')}>
                       <td className="event-day">{from.day}</td>
-                      <td className="num">{from.time}{to ? `–${to}` : ''}</td>
+                      <td className="num">{from.time}{to ? `–${to.day === from.day ? to.time : `${to.day} ${to.time}`}` : ''}</td>
                       <td>{s.name}{s.laps ? <span className="event-laps"> · {s.laps} laps</span> : ''}</td>
                       <td className="num event-until">{done ? 'Done' : s === next ? `in ${until(start.getTime() - now) || 'under a minute'}` : until(start.getTime() - now)}</td>
                     </tr>
@@ -87,12 +104,23 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
               </tbody>
             </table>
           )}
-          {event.sessionsNote && <p className="chart-note">{event.sessionsNote}</p>}
-          {event.sessionsSource && (
-            <p className="chart-note">Times from <a href={event.sessionsSource} target="_blank" rel="noreferrer">{new URL(event.sessionsSource).hostname.replace(/^www\./, '')}</a>; they can change before the weekend.{isF1 && event.trackCode ? ' The map was built from F1\'s recorded car positions at this circuit.' : ''} Live timing appears automatically when a session starts.</p>
+          {!weekend && event.sessionsNote && <p className="chart-note">{event.sessionsNote}</p>}
+          {sessionsSource && (
+            <p className="chart-note">Times from <a href={sessionsSource} target="_blank" rel="noreferrer">{sourceLabel}</a>; they can change before the weekend.{isF1 && event.trackCode ? ' The map was built from F1\'s recorded car positions at this circuit.' : ''} Live timing appears automatically when a session starts.</p>
           )}
           {!isF1 && <FinalsField meeting={event.name} />}
           {event.info && <EventInfoPanel info={event.info} />}
+          {weekend?.note && <p className="chart-note" role="status">{weekend.note}</p>}
+          </div>
+          <div id="event-panel-weekend" role="tabpanel" aria-labelledby="event-tab-weekend" hidden={tab !== 'weekend'} tabIndex={0}>
+            {tab === 'weekend' && <WeekendTimetable key={event.startDate} event={event} weekend={weekend} zone={zone} now={now} />}
+          </div>
+          <div id="event-panel-coverage" role="tabpanel" aria-labelledby="event-tab-coverage" hidden={tab !== 'coverage'} tabIndex={0}>
+            {tab === 'coverage' && <BroadcastTimetable event={event} weekend={weekend} zone={zone} />}
+          </div>
+          <div id="event-panel-standings" role="tabpanel" aria-labelledby="event-tab-standings" hidden={tab !== 'standings'} tabIndex={0}>
+            {tab === 'standings' && <ChampionshipPanel season={Number(event.startDate.slice(0, 4))} />}
+          </div>
         </section>
         <ColumnSplitter width={settings.mapWidth} onWidth={(mapWidth) => updateSettings({ mapWidth })} />
         <aside className="map-panel">

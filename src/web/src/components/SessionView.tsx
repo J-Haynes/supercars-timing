@@ -139,7 +139,7 @@ export function SessionView({ update, live, history, settings, updateSettings, t
           <div className="panel-race">
             {/* Supercars championship and Finals ladders (this season's only): no F1 standings yet. */}
             {!isF1 && <Ladder timing={timing} onHighlight={setHighlightIds} />}
-            {!isF1 && <FinalsLadder timing={timing} onHighlight={setHighlightIds} />}
+            {!isF1 && <FinalsLadder timing={timing} onHighlight={setHighlightIds} liveFeed={update.feed.mode === 'Live'} />}
           </div>
           <div className="panel-charts">
             {race && <RaceCharts timing={timing} history={history} selection={chart} />}

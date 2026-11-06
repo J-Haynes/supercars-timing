@@ -1,0 +1,163 @@
+{
+  "asOf": "Before Sandown Race 33, checked 6 November 2026",
+  "source": "https://www.supercars.com/standings/2026/supercars",
+  "drivers": [
+    {
+      "driver": "Matthew Payne",
+      "points": 4150,
+      "car": "19"
+    },
+    {
+      "driver": "Broc Feeney",
+      "points": 4120,
+      "car": "88"
+    },
+    {
+      "driver": "Brodie Kostecki",
+      "points": 4096,
+      "car": "17"
+    },
+    {
+      "driver": "Chaz Mostert",
+      "points": 4078,
+      "car": "1"
+    },
+    {
+      "driver": "William Brown",
+      "points": 4066,
+      "car": "888"
+    },
+    {
+      "driver": "Cameron Waters",
+      "points": 4057,
+      "car": "6"
+    },
+    {
+      "driver": "Anton De_Pasquale",
+      "points": 4048,
+      "car": "18"
+    },
+    {
+      "driver": "Kai Allen",
+      "points": 2208,
+      "car": "26"
+    },
+    {
+      "driver": "Ryan Wood",
+      "points": 1806,
+      "car": "2"
+    },
+    {
+      "driver": "Andre Heimgartner",
+      "points": 1647,
+      "car": "8"
+    },
+    {
+      "driver": "Jack Le_Brocq",
+      "points": 1601,
+      "car": "4"
+    },
+    {
+      "driver": "James Golding",
+      "points": 1532,
+      "car": "7"
+    },
+    {
+      "driver": "Thomas Randle",
+      "points": 1499,
+      "car": "55"
+    },
+    {
+      "driver": "Jayden Ojeda",
+      "points": 1467,
+      "car": "31"
+    },
+    {
+      "driver": "David Reynolds",
+      "points": 1278,
+      "car": "48"
+    },
+    {
+      "driver": "Zach Bates",
+      "points": 1165,
+      "car": "10"
+    },
+    {
+      "driver": "Cameron Hill",
+      "points": 1158,
+      "car": "14"
+    },
+    {
+      "driver": "Cooper Murray",
+      "points": 1077,
+      "car": "36"
+    },
+    {
+      "driver": "Rylan Gray",
+      "points": 1055,
+      "car": "38"
+    },
+    {
+      "driver": "Aaron Cameron",
+      "points": 964,
+      "car": "3"
+    },
+    {
+      "driver": "Macauley Jones",
+      "points": 834,
+      "car": "96"
+    },
+    {
+      "driver": "Jackson Walls",
+      "points": 789,
+      "car": "11"
+    },
+    {
+      "driver": "Declan Fraser",
+      "points": 788,
+      "car": "777"
+    },
+    {
+      "driver": "Jobe Stewart",
+      "points": 753,
+      "car": "9"
+    },
+    {
+      "driver": "Todd Hazelwood",
+      "points": 441
+    },
+    {
+      "driver": "Aaron Seton",
+      "points": 438
+    },
+    {
+      "driver": "Reuben Goodall",
+      "points": 328
+    },
+    {
+      "driver": "Bayley Hall",
+      "points": 309
+    },
+    {
+      "driver": "Jarrod Hughes",
+      "points": 263,
+      "car": "99"
+    },
+    {
+      "driver": "Craig Lowndes",
+      "points": 262
+    },
+    {
+      "driver": "Mark Winterbottom",
+      "points": 224
+    },
+    {
+      "driver": "Ben Gomersall",
+      "points": 105
+    },
+    {
+      "driver": "James Moffat",
+      "points": 67
+    }
+  ]
+}

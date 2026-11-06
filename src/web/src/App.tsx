@@ -42,11 +42,13 @@ export default function App() {
   const { replay: replayAllowed } = useFeatures()
 
   const timing = update?.timing
+  // Use the delayed status so the next-session countdown doesn't cover the end of a delayed broadcast.
+  const waiting = update?.feed.state === 'waiting'
   // Support categories share the feed: only show Supercars Championship sessions.
-  const supportSession = !isF1 && !!timing?.session.name && !isSupercarsSession(timing.session.name)
-  const hasCars = !!timing && timing.cars.length > 0 && !supportSession
+  const supportSession = !waiting && !isF1 && !!timing?.session.name && !isSupercarsSession(timing.session.name)
+  const hasCars = !waiting && !!timing && timing.cars.length > 0 && !supportSession
   // Red / yellow (safety car, full-course yellow) flags frame the whole screen while they're out.
-  const kind = live && !supportSession && timing ? flagKind(timing.session.flag) : undefined
+  const kind = live && !waiting && !supportSession && timing ? flagKind(timing.session.flag) : undefined
   const frame = kind === 'red' ? ' flag-frame flag-frame-red' : kind === 'caution' ? ' flag-frame flag-frame-yellow' : ''
 
   // The tab's title names the page, so history, bookmarks and tabs can tell them apart.
@@ -61,7 +63,7 @@ export default function App() {
 
   return (
     <div className={`app${frame}`}>
-      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} hideSession={supportSession}
+      <SessionHeader update={update} feed={latest?.feed} connection={connection} onMenu={() => setMenuOpen(true)} hideSession={supportSession || waiting}
         viewing={headerView(preview, results ?? null, replaying ? replayUpdate : null)} />
       <Menu
         open={menuOpen}
@@ -117,7 +119,7 @@ export default function App() {
             {hasCars && update ? (
               <SessionView update={update} live={latest} settings={settings} updateSettings={updateSettings} togglePinned={togglePinned} tips />
             ) : (
-              <EmptyState state={latest?.feed.state} detail={latest?.feed.detail} connection={connection} support={supportSession ? timing?.session.name : undefined}
+              <EmptyState state={update?.feed.state} detail={update?.feed.detail} connection={connection} support={supportSession ? timing?.session.name : undefined}
                 onOpenEvent={(e) => navigate(paths.event(e))} />
             )}
           </main>
@@ -147,7 +149,8 @@ function EmptyState({ state, detail, connection, support, onOpenEvent }: {
   state?: string; detail?: string | null; connection: string; support?: string; onOpenEvent: (event: UpcomingEvent) => void
 }) {
   // Between sessions: what's next and when (the server says when it will connect to the feed).
-  if (connection === 'connected' && !support && state === 'waiting') return <NextSession detail={detail} onOpenEvent={onOpenEvent} />
+  if (connection === 'connected' && (support || state === 'waiting')) return <NextSession detail={support
+    ? `A support category is on track: ${support}` : detail} onOpenEvent={onOpenEvent} />
   let message = 'Waiting for timing data…'
   if (connection !== 'connected') message = 'Connecting to the timing server…'
   else if (support) message = `A support category is on track (${support.replace(/^\d{4}\s+/, '').split(' - ')[0]}). Timing will appear here when the next Supercars session starts.`

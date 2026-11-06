@@ -1,0 +1,1754 @@
+[
+  {
+    "series": "v8",
+    "eventName": "Penrite Oil Sandown 500",
+    "startDate": "2026-11-06",
+    "scheduleSource": "https://www.supercars.com/events/2026-sandown/schedule",
+    "eventUrl": "https://www.supercars.com/events/2026-sandown",
+    "timetableUrl": "https://www.supercars.com/events/2026-sandown/schedule",
+    "utcOffset": "+11:00",
+    "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+    "sessions": [
+      {
+        "name": "Practice",
+        "category": "Trans Am",
+        "start": "2026-11-06T08:45:00.000+11:00",
+        "end": "2026-11-06T09:05:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Practice 1",
+        "category": "TOYOTA GAZOO Racing Australia GR CUP",
+        "start": "2026-11-06T09:15:00.000+11:00",
+        "end": "2026-11-06T09:35:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Practice",
+        "category": "Porsche Sprint Challenge Australia",
+        "start": "2026-11-06T09:45:00.000+11:00",
+        "end": "2026-11-06T10:30:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Practice 1",
+        "category": "DUNLOP Super2 Series",
+        "start": "2026-11-06T10:45:00.000+11:00",
+        "end": "2026-11-06T11:25:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Qualifying",
+        "category": "Trans Am",
+        "start": "2026-11-06T12:00:00.000+11:00",
+        "end": "2026-11-06T12:20:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Practice 2",
+        "category": "TOYOTA GAZOO Racing Australia GR CUP",
+        "start": "2026-11-06T12:30:00.000+11:00",
+        "end": "2026-11-06T12:50:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Qualifying",
+        "category": "Porsche Sprint Challenge Australia",
+        "start": "2026-11-06T13:00:00.000+11:00",
+        "end": "2026-11-06T13:30:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Practice 2",
+        "category": "DUNLOP Super2 Series",
+        "start": "2026-11-06T13:45:00.000+11:00",
+        "end": "2026-11-06T14:25:00.000+11:00",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "start": "2026-11-06T13:45:00.000+11:00",
+          "end": null,
+          "source": "https://www.foxtel.com.au/tv-guide/channel/FOX-SPORTS-506-HD/SPS/2026/08/20/1241",
+          "note": "Track time matches a live support block; this session is not explicitly named in the programme guide.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme"
+        }
+      },
+      {
+        "name": "Practice 1",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-06T14:40:00.000+11:00",
+        "end": "2026-11-06T15:10:00.000+11:00",
+        "main": true,
+        "coverage": {
+          "start": "2026-11-06T14:25:00+11:00",
+          "end": "2026-11-06T16:15:00+11:00",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://www.foxtel.com.au/tv-guide/channel/FOX-SPORTS-506-HD/SPS/2026/08/20/1241",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme",
+          "status": "confirmed"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-06T15:25:00.000+11:00",
+        "end": "2026-11-06T15:55:00.000+11:00",
+        "main": true,
+        "coverage": {
+          "start": "2026-11-06T14:25:00+11:00",
+          "end": "2026-11-06T16:15:00+11:00",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://www.foxtel.com.au/tv-guide/channel/FOX-SPORTS-506-HD/SPS/2026/08/20/1241",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme",
+          "status": "confirmed"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "Porsche Sprint Challenge Australia",
+        "start": "2026-11-06T16:15:00.000+11:00",
+        "end": "2026-11-06T16:40:00.000+11:00",
+        "main": false,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.porschesprintchallenge.com.au/porsche-michelin-sprint-challenge-australia-set-for-sandown-season-decider/",
+          "start": "2026-11-06T16:15:00.000+11:00",
+          "end": null,
+          "note": "All three races confirmed live by Porsche. Broadcast block may include other sessions.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "Porsche Sprint Challenge Australia",
+        "start": "2026-11-07T08:30:00.000+11:00",
+        "end": "2026-11-07T09:15:00.000+11:00",
+        "main": false,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.porschesprintchallenge.com.au/porsche-michelin-sprint-challenge-australia-set-for-sandown-season-decider/",
+          "start": null,
+          "end": null,
+          "note": "All three races confirmed live by Porsche. Broadcast block may include other sessions.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "Trans Am",
+        "start": "2026-11-07T09:25:00.000+11:00",
+        "end": "2026-11-07T09:55:00.000+11:00",
+        "main": false,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://speedcafe.com/motorsport-news-2026-sandown-500-trans-am-cup-series-entry-list-how-to-watch-nathan-herne-todd-hazelwood-championship-details/",
+          "start": null,
+          "end": null,
+          "note": "All three races confirmed live; programme start unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Qualifying",
+        "category": "TOYOTA GAZOO Racing Australia GR CUP",
+        "start": "2026-11-07T10:15:00.000+11:00",
+        "end": "2026-11-07T10:30:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Qualifying (Race 1)",
+        "category": "DUNLOP Super2 Series",
+        "start": "2026-11-07T10:45:00.000+11:00",
+        "end": "2026-11-07T11:05:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Boost Mobile Qualifying (Race 33)",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-07T11:20:00.000+11:00",
+        "end": "2026-11-07T11:55:00.000+11:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "start": "2026-11-07T08:30:00.000+11:00",
+          "end": null,
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "day"
+        }
+      },
+      {
+        "name": "Boost Mobile Top Ten Shootout (Race 33)",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-07T12:05:00.000+11:00",
+        "end": "2026-11-07T12:35:00.000+11:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "start": "2026-11-07T08:30:00.000+11:00",
+          "end": null,
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "day"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "TOYOTA GAZOO Racing Australia GR CUP",
+        "start": "2026-11-07T12:50:00.000+11:00",
+        "end": "2026-11-07T13:15:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Race 3",
+        "category": "Porsche Sprint Challenge Australia",
+        "start": "2026-11-07T13:25:00.000+11:00",
+        "end": "2026-11-07T13:50:00.000+11:00",
+        "main": false,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.porschesprintchallenge.com.au/porsche-michelin-sprint-challenge-australia-set-for-sandown-season-decider/",
+          "start": null,
+          "end": null,
+          "note": "All three races confirmed live by Porsche. Broadcast block may include other sessions.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "DUNLOP Super2 Series",
+        "start": "2026-11-07T14:05:00.000+11:00",
+        "end": "2026-11-07T14:45:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Race 33",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-07T15:30:00.000+11:00",
+        "end": "2026-11-07T17:35:00.000+11:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "start": "2026-11-07T08:30:00.000+11:00",
+          "end": null,
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "day"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "Trans Am",
+        "start": "2026-11-08T09:25:00.000+11:00",
+        "end": "2026-11-08T09:55:00.000+11:00",
+        "main": false,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://speedcafe.com/motorsport-news-2026-sandown-500-trans-am-cup-series-entry-list-how-to-watch-nathan-herne-todd-hazelwood-championship-details/",
+          "start": null,
+          "end": null,
+          "note": "All three races confirmed live; programme start unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "TOYOTA GAZOO Racing Australia GR CUP",
+        "start": "2026-11-08T10:10:00.000+11:00",
+        "end": "2026-11-08T10:30:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Qualifying (Race 2)",
+        "category": "DUNLOP Super2 Series",
+        "start": "2026-11-08T10:45:00.000+11:00",
+        "end": "2026-11-08T11:05:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Boost Mobile Qualifying (Race 34)",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-08T11:20:00.000+11:00",
+        "end": "2026-11-08T11:55:00.000+11:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "start": "2026-11-08T09:25:00.000+11:00",
+          "end": null,
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "day"
+        }
+      },
+      {
+        "name": "Boost Mobile Top Ten Shootout (Race 34)",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-08T12:05:00.000+11:00",
+        "end": "2026-11-08T12:35:00.000+11:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "start": "2026-11-08T09:25:00.000+11:00",
+          "end": null,
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "day"
+        }
+      },
+      {
+        "name": "Race 3",
+        "category": "TOYOTA GAZOO Racing Australia GR CUP",
+        "start": "2026-11-08T12:50:00.000+11:00",
+        "end": "2026-11-08T13:10:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Race 3",
+        "category": "Trans Am",
+        "start": "2026-11-08T13:20:00.000+11:00",
+        "end": "2026-11-08T13:50:00.000+11:00",
+        "main": false,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://speedcafe.com/motorsport-news-2026-sandown-500-trans-am-cup-series-entry-list-how-to-watch-nathan-herne-todd-hazelwood-championship-details/",
+          "start": null,
+          "end": null,
+          "note": "All three races confirmed live; programme start unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "DUNLOP Super2 Series",
+        "start": "2026-11-08T14:05:00.000+11:00",
+        "end": "2026-11-08T14:45:00.000+11:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Race 34",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-08T15:30:00.000+11:00",
+        "end": "2026-11-08T17:35:00.000+11:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "start": "2026-11-08T09:25:00.000+11:00",
+          "end": null,
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "day"
+        }
+      }
+    ],
+    "broadcasts": [
+      {
+        "title": "Penrite Oil Sandown 500 · live coverage",
+        "start": "2026-11-06T13:45:00.000+11:00",
+        "end": null,
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://www.supercars.com/tv-schedule",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "day"
+      },
+      {
+        "title": "Penrite Oil Sandown 500 · live coverage",
+        "start": "2026-11-07T08:30:00.000+11:00",
+        "end": null,
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://www.supercars.com/tv-schedule",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "day"
+      },
+      {
+        "title": "Penrite Oil Sandown 500 · live coverage",
+        "start": "2026-11-08T09:25:00.000+11:00",
+        "end": null,
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://www.supercars.com/tv-schedule",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "day"
+      },
+      {
+        "title": "Support categories",
+        "start": "2026-11-06T13:45:00+11:00",
+        "end": "2026-11-06T14:25:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://www.foxtel.com.au/tv-guide/channel/FOX-SPORTS-506-HD/SPS/2026/08/20/1241",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      },
+      {
+        "title": "Supercars · Practice 1 & 2",
+        "start": "2026-11-06T14:25:00+11:00",
+        "end": "2026-11-06T16:15:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://www.foxtel.com.au/tv-guide/channel/FOX-SPORTS-506-HD/SPS/2026/08/20/1241",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      },
+      {
+        "title": "Support categories",
+        "start": "2026-11-06T16:15:00+11:00",
+        "end": "2026-11-06T16:45:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://www.foxtel.com.au/tv-guide/channel/FOX-SPORTS-506-HD/SPS/2026/08/20/1241",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      }
+    ],
+    "note": null
+  },
+  {
+    "series": "v8",
+    "eventName": "bp Adelaide Grand Final",
+    "startDate": "2026-11-26",
+    "scheduleSource": "https://www.supercars.com/news/supercars-news-2026-adelaide-grand-final-track-schedule-revealed-times-racing-super2-series-finals-supports",
+    "eventUrl": "https://www.supercars.com/events/2026-adelaide",
+    "timetableUrl": "https://www.supercars.com/news/supercars-news-2026-adelaide-grand-final-track-schedule-revealed-times-racing-super2-series-finals-supports",
+    "utcOffset": "+10:30",
+    "checkedAt": "2026-11-06T02:00:00Z",
+    "sessions": [
+      {
+        "name": "Practice 1",
+        "category": "GT World Challenge",
+        "start": "2026-11-26T08:20:00+10:30",
+        "main": false,
+        "end": "2026-11-26T09:00:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 1",
+        "category": "Carrera Cup",
+        "start": "2026-11-26T09:10:00+10:30",
+        "main": false,
+        "end": "2026-11-26T09:35:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice",
+        "category": "V8 SuperUtes",
+        "start": "2026-11-26T09:45:00+10:30",
+        "main": false,
+        "end": "2026-11-26T10:05:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 1",
+        "category": "Super2 Series",
+        "start": "2026-11-26T10:40:00+10:30",
+        "main": false,
+        "end": "2026-11-26T11:20:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 1",
+        "category": "GT1 Race Club",
+        "start": "2026-11-26T11:35:00+10:30",
+        "main": false,
+        "end": "2026-11-26T11:50:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "GT World Challenge",
+        "start": "2026-11-26T12:25:00+10:30",
+        "main": false,
+        "end": "2026-11-26T13:05:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "Carrera Cup",
+        "start": "2026-11-26T13:15:00+10:30",
+        "main": false,
+        "end": "2026-11-26T13:40:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "GT1 Race Club",
+        "start": "2026-11-26T13:50:00+10:30",
+        "main": false,
+        "end": "2026-11-26T14:05:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "Super2 Series",
+        "start": "2026-11-26T14:20:00+10:30",
+        "main": false,
+        "end": "2026-11-26T15:00:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 1",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-26T15:15:00+10:30",
+        "main": true,
+        "end": "2026-11-26T15:40:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Qualifying",
+        "category": "V8 SuperUtes",
+        "start": "2026-11-26T16:10:00+10:30",
+        "main": false,
+        "end": "2026-11-26T16:30:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "V8 SuperUtes",
+        "start": "2026-11-27T08:05:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Qualifying",
+        "category": "Carrera Cup",
+        "start": "2026-11-27T08:35:00+10:30",
+        "main": false,
+        "end": "2026-11-27T09:05:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Qualifying",
+        "category": "GT1 Race Club",
+        "start": "2026-11-27T09:15:00+10:30",
+        "main": false,
+        "end": "2026-11-27T09:35:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-27T10:00:00+10:30",
+        "main": true,
+        "end": "2026-11-27T10:25:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Qualifying - Race 1",
+        "category": "Super2 Series",
+        "start": "2026-11-27T10:40:00+10:30",
+        "main": false,
+        "end": "2026-11-27T11:00:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Q1",
+        "category": "GT World Challenge",
+        "start": "2026-11-27T11:15:00+10:30",
+        "main": false,
+        "end": "2026-11-27T11:25:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Q2",
+        "category": "GT World Challenge",
+        "start": "2026-11-27T11:35:00+10:30",
+        "main": false,
+        "end": "2026-11-27T11:45:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "GT1 Race Club",
+        "start": "2026-11-27T11:55:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "V8 SuperUtes",
+        "start": "2026-11-27T12:25:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Q1 - Race 35",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-27T13:10:00+10:30",
+        "main": true,
+        "end": "2026-11-27T13:22:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Q2 - Race 35",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-27T13:30:00+10:30",
+        "main": true,
+        "end": "2026-11-27T13:38:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "Carrera Cup",
+        "start": "2026-11-27T13:50:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Qualifying - Race 2",
+        "category": "Super2 Series",
+        "start": "2026-11-27T14:50:00+10:30",
+        "main": false,
+        "end": "2026-11-27T15:10:00+10:30",
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 35",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-27T16:20:00+10:30",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "GT World Challenge",
+        "start": "2026-11-28T09:10:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 3",
+        "category": "V8 SuperUtes",
+        "start": "2026-11-28T10:20:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "GT1 Race Club",
+        "start": "2026-11-28T10:50:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Q1 Race 36",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-28T11:45:00+10:30",
+        "main": true,
+        "end": "2026-11-28T11:57:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Q2 Race 36",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-28T12:05:00+10:30",
+        "main": true,
+        "end": "2026-11-28T12:17:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Top Ten Shootout",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-28T12:35:00+10:30",
+        "main": true,
+        "end": "2026-11-28T13:10:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "Carrera Cup",
+        "start": "2026-11-28T13:20:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 1",
+        "category": "Super2 Series",
+        "start": "2026-11-28T13:55:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 36",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-28T15:20:00+10:30",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 4",
+        "category": "V8 SuperUtes",
+        "start": "2026-11-29T09:10:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "GT World Challenge",
+        "start": "2026-11-29T09:40:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 3",
+        "category": "GT1 Race Club",
+        "start": "2026-11-29T10:50:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Q1 Race 37",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-29T11:45:00+10:30",
+        "main": true,
+        "end": "2026-11-29T11:57:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Q2 Race 37",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-29T12:05:00+10:30",
+        "main": true,
+        "end": "2026-11-29T12:17:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Top Ten Shootout",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-29T12:35:00+10:30",
+        "main": true,
+        "end": "2026-11-29T13:10:00+10:30",
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 3",
+        "category": "Carrera Cup",
+        "start": "2026-11-29T13:20:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 2",
+        "category": "Super2 Series",
+        "start": "2026-11-29T13:55:00+10:30",
+        "main": false,
+        "coverage": {
+          "status": "unconfirmed",
+          "channels": [],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Individual support-session coverage has not been confirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      },
+      {
+        "name": "Race 37",
+        "category": "Repco Supercars Championship",
+        "start": "2026-11-29T15:15:00+10:30",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.supercars.com/tv-schedule",
+          "note": "Programme times and channel number are unconfirmed.",
+          "checkedAt": "2026-11-06T02:00:00Z"
+        }
+      }
+    ],
+    "broadcasts": [],
+    "note": null
+  },
+  {
+    "series": "f1",
+    "eventName": "Brazilian Grand Prix",
+    "startDate": "2026-11-06",
+    "scheduleSource": "https://www.formula1.com/en/latest/article/formula-1-msc-cruises-grande-premio-de-sao-paulo-2026.3nFWRAkowAY3uUyvw6O0eJ",
+    "eventUrl": "https://www.formula1.com/en/racing/2026/brazil",
+    "timetableUrl": "https://www.formula1.com/en/latest/article/formula-1-msc-cruises-grande-premio-de-sao-paulo-2026.3nFWRAkowAY3uUyvw6O0eJ",
+    "utcOffset": "-03:00",
+    "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+    "sessions": [
+      {
+        "name": "Practice Session",
+        "category": "Brazil Junior Trophy",
+        "start": "2026-11-06T10:05:00-03:00",
+        "end": "2026-11-06T10:45:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Practice 1",
+        "category": "Formula 1",
+        "start": "2026-11-06T12:30:00-03:00",
+        "end": "2026-11-06T13:30:00-03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+          "start": "2026-11-07T02:00:00+11:00",
+          "end": "2026-11-07T04:00:00+11:00",
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme"
+        }
+      },
+      {
+        "name": "First Race (25 Mins +1 Lap)",
+        "category": "Porsche Sprint Challenge Brazil",
+        "start": "2026-11-06T13:55:00-03:00",
+        "end": "2026-11-06T14:25:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Qualifying Session",
+        "category": "Porsche Carrera Cup Brazil",
+        "start": "2026-11-06T14:55:00-03:00",
+        "end": "2026-11-06T15:25:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Practice 2",
+        "category": "Formula 1",
+        "start": "2026-11-06T16:00:00-03:00",
+        "end": "2026-11-06T17:00:00-03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+          "start": "2026-11-07T05:45:00+11:00",
+          "end": "2026-11-07T07:15:00+11:00",
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme"
+        }
+      },
+      {
+        "name": "Qualifying Session",
+        "category": "Brazil Junior Trophy",
+        "start": "2026-11-06T17:30:00-03:00",
+        "end": "2026-11-06T17:50:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "First Race (30 Mins +1 Lap)",
+        "category": "Brazil Junior Trophy",
+        "start": "2026-11-07T10:10:00-03:00",
+        "end": "2026-11-07T10:45:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Practice 3",
+        "category": "Formula 1",
+        "start": "2026-11-07T11:30:00-03:00",
+        "end": "2026-11-07T12:30:00-03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+          "start": "2026-11-08T01:15:00+11:00",
+          "end": "2026-11-08T02:45:00+11:00",
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme"
+        }
+      },
+      {
+        "name": "First Race (25 Mins +1 Lap)",
+        "category": "Porsche Carrera Cup Brazil",
+        "start": "2026-11-07T13:25:00-03:00",
+        "end": "2026-11-07T14:00:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Qualifying",
+        "category": "Formula 1",
+        "start": "2026-11-07T15:00:00-03:00",
+        "end": "2026-11-07T16:00:00-03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+          "start": "2026-11-08T04:00:00+11:00",
+          "end": "2026-11-08T07:00:00+11:00",
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme"
+        }
+      },
+      {
+        "name": "Second Race (30 Mins +1 Lap)",
+        "category": "Brazil Junior Trophy",
+        "start": "2026-11-07T16:40:00-03:00",
+        "end": "2026-11-07T17:15:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Third Race (20 Mins +1 Lap)",
+        "category": "Brazil Junior Trophy",
+        "start": "2026-11-08T08:50:00-03:00",
+        "end": "2026-11-08T09:15:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Second Race (25 Mins +1 Lap)",
+        "category": "Porsche Sprint Challenge Brazil",
+        "start": "2026-11-08T09:45:00-03:00",
+        "end": "2026-11-08T10:15:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Second Race (25 Mins +1 Lap)",
+        "category": "Porsche Carrera Cup Brazil",
+        "start": "2026-11-08T10:45:00-03:00",
+        "end": "2026-11-08T11:15:00-03:00",
+        "main": false,
+        "coverage": null
+      },
+      {
+        "name": "Race",
+        "category": "Formula 1",
+        "start": "2026-11-08T14:00:00-03:00",
+        "end": "2026-11-08T16:00:00-03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel · Fox Sports 506"
+          ],
+          "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+          "start": "2026-11-09T03:55:00+11:00",
+          "end": "2026-11-09T06:00:00+11:00",
+          "note": null,
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "programme"
+        }
+      }
+    ],
+    "broadcasts": [
+      {
+        "title": "Practice 1",
+        "start": "2026-11-07T02:00:00+11:00",
+        "end": "2026-11-07T04:00:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      },
+      {
+        "title": "Practice 2",
+        "start": "2026-11-07T05:45:00+11:00",
+        "end": "2026-11-07T07:15:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      },
+      {
+        "title": "Practice 3",
+        "start": "2026-11-08T01:15:00+11:00",
+        "end": "2026-11-08T02:45:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      },
+      {
+        "title": "Qualifying",
+        "start": "2026-11-08T04:00:00+11:00",
+        "end": "2026-11-08T07:00:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      },
+      {
+        "title": "Race build-up",
+        "start": "2026-11-09T02:30:00+11:00",
+        "end": "2026-11-09T03:55:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      },
+      {
+        "title": "Race",
+        "start": "2026-11-09T03:55:00+11:00",
+        "end": "2026-11-09T06:00:00+11:00",
+        "channels": [
+          "Kayo Sports",
+          "Foxtel · Fox Sports 506"
+        ],
+        "source": "https://speedcafe.com/f1-news-2026-sao-paulo-brazil-grand-prix-start-time-how-to-watch-tv-times-live-stream-schedule-details-fox-sports-kayo/",
+        "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+        "scope": "programme"
+      }
+    ],
+    "note": null
+  },
+  {
+    "series": "f1",
+    "eventName": "Las Vegas Grand Prix",
+    "startDate": "2026-11-19",
+    "scheduleSource": "https://api.jolpi.ca/ergast/f1/2026/races/",
+    "eventUrl": "https://www.formula1.com/en/racing/2026/las-vegas",
+    "timetableUrl": null,
+    "utcOffset": "-08:00",
+    "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+    "sessions": [
+      {
+        "name": "Practice 1",
+        "category": "Formula 1",
+        "start": "2026-11-19T16:30:00-08:00",
+        "end": "2026-11-19T17:30:00-08:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "Formula 1",
+        "start": "2026-11-19T20:00:00-08:00",
+        "end": "2026-11-19T21:00:00-08:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Practice 3",
+        "category": "Formula 1",
+        "start": "2026-11-20T16:30:00-08:00",
+        "end": "2026-11-20T17:30:00-08:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Qualifying",
+        "category": "Formula 1",
+        "start": "2026-11-20T20:00:00-08:00",
+        "end": "2026-11-20T21:00:00-08:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Race",
+        "category": "Formula 1",
+        "start": "2026-11-21T20:00:00-08:00",
+        "end": null,
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      }
+    ],
+    "broadcasts": [],
+    "note": "Full support-category timetable has not been verified yet. Main championship sessions are shown from the published calendar."
+  },
+  {
+    "series": "f1",
+    "eventName": "Qatar Grand Prix",
+    "startDate": "2026-11-27",
+    "scheduleSource": "https://api.jolpi.ca/ergast/f1/2026/races/",
+    "eventUrl": "https://www.formula1.com/en/racing/2026/qatar",
+    "timetableUrl": null,
+    "utcOffset": "+03:00",
+    "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+    "sessions": [
+      {
+        "name": "Practice 1",
+        "category": "Formula 1",
+        "start": "2026-11-27T16:30:00+03:00",
+        "end": "2026-11-27T17:30:00+03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "Formula 1",
+        "start": "2026-11-27T20:00:00+03:00",
+        "end": "2026-11-27T21:00:00+03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Practice 3",
+        "category": "Formula 1",
+        "start": "2026-11-28T17:30:00+03:00",
+        "end": "2026-11-28T18:30:00+03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Qualifying",
+        "category": "Formula 1",
+        "start": "2026-11-28T21:00:00+03:00",
+        "end": "2026-11-28T22:00:00+03:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Race",
+        "category": "Formula 1",
+        "start": "2026-11-29T19:00:00+03:00",
+        "end": null,
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      }
+    ],
+    "broadcasts": [],
+    "note": "Full support-category timetable has not been verified yet. Main championship sessions are shown from the published calendar."
+  },
+  {
+    "series": "f1",
+    "eventName": "Abu Dhabi Grand Prix",
+    "startDate": "2026-12-04",
+    "scheduleSource": "https://api.jolpi.ca/ergast/f1/2026/races/",
+    "eventUrl": "https://www.formula1.com/en/racing/2026/united-arab-emirates",
+    "timetableUrl": null,
+    "utcOffset": "+04:00",
+    "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+    "sessions": [
+      {
+        "name": "Practice 1",
+        "category": "Formula 1",
+        "start": "2026-12-04T13:30:00+04:00",
+        "end": "2026-12-04T14:30:00+04:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Practice 2",
+        "category": "Formula 1",
+        "start": "2026-12-04T17:00:00+04:00",
+        "end": "2026-12-04T18:00:00+04:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Practice 3",
+        "category": "Formula 1",
+        "start": "2026-12-05T14:30:00+04:00",
+        "end": "2026-12-05T15:30:00+04:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Qualifying",
+        "category": "Formula 1",
+        "start": "2026-12-05T18:00:00+04:00",
+        "end": "2026-12-05T19:00:00+04:00",
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      },
+      {
+        "name": "Race",
+        "category": "Formula 1",
+        "start": "2026-12-06T17:00:00+04:00",
+        "end": null,
+        "main": true,
+        "coverage": {
+          "status": "confirmed",
+          "channels": [
+            "Kayo Sports",
+            "Foxtel"
+          ],
+          "source": "https://www.formula1.com/en/information/f1-broadcast-information.45y3LNsT1D6VoK0ZmX8ciJ",
+          "start": null,
+          "end": null,
+          "note": "Broadcast start and channel number unconfirmed.",
+          "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+          "scope": "session"
+        }
+      }
+    ],
+    "broadcasts": [],
+    "note": "Full support-category timetable has not been verified yet. Main championship sessions are shown from the published calendar."
+  }
+]

@@ -1,0 +1,994 @@
+[
+  {
+    "series": "v8",
+    "season": 2026,
+    "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+    "asOf": "As published by Supercars · includes Finals resets",
+    "driversSource": "https://www.supercars.com/standings/2026/supercars",
+    "teamsSource": "https://www.supercars.com/standings/2026/supercars/teams",
+    "drivers": [
+      {
+        "position": 1,
+        "name": "Matthew Payne",
+        "points": 4150,
+        "team": "Penrite Racing (19 & 26)"
+      },
+      {
+        "position": 2,
+        "name": "Broc Feeney",
+        "points": 4120,
+        "team": "Red Bull Ampol Racing(88 &888)"
+      },
+      {
+        "position": 3,
+        "name": "Brodie Kostecki",
+        "points": 4096,
+        "team": "Shell V-Power Racing (17 & 38)"
+      },
+      {
+        "position": 4,
+        "name": "Chaz Mostert",
+        "points": 4078,
+        "team": "WAU Racing (1 & 2)"
+      },
+      {
+        "position": 5,
+        "name": "William Brown",
+        "points": 4066,
+        "team": "Red Bull Ampol Racing(88 &888)"
+      },
+      {
+        "position": 6,
+        "name": "Cameron Waters",
+        "points": 4057,
+        "team": "Monster Castrol Racing(6 & 55)"
+      },
+      {
+        "position": 7,
+        "name": "Anton De_Pasquale",
+        "points": 4048,
+        "team": "TEAM 18 (18 & 20)"
+      },
+      {
+        "position": 8,
+        "name": "Kai Allen",
+        "points": 2208,
+        "team": "Penrite Racing (19 & 26)"
+      },
+      {
+        "position": 9,
+        "name": "Ryan Wood",
+        "points": 1806,
+        "team": "WAU Racing (1 & 2)"
+      },
+      {
+        "position": 10,
+        "name": "Andre Heimgartner",
+        "points": 1647,
+        "team": "Brad Jones Racing (8 & 14)"
+      },
+      {
+        "position": 11,
+        "name": "Jack Le_Brocq",
+        "points": 1601,
+        "team": "Matt Stone Racing (4 & 10)"
+      },
+      {
+        "position": 12,
+        "name": "James Golding",
+        "points": 1532,
+        "team": "Blanchard Racing Team (3 & 7)"
+      },
+      {
+        "position": 13,
+        "name": "Thomas Randle",
+        "points": 1499,
+        "team": "Monster Castrol Racing(6 & 55)"
+      },
+      {
+        "position": 14,
+        "name": "Jayden Ojeda",
+        "points": 1467,
+        "team": "PremiAir Racing (31 & 777)"
+      },
+      {
+        "position": 15,
+        "name": "David Reynolds",
+        "points": 1278,
+        "team": "TEAM 18 (18 & 20)"
+      },
+      {
+        "position": 16,
+        "name": "Zach Bates",
+        "points": 1165,
+        "team": "Matt Stone Racing (4 & 10)"
+      },
+      {
+        "position": 17,
+        "name": "Cameron Hill",
+        "points": 1158,
+        "team": "Brad Jones Racing (8 & 14)"
+      },
+      {
+        "position": 18,
+        "name": "Cooper Murray",
+        "points": 1077,
+        "team": "Erebus Motorsport (9 & 99)"
+      },
+      {
+        "position": 19,
+        "name": "Rylan Gray",
+        "points": 1055,
+        "team": "Shell V-Power Racing (17 & 38)"
+      },
+      {
+        "position": 20,
+        "name": "Aaron Cameron",
+        "points": 964,
+        "team": "Blanchard Racing Team (3 & 7)"
+      },
+      {
+        "position": 21,
+        "name": "Macauley Jones",
+        "points": 834,
+        "team": "Brad Jones Racing (96)"
+      },
+      {
+        "position": 22,
+        "name": "Jackson Walls",
+        "points": 789,
+        "team": "Objective Racing (11)"
+      },
+      {
+        "position": 23,
+        "name": "Declan Fraser",
+        "points": 788,
+        "team": "PremiAir Racing (31 & 777)"
+      },
+      {
+        "position": 24,
+        "name": "Jobe Stewart",
+        "points": 753,
+        "team": "Erebus Motorsport (9 & 99)"
+      },
+      {
+        "position": 26,
+        "name": "Todd Hazelwood",
+        "points": 441,
+        "team": "Shell V-Power Racing (17 & 38)"
+      },
+      {
+        "position": 27,
+        "name": "Aaron Seton",
+        "points": 438,
+        "team": "Matt Stone Racing Wildcard"
+      },
+      {
+        "position": 33,
+        "name": "Reuben Goodall",
+        "points": 328,
+        "team": "Tickford Racing Pty Ltd"
+      },
+      {
+        "position": 34,
+        "name": "Bayley Hall",
+        "points": 309,
+        "team": "Supercheap Auto Racing"
+      },
+      {
+        "position": 38,
+        "name": "Jarrod Hughes",
+        "points": 263,
+        "team": "Erebus Motorsport (9 & 99)"
+      },
+      {
+        "position": 39,
+        "name": "Craig Lowndes",
+        "points": 262,
+        "team": "Supercheap Auto Racing"
+      },
+      {
+        "position": 40,
+        "name": "Mark Winterbottom",
+        "points": 224,
+        "team": "Monster Castrol Racing(6 & 55)"
+      },
+      {
+        "position": 50,
+        "name": "Ben Gomersall",
+        "points": 105,
+        "team": "Tickford Racing Pty Ltd"
+      },
+      {
+        "position": 53,
+        "name": "James Moffat",
+        "points": 67,
+        "team": "Garry Rogers Motorsport"
+      }
+    ],
+    "teams": [
+      {
+        "position": 1,
+        "name": "Penrite Racing",
+        "points": 4864,
+        "team": "Grove Racing"
+      },
+      {
+        "position": 2,
+        "name": "Red Bull Ampol Racing",
+        "points": 4762,
+        "team": "Triple Eight Race Engineering"
+      },
+      {
+        "position": 3,
+        "name": "Monster Castrol Racing",
+        "points": 3750,
+        "team": "Tickford Racing"
+      },
+      {
+        "position": 4,
+        "name": "Mobil 1 Truck Assist & Mobil 1 Optus Racing",
+        "points": 3716,
+        "team": "Walkinshaw TWG Racing"
+      },
+      {
+        "position": 5,
+        "name": "Shell V-Power Racing Team",
+        "points": 3598,
+        "team": "Dick Johnson Racing"
+      },
+      {
+        "position": 6,
+        "name": "DEWALT & Snowy River Racing",
+        "points": 3325,
+        "team": "Team 18"
+      },
+      {
+        "position": 7,
+        "name": "Brad Jones Racing",
+        "points": 2805,
+        "team": "Brad Jones Racing"
+      },
+      {
+        "position": 8,
+        "name": "Sherrin Rentals & Bendix Racing",
+        "points": 2676,
+        "team": "Matt Stone Racing"
+      },
+      {
+        "position": 9,
+        "name": "Blanchard Racing Team",
+        "points": 2436,
+        "team": "Blanchard Racing Team"
+      },
+      {
+        "position": 10,
+        "name": "PremiAir Racing",
+        "points": 2330,
+        "team": "PremiAir Racing"
+      },
+      {
+        "position": 11,
+        "name": "Erebus Motorsport",
+        "points": 1771,
+        "team": "Erebus Motorsport"
+      },
+      {
+        "position": 12,
+        "name": "Brad Jones Racing (96)",
+        "points": 834,
+        "team": "Brad Jones Racing (96)"
+      },
+      {
+        "position": 13,
+        "name": "Objective Racing",
+        "points": 789,
+        "team": "SCT Motorsport"
+      },
+      {
+        "position": 15,
+        "name": "Tickford Autosport",
+        "points": 149,
+        "team": "Tickford Autosport"
+      },
+      {
+        "position": 16,
+        "name": "Matt Stone Racing",
+        "points": 98,
+        "team": "Matt Stone Racing"
+      },
+      {
+        "position": 17,
+        "name": "Team Valvoline GRM",
+        "points": 67,
+        "team": "Garry Rogers Motorsport"
+      },
+      {
+        "position": 0,
+        "name": "Supercheap Auto Racing",
+        "points": 0,
+        "team": "WFL Racing"
+      }
+    ],
+    "note": null,
+    "completedRace": 32,
+    "raceResults": {
+      "3": [
+        "88",
+        "19",
+        "6",
+        "1",
+        "2",
+        "4",
+        "14",
+        "55",
+        "8",
+        "96",
+        "38",
+        "17",
+        "10",
+        "11",
+        "18",
+        "20",
+        "3",
+        "888",
+        "31",
+        "99",
+        "777",
+        "9",
+        "26",
+        "7"
+      ],
+      "4": [
+        "17",
+        "19",
+        "88",
+        "7",
+        "1",
+        "6",
+        "2",
+        "888",
+        "18",
+        "99",
+        "26",
+        "55",
+        "4",
+        "800",
+        "20",
+        "31",
+        "38",
+        "14",
+        "10",
+        "9",
+        "96",
+        "777",
+        "3",
+        "11"
+      ],
+      "5": [
+        "17",
+        "19",
+        "2",
+        "6",
+        "26",
+        "4",
+        "88",
+        "55",
+        "800",
+        "18",
+        "14",
+        "777",
+        "7",
+        "1",
+        "38",
+        "11",
+        "10",
+        "31",
+        "20",
+        "96",
+        "888",
+        "9",
+        "99",
+        "3"
+      ],
+      "11": [
+        "17",
+        "26",
+        "2",
+        "888",
+        "88",
+        "18",
+        "6",
+        "31",
+        "3",
+        "10",
+        "38",
+        "4",
+        "1",
+        "55",
+        "7",
+        "99",
+        "9",
+        "96",
+        "19",
+        "777",
+        "20",
+        "11",
+        "8",
+        "14"
+      ],
+      "12": [
+        "19",
+        "88",
+        "7",
+        "2",
+        "17",
+        "18",
+        "26",
+        "6",
+        "4",
+        "38",
+        "31",
+        "1",
+        "888",
+        "10",
+        "8",
+        "14",
+        "55",
+        "99",
+        "20",
+        "9",
+        "3",
+        "777",
+        "96",
+        "11"
+      ],
+      "15": [
+        "8",
+        "88",
+        "19",
+        "888",
+        "18",
+        "26",
+        "6",
+        "2",
+        "14",
+        "55",
+        "4",
+        "7",
+        "10",
+        "31",
+        "3",
+        "38",
+        "20",
+        "99",
+        "96",
+        "1",
+        "11",
+        "9",
+        "777",
+        "17"
+      ],
+      "16": [
+        "88",
+        "19",
+        "26",
+        "18",
+        "888",
+        "31",
+        "3",
+        "2",
+        "1",
+        "6",
+        "55",
+        "17",
+        "7",
+        "8",
+        "96",
+        "20",
+        "777",
+        "11",
+        "14",
+        "10",
+        "99",
+        "9",
+        "38",
+        "4"
+      ],
+      "17": [
+        "6",
+        "26",
+        "19",
+        "17",
+        "888",
+        "18",
+        "1",
+        "2",
+        "31",
+        "96",
+        "8",
+        "14",
+        "99",
+        "88",
+        "55",
+        "10",
+        "3",
+        "7",
+        "9",
+        "777",
+        "38",
+        "11",
+        "20",
+        "4"
+      ],
+      "20": [
+        "6",
+        "17",
+        "19",
+        "26",
+        "1",
+        "55",
+        "888",
+        "2",
+        "31",
+        "88",
+        "4",
+        "7",
+        "99",
+        "18",
+        "8",
+        "20",
+        "38",
+        "11",
+        "14",
+        "3",
+        "777",
+        "9",
+        "10",
+        "96",
+        "5",
+        "30"
+      ],
+      "21": [
+        "19",
+        "18",
+        "17",
+        "6",
+        "55",
+        "888",
+        "1",
+        "88",
+        "4",
+        "20",
+        "31",
+        "26",
+        "99",
+        "10",
+        "3",
+        "8",
+        "38",
+        "11",
+        "96",
+        "9",
+        "777",
+        "7",
+        "30",
+        "5",
+        "14",
+        "2"
+      ],
+      "23": [
+        "19",
+        "2",
+        "18",
+        "6",
+        "1",
+        "26",
+        "88",
+        "8",
+        "55",
+        "38",
+        "4",
+        "888",
+        "99",
+        "14",
+        "7",
+        "3",
+        "11",
+        "9",
+        "20",
+        "31",
+        "777",
+        "10",
+        "96",
+        "17"
+      ],
+      "24": [
+        "88",
+        "19",
+        "26",
+        "1",
+        "888",
+        "17",
+        "8",
+        "2",
+        "6",
+        "55",
+        "18",
+        "777",
+        "4",
+        "7",
+        "20",
+        "9",
+        "38",
+        "31",
+        "99",
+        "14",
+        "3",
+        "10",
+        "96",
+        "11"
+      ],
+      "26": [
+        "17",
+        "19",
+        "888",
+        "88",
+        "26",
+        "1",
+        "38",
+        "6",
+        "2",
+        "55",
+        "7",
+        "8",
+        "18",
+        "99",
+        "11",
+        "3",
+        "14",
+        "31",
+        "10",
+        "20",
+        "4",
+        "9",
+        "777",
+        "96",
+        "5",
+        "30",
+        "15"
+      ],
+      "31": [
+        "1",
+        "48",
+        "19",
+        "18",
+        "8",
+        "888",
+        "17",
+        "6",
+        "88",
+        "31",
+        "36",
+        "10",
+        "7",
+        "2",
+        "11",
+        "96",
+        "38",
+        "14",
+        "99",
+        "3",
+        "9",
+        "4",
+        "55",
+        "26"
+      ]
+    },
+    "pointsRemaining": {
+      "drivers": 600,
+      "teams": 1152,
+      "races": 5,
+      "sprints": 0,
+      "driverResetsPending": true,
+      "source": "https://www.supercars.com/rules-and-regulations"
+    },
+    "racePoints": {
+      "31": {
+        "888": 99.0,
+        "88": 77.0,
+        "19": 127.0,
+        "26": 22.0,
+        "1": 150.0,
+        "2": 51.0,
+        "6": 84.0,
+        "55": 0,
+        "48": 138.0,
+        "18": 117.0,
+        "17": 91.0,
+        "38": 40.0,
+        "8": 107.0,
+        "14": 36.0,
+        "4": 26.0,
+        "10": 60.0,
+        "31": 71.0,
+        "36": 65.0,
+        "777": 0,
+        "9": 28.0,
+        "7": 55.0,
+        "3": 31.0,
+        "11": 47.0,
+        "96": 43.0,
+        "5": 0,
+        "30": 0,
+        "15": 0,
+        "34": 0
+      },
+      "32": {
+        "888": 65.0,
+        "88": 150.0,
+        "19": 99.0,
+        "26": 55.0,
+        "1": 127.0,
+        "2": 117.0,
+        "6": 91.0,
+        "55": 0,
+        "48": 26.0,
+        "18": 51.0,
+        "17": 138.0,
+        "38": 47.0,
+        "8": 107.0,
+        "14": 77.0,
+        "4": 28.0,
+        "10": 36.0,
+        "31": 33.0,
+        "36": 40.0,
+        "777": 0,
+        "9": 0.0,
+        "7": 84.0,
+        "3": 60.0,
+        "11": 31.0,
+        "96": 24.0,
+        "5": 0,
+        "30": 0,
+        "15": 0,
+        "34": 0
+      }
+    },
+    "raceWinners": {
+      "31": "1",
+      "32": "88"
+    }
+  },
+  {
+    "series": "f1",
+    "season": 2026,
+    "checkedAt": "2026-11-06T01:13:12.057284+00:00",
+    "asOf": "After round 19",
+    "driversSource": "https://api.jolpi.ca/ergast/f1/2026/driverstandings/",
+    "teamsSource": "https://api.jolpi.ca/ergast/f1/2026/constructorstandings/",
+    "drivers": [
+      {
+        "position": 1,
+        "name": "Andrea Kimi Antonelli",
+        "points": 380.0,
+        "team": "Mercedes"
+      },
+      {
+        "position": 2,
+        "name": "Max Verstappen",
+        "points": 261.0,
+        "team": "Red Bull"
+      },
+      {
+        "position": 3,
+        "name": "Lewis Hamilton",
+        "points": 259.0,
+        "team": "Ferrari"
+      },
+      {
+        "position": 4,
+        "name": "George Russell",
+        "points": 250.0,
+        "team": "Mercedes"
+      },
+      {
+        "position": 5,
+        "name": "Charles Leclerc",
+        "points": 245.0,
+        "team": "Ferrari"
+      },
+      {
+        "position": 6,
+        "name": "Lando Norris",
+        "points": 221.0,
+        "team": "McLaren"
+      },
+      {
+        "position": 7,
+        "name": "Oscar Piastri",
+        "points": 144.0,
+        "team": "McLaren"
+      },
+      {
+        "position": 8,
+        "name": "Isack Hadjar",
+        "points": 107.0,
+        "team": "Red Bull"
+      },
+      {
+        "position": 9,
+        "name": "Liam Lawson",
+        "points": 83.0,
+        "team": "RB F1 Team / Red Bull"
+      },
+      {
+        "position": 10,
+        "name": "Pierre Gasly",
+        "points": 42.0,
+        "team": "Alpine F1 Team"
+      },
+      {
+        "position": 11,
+        "name": "Arvid Lindblad",
+        "points": 38.0,
+        "team": "RB F1 Team"
+      },
+      {
+        "position": 12,
+        "name": "Franco Colapinto",
+        "points": 27.0,
+        "team": "Alpine F1 Team"
+      },
+      {
+        "position": 13,
+        "name": "Oliver Bearman",
+        "points": 23.0,
+        "team": "Haas F1 Team"
+      },
+      {
+        "position": 14,
+        "name": "Gabriel Bortoleto",
+        "points": 14.0,
+        "team": "Audi"
+      },
+      {
+        "position": 15,
+        "name": "Nico Hülkenberg",
+        "points": 13.0,
+        "team": "Audi"
+      },
+      {
+        "position": 16,
+        "name": "Esteban Ocon",
+        "points": 7.0,
+        "team": "Haas F1 Team"
+      },
+      {
+        "position": 17,
+        "name": "Fernando Alonso",
+        "points": 7.0,
+        "team": "Aston Martin"
+      },
+      {
+        "position": 18,
+        "name": "Carlos Sainz",
+        "points": 7.0,
+        "team": "Williams"
+      },
+      {
+        "position": 19,
+        "name": "Alexander Albon",
+        "points": 5.0,
+        "team": "Williams"
+      },
+      {
+        "position": 20,
+        "name": "Yuki Tsunoda",
+        "points": 1.0,
+        "team": "RB F1 Team"
+      },
+      {
+        "position": 21,
+        "name": "Ryo Hirakawa",
+        "points": 1.0,
+        "team": "Haas F1 Team"
+      },
+      {
+        "position": 22,
+        "name": "Lance Stroll",
+        "points": 0.0,
+        "team": "Aston Martin"
+      },
+      {
+        "position": 23,
+        "name": "Valtteri Bottas",
+        "points": 0.0,
+        "team": "Cadillac F1 Team"
+      },
+      {
+        "position": 24,
+        "name": "Sergio Pérez",
+        "points": 0.0,
+        "team": "Cadillac F1 Team"
+      }
+    ],
+    "teams": [
+      {
+        "position": 1,
+        "name": "Mercedes",
+        "points": 630.0,
+        "team": null
+      },
+      {
+        "position": 2,
+        "name": "Ferrari",
+        "points": 504.0,
+        "team": null
+      },
+      {
+        "position": 3,
+        "name": "Red Bull",
+        "points": 382.0,
+        "team": null
+      },
+      {
+        "position": 4,
+        "name": "McLaren",
+        "points": 365.0,
+        "team": null
+      },
+      {
+        "position": 5,
+        "name": "RB F1 Team",
+        "points": 108.0,
+        "team": null
+      },
+      {
+        "position": 6,
+        "name": "Alpine F1 Team",
+        "points": 69.0,
+        "team": null
+      },
+      {
+        "position": 7,
+        "name": "Haas F1 Team",
+        "points": 31.0,
+        "team": null
+      },
+      {
+        "position": 8,
+        "name": "Audi",
+        "points": 27.0,
+        "team": null
+      },
+      {
+        "position": 9,
+        "name": "Williams",
+        "points": 12.0,
+        "team": null
+      },
+      {
+        "position": 10,
+        "name": "Aston Martin",
+        "points": 7.0,
+        "team": null
+      },
+      {
+        "position": 11,
+        "name": "Cadillac F1 Team",
+        "points": 0.0,
+        "team": null
+      }
+    ],
+    "note": null,
+    "pointsRemaining": {
+      "drivers": 100,
+      "teams": 172,
+      "races": 4,
+      "sprints": 0,
+      "driverResetsPending": false,
+      "source": "https://www.formula1.com/en/latest/article/f1-glossary-p-t.GBhLQtpeu9b8LrK5VM0F1"
+    }
+  }
+]

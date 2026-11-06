@@ -5,6 +5,7 @@ using SupercarsTiming.Server.Hubs;
 using SupercarsTiming.Natsoft;
 using SupercarsTiming.Server.Sessions;
 using SupercarsTiming.Server.F1;
+using SupercarsTiming.Server.Weekend;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,12 @@ builder.Services.AddHostedService<TimingFeedService>();
 builder.Services.AddHostedService<SnapshotBroadcaster>();
 builder.Services.AddSingleton<SessionCatalog>();
 builder.Services.AddSingleton<ReplayService>();
+builder.Services.AddHttpClient("weekend", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(12);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 SupercarsTiming/1.0");
+});
+builder.Services.AddSingleton<WeekendService>();
 // Requests through the Cloudflare Tunnel arrive on their own port and can't use replays (RemoteAccess.cs).
 builder.Services.AddSingleton<RemoteAccess>();
 // F1: a second, separate feed (F1's live timing hub) with its own store, hub and endpoints under /api/f1.
@@ -29,6 +36,11 @@ builder.Services.AddSignalR()
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 var app = builder.Build();
+
+app.MapGet("/api/weekend/{series}/{date}", async (string series, string date, WeekendService data) =>
+    await data.Weekend(series, date) is { } weekend ? Results.Ok(weekend) : Results.NotFound());
+app.MapGet("/api/standings/{series}/{season:int}", async (string series, int season, WeekendService data) =>
+    await data.Standings(series, season) is { } standings ? Results.Ok(standings) : Results.NotFound());
 
 app.MapGet("/api/health", (TimingStore store) => Results.Ok(store.Status));
 // What this viewer may use, for both series: replays only locally and on the tailnet, not through the tunnel.

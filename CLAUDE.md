@@ -116,6 +116,31 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
   (merges F1's patches, works out mini-sector crossings, laps, pit stops, flags; builds the same `TimingSnapshot`),
   `F1FeedService` (+ `F1Store`, `F1Hub`, `F1Options`: live/replay, recording, warm start, broadcasting).
 - `src/web/src/series.ts`: which app the page is (`/f1` = F1, else Supercars), its API base and hub, team colours.
+- Event pages use `components/WeekendPanels.tsx` (Overview / Weekend timetable / TV coverage / Standings),
+  `weekend.ts` and `useWeekend.ts`. `Server/Weekend/WeekendService` serves `/api/weekend/{series}/{startDate}` and
+  `/api/standings/{series}/{season}`; known weekends/seasons only, source refreshes coalesced and cached for 15 min.
+  `schedule/weekends.json` and `standings.json` are sourced, dated offline snapshots.
+  Supercars full timetables/standings come from its public Next/Contentful data; Adelaide uses its newer official
+  timetable article (the older event CMS mislabels a SuperUtes race and omits Q2 sessions). F1 timetables come from formula1.com
+  and standings from Jolpica. Exact TV blocks and explicit support coverage retain their own source/check date;
+  refreshing a track timetable does not re-verify those listings. Never infer support TV coverage merely from
+  overlapping a broadcast block. Missing starts/channels/coverage remain unconfirmed. Weekend schedules are display
+  data: keep them separate from `supercars.json`/`f1.json`, which still own timing-feed connection windows.
+  `NextSession` uses only main championship sessions and shows their coverage while waiting (also during Supercars
+  support sessions). Test parsers/cache/fallback with `WeekendTests` and web timezone helpers with `npm test`.
+  `championshipLocks.ts` proves exact positions with conservative remaining-points bounds (ties unconfirmed;
+  Supercars drivers can lose resets until the final four are set). F1 remaining rounds/Sprints come from Jolpica's
+  complete calendar and race winners, not wall-clock guesses. Supercars 2026 R31–34 award 150/138; Adelaide R35
+  awards 50/46, R36–37 125/115 (Operations Manual Schedule D1). Two-car team upper bounds use the top two places.
+  Sandown's pre-R33 field/ordinary standings are in `schedule/finals-sandown.json`. `FinalsLadder` combines earlier
+  official per-race points/wins with completed recordings, excludes the current/future race, then projects from the
+  delayed running order. A live leader is provisional; only a completed win or proven points margin is secured.
+  Missing earlier results are labelled incomplete and cannot produce a points-based secured badge.
+  If the latest race has points but no classification, ties at the advancement cut stay unconfirmed; an older
+  race or the seed must not pick a qualifier. Live running order can supply the current provisional tie-break.
+  Replays use their recorded history and never consume current published race points. Local prior-race selection anchors to the
+  earliest same-meeting/session recording fragment; unknown anchors must not expose future results. Completed
+  classification excludes position-zero cars; all race-result projections remain provisional pending official classification/penalties.
 - `.claude/`: `skills/steward/SKILL.md` (the PR routine) and `hooks/session-start.sh` (cloud sessions only: installs
   the .NET 10 SDK from Ubuntu's archive, since Microsoft's download host is blocked there, then `dotnet restore` and
   `npm install`, so `dotnet test` and `npm run build` work in the cloud; recordings still don't exist there).
@@ -571,8 +596,7 @@ the tunnel's port 7844). `homeserver` is a Lenovo ThinkCentre M90q (i5-10500T, 1
   Coast (Supercars re-orders the pit lane after each event).
 - **Before the weekend:** done: the Enduro Cup winner (Brown, #888) and the official starting points are in
   `finals.ts`. Grids are automatic (server, since 24 Oct 2026); a `startingGrid.ts` entry is only needed to
-  correct one. For Sandown, add a `FINALS_ROUNDS` entry with its official
-  field after the Gold Coast.
+  correct one. Sandown's official field after the Gold Coast is now in `FINALS_ROUNDS`.
 - **After Practice 1 (done, 23 Oct):** map rebuilt from the recording as `SPSC` (lap 76.9 s; the control line is still
   estimated mid Gold Coast Highway). Watch in Practice 2 that cars cross the points as the tower updates.
 - `championship.ts` only knows the Bathurst 1000; the Finals ladder takes over at Finals rounds.

@@ -79,8 +79,8 @@ export function SessionHeader({ update: liveUpdate, feed, connection, onMenu, hi
         <SeriesSwitch />
       </div>
       <div className="session-title">
-        <div className="meeting">{session?.meeting || update?.timing.session.meeting || (isF1 ? 'F1 Timing' : 'Supercars Timing')}</div>
-        <h1>{session?.name || (hideSession ? 'Waiting for the next Supercars session' : '—')}</h1>
+        <div className="meeting">{session?.meeting || (isF1 ? 'F1 Timing' : 'Supercars Timing')}</div>
+        <h1>{session?.name || (hideSession ? `Waiting for the next ${isF1 ? 'F1' : 'Supercars'} session` : '—')}</h1>
         {/* Always three lines, so the header keeps its height between sessions and between the two apps. */}
         <div className="track">{session?.track || '\u00A0'}</div>
       </div>

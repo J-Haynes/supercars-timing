@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import type { TimingSnapshot } from '../types'
-import { finalsRoundFor, roundStandings, type FinalsRound, type StandingRow } from '../finals'
+import { finalsRoundFor, resultOrder, roundStandings, type FinalsRound, type StandingRow } from '../finals'
 import { projectedFinish } from '../championship'
 import { flagKind } from '../session'
 import { useFinalsData } from '../useFinalsData'
 import { teamsRoundFor, type TeamsRound } from '../teams'
+import { useStandings } from '../useWeekend'
 
 /** The championship's own races (not support categories, qualifying or the Shootout): the only ones paying points. */
 const POINTS_RACE = /supercars championship - race \d+$/i
@@ -15,40 +16,48 @@ const POINTS_RACE = /supercars championship - race \d+$/i
  * ordinary points. `live` adds the race on now as provisional points in their own column; outside a race the table
  * only shows points already earned.
  */
-function StandingsTable({ round, rows, live, onHighlight }: {
+function StandingsTable({ round, rows, live, onHighlight, secured, uncertain, tieOrderKnown }: {
   round: FinalsRound
   rows: StandingRow[]
   live: boolean
   onHighlight?: (carNumber: string | undefined) => void
+  secured: Map<string, 'win' | 'points'>
+  uncertain: Set<string>
+  tieOrderKnown: boolean
 }) {
   const finalists = rows.filter((r) => r.finalist)
-  const through = finalists.filter((r) => !r.out)
-  const out = finalists.filter((r) => r.out)
+  const through = finalists.filter((r) => !r.out && !uncertain.has(r.carNumber!))
+  const out = finalists.filter((r) => r.out && !uncertain.has(r.carNumber!))
+  const undecided = finalists.filter((r) => uncertain.has(r.carNumber!))
   const rest = rows.filter((r) => !r.finalist)
   // Win and you're in (finals.ts): a race winner is through whatever their points, so the cut is between the lowest
   // finalist through on points and the highest one out.
-  const onPoints = through.filter((r) => r.wins === 0 && !r.leading)
+  const onPoints = finalists.filter((r) => !r.out && r.wins === 0 && !r.leading)
   const lastIn = onPoints.at(-1)?.total ?? 0
-  const firstOut = out[0]?.total ?? 0
+  const firstOut = finalists.find(r => r.out)?.total ?? 0
   const cut = (r: StandingRow) =>
-    r.out ? `${lastIn - r.total} behind` : r.wins > 0 ? 'won · through' : r.leading ? 'leading' : out.length ? `${r.total - firstOut} clear` : ''
+    uncertain.has(r.carNumber!) ? 'tie unconfirmed' : r.out ? `${lastIn - r.total} behind` : r.wins > 0 ? 'won · through' : r.leading ? 'leading' : out.length ? `${r.total - firstOut} clear` : ''
 
   const row = (r: StandingRow, finalist: boolean) => {
     const moved = live ? r.rankNow - r.rank : 0
     return (
-      <div key={r.driver} className={`standings-row${live ? ' live' : ''}${finalist && r.out ? ' out' : ''}${finalist ? '' : ' plain'}${r.carNumber ? '' : ' absent'}`}
+      <div key={r.driver} className={`standings-row${live ? ' live' : ''}${finalist && r.out && !uncertain.has(r.carNumber!) ? ' out' : ''}${finalist ? '' : ' plain'}${r.carNumber ? '' : ' absent'}`}
         onMouseEnter={() => onHighlight?.(r.carNumber)}
         title={[r.seed && `Seed ${r.seed} going into the Finals`, r.cup && `${r.cup} winner (+${round.cupBonus})`, !r.carNumber && 'Not entered in this round (co-driver or wildcard)'].filter(Boolean).join(' · ') || undefined}>
-        <span className="standings-pos">{r.rank}</span>
+        <span className="standings-pos">{uncertain.has(r.carNumber!) ? '—' : r.rank}</span>
         {live && <span className={`standings-move${moved > 0 ? ' up' : moved < 0 ? ' down' : ''}`}>{moved > 0 ? `▲${moved}` : moved < 0 ? `▼${-moved}` : ''}</span>}
         <span className="standings-driver">
           {r.driver}{r.carNumber && <span className="standings-car"> #{r.carNumber}</span>}
+          {finalist && (uncertain.has(r.carNumber!)
+            ? <span className="finals-marker">Tie · advancement unconfirmed</span>
+            : secured.has(r.carNumber!)
+            ? <span className="finals-marker secured">🔒 Secured · {secured.get(r.carNumber!) === 'win' ? 'win' : 'points'}</span>
+            : <span className={`finals-marker ${r.out ? 'below' : 'projected'}`}>{r.out ? 'Below cut' : '◇ Projected through'}</span>)}
           {r.cup && <span className="standings-tag"> · {r.cup}</span>}
           {finalists.some((o) => o !== r && o.total === r.total) && finalist && (
-            <span className="standings-tag" title="Level on points: split by the order in the latest race here (Operations Manual D14.1.5.1)"> · level, split by race order</span>
+            <span className="standings-tag" title="Level on points: the latest race classification decides (Operations Manual D14.1.5.1)">{tieOrderKnown ? ' · level, split by race order' : ' · level, latest race order unconfirmed'}</span>
           )}
-          {finalist && r.wins > 0 && <span className="standings-tag" title="Won a race at this round: through to the next round, whatever the points"> · won here, through</span>}
-          {finalist && live && r.leading && r.wins === 0 && <span className="standings-tag" title="Leading this race: a win puts a finalist through, whatever the points"> · leading: through if it ends now</span>}
+          {finalist && live && r.leading && r.wins === 0 && !secured.has(r.carNumber!) && <span className="standings-tag" title="Leading this race: a win puts a finalist through, whatever the points"> · leading: through if it ends now</span>}
           {live && r.finish > 0 && <span className="standings-tag" title="Running position in this race"> · P{r.finish}</span>}
         </span>
         {live && <span className="standings-now">{r.points}</span>}
@@ -78,6 +87,10 @@ function StandingsTable({ round, rows, live, onHighlight }: {
         <div className="ladder-elimination-label">Finalists · eliminated if it ended now</div>
         {out.map((r) => row(r, true))}
       </div>
+      {undecided.length > 0 && <div className="ladder-uncertain">
+        <div className="ladder-finals-label">Finalists · tied at the cut · latest race classification unconfirmed</div>
+        {undecided.map(r => row(r, true))}
+      </div>}
       <details className="standings-rest" open>
         <summary>Rest of the championship ({rest.length}) · ordinary points</summary>
         {rest.map((r) => row(r, false))}
@@ -185,17 +198,17 @@ export function FinalsField({ meeting }: { meeting: string }) {
   const run = data?.earlier.length ?? 0
   return (
     <section className="ladder finals-field" aria-label="Championship standings">
-      <h2>Championship standings <span className="ladder-live">{run ? `after ${run} race${run > 1 ? 's' : ''} here` : 'now, after Bathurst'} · {advance} of {round.finalists} finalists go through</span></h2>
+      <h2>Championship standings <span className="ladder-live">{run ? `after ${run} race${run > 1 ? 's' : ''} here` : round.asOf} · {advance} of {round.finalists} finalists go through</span></h2>
       {teams && <ChampionshipTabs tab={tab} onTab={setTab} />}
-      <p className="finals-explain">
+      {round.firstRace === 33 ? <p className="finals-explain">Seven drivers contest the Sandown Semi Final; four advance to Adelaide. A finalist who wins either Sandown race is secured for the Grand Final. Everyone else qualifies on points, with the latest race classification breaking ties. A current race leader is only provisionally through.</p> : <p className="finals-explain">
         The top {round.finalists} after Bathurst are the finalists. Their points were reset for the Finals: {round.reset} plus
         a bonus for where they finished the regular season (up to {round.bonus[0]}), and {round.cupBonus} more for the Sprint
         and Enduro Cup winners. After the two races here the bottom {round.eliminate} finalists are eliminated and {advance} go
         on to Sandown, except that a finalist who wins a race here is through whatever their points (the next lowest goes
         out instead); three more go out there and 4 contest the Grand Final in Adelaide. Everyone else, and eliminated
         drivers, race on with their ordinary points for 11th and below.
-      </p>
-      <StandingsTable round={round} rows={rows} live={false} />
+      </p>}
+      <StandingsTable round={round} rows={rows} live={false} secured={standings.secured} uncertain={standings.uncertain} tieOrderKnown={standings.tieOrderKnown} />
       <PointsOnOffer round={round} />
       <p className="ladder-note">
         Points now: Supercars' official Finals standings for the finalists, the championship after Bathurst (Speedcafe)
@@ -211,17 +224,44 @@ export function FinalsField({ meeting }: { meeting: string }) {
  * Live tab (live and replay), every session of a Finals round: the standings as they are, and during the round's two
  * races (from the green flag) provisional points for where each car is running, with the standings they'd give.
  */
-export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; onHighlight: (ids: string[]) => void }) {
+export function FinalsLadder({ timing, onHighlight, liveFeed = false }: { timing: TimingSnapshot; onHighlight: (ids: string[]) => void; liveFeed?: boolean }) {
   // Championship sessions only (support categories share the feed; the live view hides them, replays don't).
   const round = /supercars championship/i.test(timing.session.name) ? finalsRoundFor(timing.session.meeting) : undefined
   const teams = round ? teamsRoundFor(timing.session.meeting) : undefined
   const [tab, setTab] = useState<ChampionshipTab>('drivers')
-  const data = useFinalsData(round, timing.session.name)
+  const data = useFinalsData(round, timing.session.name, timing.session.meeting)
+  const published = useStandings(2026)
+  const currentRace = Number(/race (\d+)$/i.exec(timing.session.name)?.[1])
+  const earlier = new Map<number, string[]>()
+  if (round && liveFeed) for (const [race, order] of Object.entries(published?.raceResults ?? {})) {
+    if (Number(race) >= round.firstRace && Number(race) < round.firstRace + 2 && (!currentRace || Number(race) < currentRace)) earlier.set(Number(race), order)
+  }
+  data?.earlier.forEach((order, i) => { if (round && data.raceNumbers[i] >= round.firstRace && data.raceNumbers[i] < round.firstRace + 2) earlier.set(data.raceNumbers[i], order) })
+  const earlierOrders = [...earlier].sort(([a], [b]) => a - b).map(([, order]) => order)
+  const priorScores = new Map<number, Record<string, number>>()
+  const priorWinners = new Map<number, string>()
+  earlier.forEach((order, race) => {
+    priorScores.set(race, Object.fromEntries(order.map((car, i) => [car, round?.points[i] ?? 0])))
+    if (order[0]) priorWinners.set(race, order[0])
+  })
+  if (round && liveFeed) for (const [race, points] of Object.entries(published?.racePoints ?? {})) {
+    const number = Number(race)
+    if (number >= round.firstRace && number < round.firstRace + 2 && (!currentRace || number < currentRace)) {
+      priorScores.set(number, points)
+      if (published?.raceWinners?.[race]) priorWinners.set(number, published.raceWinners[race])
+    }
+  }
+  const priorPoints: Record<string, number> = {}
+  priorScores.forEach(points => Object.entries(points).forEach(([car, score]) => { priorPoints[car] = (priorPoints[car] ?? 0) + score }))
+  const lastRaceOrder = earlier.get(Math.max(...priorScores.keys()))
+  const expectedPrior = round && currentRace ? Math.max(0, Math.min(2, currentRace - round.firstRace)) : priorScores.size
+  const complete = priorScores.size >= expectedPrior
   const pointsRace = POINTS_RACE.test(timing.session.name) && (timing.session.greenAt ?? 0) > 0
-  const live = pointsRace ? projectedFinish(timing).map((c) => c.carNumber) : undefined
-  const standings = round && data ? roundStandings(round, data.earlier, live) : undefined
-  if (!round || !standings) return null
   const finished = flagKind(timing.session.flag) === 'finished'
+  const live = pointsRace ? (finished ? resultOrder(timing) : projectedFinish(timing).map((c) => c.carNumber)) : undefined
+  const standings = round ? roundStandings(round, earlierOrders, live, finished && !!live,
+    { points: priorPoints, winners: [...priorWinners.values()], completed: priorScores.size, complete, lastRaceOrder }) : undefined
+  if (!round || !standings) return null
   const highlight = (car: string | undefined) => {
     const id = car ? timing.cars.find((c) => c.carNumber === car)?.id : undefined
     onHighlight(id ? [id] : [])
@@ -239,18 +279,19 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
   return (
     <section className="ladder finals-ladder" aria-label="Championship standings">
       <h2>
-        Championship standings{' '}
+        Finals projection · {round.nextRound}{' '}
         <span className="ladder-live">
           {live ? (finished ? 'provisional result, before any post-race penalties' : 'provisional: if the race finished now') : 'points earned so far'}
         </span>
       </h2>
       {teams && <ChampionshipTabs tab={tab} onTab={setTab} />}
-      <StandingsTable round={round} rows={standings.rows} live={!!live} onHighlight={highlight} />
+      <StandingsTable round={round} rows={standings.rows} live={!!live} onHighlight={highlight} secured={standings.secured} uncertain={standings.uncertain} tieOrderKnown={standings.tieOrderKnown} />
+      {!complete && <p className="ladder-note" role="status">Projection incomplete: an earlier race result at this round is not available yet. Points-based secured places are unconfirmed.</p>}
+      <p className="ladder-note">◇ Projected through: based on the current running order. 🔒 Secured: a completed win at this round, or a mathematically safe points margin including remaining win-to-advance seats. All live results remain provisional until penalties are settled.</p>
       <PointsOnOffer round={round} open={false} />
       <p className="ladder-note">
         {live && 'Now: points earned before this race. Race: points for the position each car is running in. '}
-        Finalists on Supercars' official Finals points, everyone else on the championship after Bathurst
-        {data?.earlier.length ? ', plus earlier races here from our recordings' : ''}.
+        {round.asOf}, plus earlier races at this round from published points or completed recordings.
       </p>
     </section>
   )

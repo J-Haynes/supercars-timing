@@ -1,6 +1,8 @@
 import type { RecordedSession, TimingSnapshot } from './types'
 import { STANDINGS_AFTER_BATHURST, inPointsSeason } from './championship'
 import { flagKind } from './session'
+import sandown from './schedule/finals-sandown.json'
+import { finalsQualification } from './championshipLocks'
 
 /**
  * Finals rounds (2026): the top 10 after Bathurst go to the Finals. At each Finals round their points reset and
@@ -35,6 +37,10 @@ import { flagKind } from './session'
  *   the round uses the official numbers (`field`). Car numbers from STANDINGS_AFTER_R10.
  */
 export interface FinalsRound {
+  firstRace: number
+  nextRound: string
+  asOf: string
+  priorPoints?: { driver: string; car?: string; points: number }[]
   meeting: RegExp
   /** Points each finalist starts the round on, before bonuses. */
   reset: number
@@ -53,11 +59,12 @@ export interface FinalsRound {
   field?: { car: string; start: number }[]
 }
 
-const FINALS_POINTS = [150, 138, 127, 117, 107, 99, 91, 84, 77, 71, 65, 60, 55, 51, 47, 43, 40, 36, 33, 31, 28, 26, 24, 22, 20]
+const FINALS_POINTS = [150, 138, 127, 117, 107, 99, 91, 84, 77, 71, 65, 60, 55, 51, 47, 43, 40, 36, 33, 31, 28, 26, 24, 22, 20, 19, 17, 16, 15, 13]
 
 export const FINALS_ROUNDS: FinalsRound[] = [
   {
     meeting: /gold coast/i,
+    firstRace: 31, nextRound: 'Sandown', asOf: 'Before Gold Coast',
     reset: 3000,
     bonus: [150, 120, 96, 78],
     points: FINALS_POINTS,
@@ -71,6 +78,15 @@ export const FINALS_ROUNDS: FinalsRound[] = [
       { car: '26', start: 3066 }, { car: '6', start: 3057 }, { car: '18', start: 3048 }, { car: '1', start: 3039 },
       { car: '2', start: 3030 }, { car: '4', start: 3021 },
     ],
+  },
+  {
+    // Official pre-Sandown field/points, checked 6 Nov 2026; only a win AT SANDOWN secures Adelaide.
+    // https://www.supercars.com/news/supercars-news-2026-sandown-500-semi-final-standings-pre-round-points-matt-payne-broc-feeney
+    meeting: /sandown/i, firstRace: 33, nextRound: 'Adelaide Grand Final', asOf: sandown.asOf,
+    reset: 4000, bonus: [150, 120, 96, 78, 66, 57, 48], points: FINALS_POINTS,
+    finalists: 7, eliminate: 3, cupWinners: {}, cupBonus: 0, priorPoints: sandown.drivers,
+    field: [{ car: '19', start: 4150 }, { car: '88', start: 4120 }, { car: '17', start: 4096 },
+      { car: '1', start: 4078 }, { car: '888', start: 4066 }, { car: '6', start: 4057 }, { car: '18', start: 4048 }],
   },
 ]
 
@@ -128,13 +144,14 @@ export interface StandingRow {
  * gets that race's points for where they are now: provisional, shown apart from what's earned. Undefined for a round
  * without its official field (finals.ts `field`).
  */
-export function roundStandings(round: FinalsRound, earlierRaces: string[][], live?: string[]) {
+export function roundStandings(round: FinalsRound, earlierRaces: string[][], live?: string[], currentFinished = false,
+  prior?: { points: Record<string, number>; winners: string[]; completed: number; complete: boolean; lastRaceOrder?: string[] }) {
   const field = round.field
   if (!field) return undefined
-  const earned = (car?: string) => (car ? earlierRaces.reduce((s, r) => s + (scored(r, round.points).get(car) ?? 0), 0) : 0)
+  const earned = (car?: string) => car ? prior ? prior.points[car] ?? 0 : earlierRaces.reduce((s, r) => s + (scored(r, round.points).get(car) ?? 0), 0) : 0
   const today = live ? scored(live, round.points) : new Map<string, number>()
   const finishOf = (car?: string) => (car && live ? live.indexOf(car) + 1 : 0)
-  const winsOf = (car?: string) => (car ? earlierRaces.filter((r) => r[0] === car).length : 0)
+  const winsOf = (car?: string) => car ? prior ? prior.winners.filter(w => w === car).length : earlierRaces.filter((r) => r[0] === car).length : 0
   const cupOf = (car: string) => [car === round.cupWinners.sprint && 'Sprint Cup', car === round.cupWinners.enduro && 'Enduro Cup'].filter(Boolean).join(', ') || undefined
 
   const finalists: StandingRow[] = field.map((f, i) => {
@@ -143,7 +160,7 @@ export function roundStandings(round: FinalsRound, earlierRaces: string[][], liv
     const l = today.get(f.car) ?? 0
     return { carNumber: f.car, driver, finalist: true, seed: i + 1, cup: cupOf(f.car), points, live: l, finish: finishOf(f.car), total: points + l, rankNow: 0, rank: 0, wins: winsOf(f.car), leading: finishOf(f.car) === 1, out: false }
   })
-  const rest: StandingRow[] = STANDINGS_AFTER_BATHURST.filter((d) => !field.some((f) => f.car === d.car)).map((d) => {
+  const rest: StandingRow[] = (round.priorPoints ?? STANDINGS_AFTER_BATHURST).filter((d) => !field.some((f) => f.car === d.car)).map((d) => {
     const points = d.points + earned(d.car)
     const l = (d.car && today.get(d.car)) || 0
     return { carNumber: d.car, driver: d.driver, finalist: false, points, live: l, finish: finishOf(d.car), total: points + l, rankNow: 0, rank: 0, wins: winsOf(d.car), leading: finishOf(d.car) === 1, out: false }
@@ -158,7 +175,8 @@ export function roundStandings(round: FinalsRound, earlierRaces: string[][], liv
     const i = order && car ? order.indexOf(car) : -1
     return i >= 0 ? i : Infinity
   }
-  const lastRun = earlierRaces.at(-1)
+  // Awards can arrive without a classification. An older race must not decide a later race's tie.
+  const lastRun = prior ? prior.lastRaceOrder : earlierRaces.at(-1)
   const rankBy = (key: 'points' | 'total', set: 'rankNow' | 'rank') => {
     const decider = key === 'total' && live ? live : lastRun
     const tie = (a: StandingRow, b: StandingRow) =>
@@ -171,9 +189,23 @@ export function roundStandings(round: FinalsRound, earlierRaces: string[][], liv
   const rows = [...finalists, ...rest].sort((a, b) => a.rank - b.rank)
   // Win and you're in: the eliminated are the lowest on points (with this race as it stands) among finalists who
   // haven't won here, or aren't leading the race on now.
-  const contenders = rows.filter((r) => r.finalist && r.wins === 0 && !r.leading)
-  contenders.slice(Math.max(0, contenders.length - round.eliminate)).forEach((r) => { r.out = true })
-  return { rows, advance: round.finalists - round.eliminate }
+  const advance = round.finalists - round.eliminate
+  const qualification = finalsQualification(rows.filter(r => r.finalist).map(r => ({ car: r.carNumber!,
+    banked: r.points, total: r.total, wins: r.wins, leading: r.leading })), advance,
+    Math.max(0, 2 - (prior?.completed ?? earlierRaces.length) - (currentFinished ? 1 : 0)), round.points[0], currentFinished)
+  if (prior && !prior.complete) for (const [car, reason] of qualification.secured) if (reason === 'points') qualification.secured.delete(car)
+  const tieOrderKnown = !!live || !prior || prior.completed === 0 || !!lastRun
+  const uncertain = new Set<string>()
+  if (!tieOrderKnown) {
+    const pointsPlaces = rows.filter(r => r.finalist && r.wins === 0 && !r.leading)
+    for (const row of pointsPlaces) {
+      if (pointsPlaces.some(other => other.total === row.total
+        && qualification.through.has(other.carNumber!) !== qualification.through.has(row.carNumber!))) uncertain.add(row.carNumber!)
+    }
+  }
+  for (const car of uncertain) qualification.secured.delete(car)
+  rows.filter(r => r.finalist).forEach(r => { r.out = !qualification.through.has(r.carNumber!) })
+  return { rows, advance, secured: qualification.secured, uncertain, tieOrderKnown }
 }
 
 /** Finishing order (car numbers) from a recorded session's results (GET /api/sessions/{id}/results). */
@@ -186,6 +218,17 @@ export function resultOrder(results: TimingSnapshot): string[] {
 export function racesOf(sessions: RecordedSession[], meeting: RegExp): RecordedSession[] {
   return sessions.filter((s) => meeting.test(s.meeting) && inPointsSeason(s.meeting) && /race/i.test(s.type) && /supercars championship - race \d+$/i.test(s.name))
     .sort((a, b) => a.start.localeCompare(b.start))
+}
+
+/** A replay may only use races before its own meeting/session, including before the first recording fragment. */
+export function priorFinalsSessions(sessions: RecordedSession[], round: FinalsRound,
+  current?: Pick<RecordedSession, 'meeting' | 'name'>): RecordedSession[] {
+  const races = racesOf(sessions, round.meeting)
+  if (!current) return races
+  const first = sessions.filter(s => s.meeting === current.meeting && s.name === current.name)
+    .sort((a, b) => a.start.localeCompare(b.start))[0]
+  // Without a recording anchor, don't guess a replay's chronology from other meetings or race names.
+  return first ? races.filter(s => s.meeting === current.meeting && s.name !== current.name && s.start < first.start) : []
 }
 
 /**

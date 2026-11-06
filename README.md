@@ -49,6 +49,15 @@ charts, pit stops and race control, or hit Replay and scrub through it at up to 
 **Championship.** The ladder during the Bathurst 1000, and the Finals standings with the elimination cut during
 the Finals rounds.
 
+**Race weekends.** Event pages have Overview, Weekend timetable, TV coverage and Standings tabs for Supercars and F1.
+They include published support-category sessions, Australian broadcast starts/channels and driver/team championship
+points. Times use your browser's timezone by default, with a track-time switch. Unconfirmed coverage, unpublished
+programme times and the date each source was checked are labelled. The waiting screen shows coverage for the next
+main championship session. Public source refreshes are cached for 15 minutes; bundled snapshots remain available offline.
+Mathematically fixed driver/team championship positions have a lock badge; reachable ties and uncertain Finals resets
+stay unmarked. Supercars live Finals projections distinguish drivers provisionally advancing on the running order
+from drivers secured by a completed win or a safe points margin, including remaining win-to-advance places.
+
 **Pit rejoin ghost** (experimental). Pick a car and the map shows where it would come out if it pitted now, based
 on what stops have cost in this race or at this track last year.
 

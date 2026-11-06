@@ -1,9 +1,12 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { SERIES_UPCOMING, eventStart, sessionTime, type EventSession, type UpcomingEvent } from '../calendar'
+import { SERIES_UPCOMING, eventStart, type UpcomingEvent } from '../calendar'
 import { browserTimeZone, formatSessionTime, useTimeZoneChoice } from '../timeZone'
 import { useTrack } from '../tracks'
 import { ErrorBoundary } from './ErrorBoundary'
 import type { TimingUpdate } from '../types'
+import { useWeekends } from '../useWeekend'
+import { nextWeekend } from '../weekend'
+import { CoverageDetails } from './WeekendPanels'
 
 // three.js is large: the same lazy chunk as the live map.
 const TrackMap3D = lazy(() => import('./TrackMap3D'))
@@ -23,13 +26,16 @@ export function NextSession({ detail, onOpenEvent }: { detail?: string | null; o
   // Times in the viewer's zone or the track's: the same site-wide setting as the event pages (timeZone.ts).
   const [zone, setZone] = useTimeZoneChoice()
   const mine = browserTimeZone()
-  const next = nextUp(now)
+  const weekends = useWeekends(SERIES_UPCOMING)
+  const next = nextWeekend(SERIES_UPCOMING, weekends, now)
+  const weekend = weekends.find(w => w?.eventName === next?.event.name && w?.startDate === next?.event.startDate)
   const track = useTrack(next?.event.trackCode, next?.event.venue)
   const empty = useMemo(() => next && emptyUpdate(next.event), [next?.event]) // eslint-disable-line react-hooks/exhaustive-deps -- same event, same update
 
   if (!next || !empty) return <div className="empty">No session on track right now. Timing appears automatically when one starts.</div>
-  const { event, session } = next
-  const startsAt = session ? sessionTime(event, session.start) : eventStart(event)
+  const { event } = next
+  const session = next.session
+  const startsAt = session ? new Date(session.start) : eventStart(event)
   const when = formatSessionTime(startsAt, zone, event.utcOffset)
   const under = startsAt.getTime() <= now
 
@@ -68,23 +74,18 @@ export function NextSession({ detail, onOpenEvent }: { detail?: string | null; o
           </div>
         </div>
       </div>
+      {session && <aside className="next-coverage" aria-label="TV coverage for the next session">
+        <h3>TV coverage · {session.name}</h3>
+        <CoverageDetails coverage={session.coverage} event={event} zone={zone} />
+        {weekend?.note && <p className="chart-note">{weekend.note}</p>}
+        <p className="chart-note">Australian broadcast listings · {zone === 'mine' ? `your time (${mine.id})` : `track time (UTC${event.utcOffset})`}.</p>
+      </aside>}
       <div className="next-actions">
         <button type="button" className="back-button" onClick={() => onOpenEvent(event)}>Event page: timetable and standings</button>
-        <span className="next-detail">Timing appears here automatically when the session starts.{detail?.startsWith('Not connected') ? ` ${detail}.` : ''}</span>
+        <span className="next-detail">Timing appears here automatically when the session starts.{detail && (detail.startsWith('Not connected') || detail.startsWith('A support')) ? ` ${detail}.` : ''}</span>
       </div>
     </section>
   )
-}
-
-/** The next session that hasn't finished (or the next event, if its timetable isn't published). */
-function nextUp(now: number): { event: UpcomingEvent; session: EventSession | null } | null {
-  for (const event of SERIES_UPCOMING) {
-    const sessions = event.sessions ?? []
-    const left = sessions.find((s) => sessionTime(event, s.end ?? s.start).getTime() > now)
-    if (left) return { event, session: left }
-    if (sessions.length === 0 && eventStart(event).getTime() > now) return { event, session: null }
-  }
-  return null
 }
 
 /** The map needs a timing update; an empty one (no cars, no timing points) draws the circuit only. */
