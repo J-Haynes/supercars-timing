@@ -36,6 +36,13 @@ import { flagKind } from './session'
  */
 export interface FinalsRound {
   meeting: RegExp
+  /** Short names for the explanations: this round, the standings the finalists were seeded from, the next round. */
+  name: string
+  seededAfter: string
+  next: string
+  /** Earlier Finals rounds (meetings): their races count for everyone not in this round's field (non-finalists and
+   * drivers eliminated earlier race on with their points after Bathurst plus every race since). */
+  previous: RegExp[]
   /** Points each finalist starts the round on, before bonuses. */
   reset: number
   /** Bonus by championship position going into the round (1st, 2nd, ...). */
@@ -58,6 +65,10 @@ const FINALS_POINTS = [150, 138, 127, 117, 107, 99, 91, 84, 77, 71, 65, 60, 55, 
 export const FINALS_ROUNDS: FinalsRound[] = [
   {
     meeting: /gold coast/i,
+    name: 'the Gold Coast',
+    seededAfter: 'Bathurst',
+    next: 'Sandown',
+    previous: [],
     reset: 3000,
     bonus: [150, 120, 96, 78],
     points: FINALS_POINTS,
@@ -70,6 +81,33 @@ export const FINALS_ROUNDS: FinalsRound[] = [
       { car: '19', start: 3150 }, { car: '88', start: 3145 }, { car: '17', start: 3096 }, { car: '888', start: 3103 },
       { car: '26', start: 3066 }, { car: '6', start: 3057 }, { car: '18', start: 3048 }, { car: '1', start: 3039 },
       { car: '2', start: 3030 }, { car: '4', start: 3021 },
+    ],
+  },
+  {
+    // Sandown Semi Final: the 7 left after the Gold Coast (Wood, Allen and Le Brocq out), reset to 4000 plus the
+    // same bonus scale by their order after the Gold Coast; no cup bonus this time. Supercars' "Semi Final standings:
+    // Heavyweights in danger, Payne on top" (read 6 Nov 2026):
+    // https://www.supercars.com/news/supercars-news-2026-sandown-500-semi-final-standings-pre-round-points-matt-payne-broc-feeney
+    // Payne 4150, Feeney 4120, Kostecki 4096, Mostert 4078, Brown 4066, Waters 4057, De Pasquale 4048. Three go out,
+    // four go to Adelaide (same win-and-you're-in rule, sources above). Race points: the Rounds 12-13 table above.
+    // Speedcafe's table after Race 32 has the same field and gaps except Brown ("74" behind Payne = 4076); 4066 is
+    // Supercars', Motorsport Australia's (5 Nov) and 4000 + 66 for 5th, so it stays.
+    // https://speedcafe.com/supercars-news-2026-gold-coast-500-finals-series-standings-points-after-sunday-race-2/
+    meeting: /sandown/i,
+    name: 'Sandown',
+    seededAfter: 'the Gold Coast',
+    next: 'the Grand Final in Adelaide',
+    previous: [/gold coast/i],
+    reset: 4000,
+    bonus: [150, 120, 96, 78],
+    points: FINALS_POINTS,
+    finalists: 7,
+    eliminate: 3,
+    cupWinners: {},
+    cupBonus: 0,
+    field: [
+      { car: '19', start: 4150 }, { car: '88', start: 4120 }, { car: '17', start: 4096 }, { car: '1', start: 4078 },
+      { car: '888', start: 4066 }, { car: '6', start: 4057 }, { car: '18', start: 4048 },
     ],
   },
 ]
@@ -125,13 +163,15 @@ export interface StandingRow {
  * Championship standings at a Finals round: the finalists on their Finals points, then everyone else on ordinary
  * points (eliminated and non-finalist drivers race on for 11th and below), each plus the points from races already
  * run at the round. With `live` (a finishing order, car numbers, while a race of the round is on) each driver also
- * gets that race's points for where they are now: provisional, shown apart from what's earned. Undefined for a round
- * without its official field (finals.ts `field`).
+ * gets that race's points for where they are now: provisional, shown apart from what's earned. `previousRaces`: the
+ * finishing orders of earlier Finals rounds' races (`round.previous`), added for everyone outside this round's field.
+ * Undefined for a round without its official field (finals.ts `field`).
  */
-export function roundStandings(round: FinalsRound, earlierRaces: string[][], live?: string[]) {
+export function roundStandings(round: FinalsRound, earlierRaces: string[][], live?: string[], previousRaces: string[][] = []) {
   const field = round.field
   if (!field) return undefined
-  const earned = (car?: string) => (car ? earlierRaces.reduce((s, r) => s + (scored(r, round.points).get(car) ?? 0), 0) : 0)
+  const earnedIn = (races: string[][], car?: string) => (car ? races.reduce((s, r) => s + (scored(r, round.points).get(car) ?? 0), 0) : 0)
+  const earned = (car?: string) => earnedIn(earlierRaces, car)
   const today = live ? scored(live, round.points) : new Map<string, number>()
   const finishOf = (car?: string) => (car && live ? live.indexOf(car) + 1 : 0)
   const winsOf = (car?: string) => (car ? earlierRaces.filter((r) => r[0] === car).length : 0)
@@ -144,7 +184,7 @@ export function roundStandings(round: FinalsRound, earlierRaces: string[][], liv
     return { carNumber: f.car, driver, finalist: true, seed: i + 1, cup: cupOf(f.car), points, live: l, finish: finishOf(f.car), total: points + l, rankNow: 0, rank: 0, wins: winsOf(f.car), leading: finishOf(f.car) === 1, out: false }
   })
   const rest: StandingRow[] = STANDINGS_AFTER_BATHURST.filter((d) => !field.some((f) => f.car === d.car)).map((d) => {
-    const points = d.points + earned(d.car)
+    const points = d.points + earnedIn(previousRaces, d.car) + earned(d.car)
     const l = (d.car && today.get(d.car)) || 0
     return { carNumber: d.car, driver: d.driver, finalist: false, points, live: l, finish: finishOf(d.car), total: points + l, rankNow: 0, rank: 0, wins: winsOf(d.car), leading: finishOf(d.car) === 1, out: false }
   })

@@ -38,7 +38,7 @@ function StandingsTable({ round, rows, live, onHighlight }: {
     return (
       <div key={r.driver} className={`standings-row${live ? ' live' : ''}${finalist && r.out ? ' out' : ''}${finalist ? '' : ' plain'}${r.carNumber ? '' : ' absent'}`}
         onMouseEnter={() => onHighlight?.(r.carNumber)}
-        title={[r.seed && `Seed ${r.seed} going into the Finals`, r.cup && `${r.cup} winner (+${round.cupBonus})`, !r.carNumber && 'Not entered in this round (co-driver or wildcard)'].filter(Boolean).join(' · ') || undefined}>
+        title={[r.seed && `Seed ${r.seed} going into ${round.name}`, r.cup && `${r.cup} winner (+${round.cupBonus})`, !r.carNumber && 'Not entered in this round (co-driver or wildcard)'].filter(Boolean).join(' · ') || undefined}>
         <span className="standings-pos">{r.rank}</span>
         {live && <span className={`standings-move${moved > 0 ? ' up' : moved < 0 ? ' down' : ''}`}>{moved > 0 ? `▲${moved}` : moved < 0 ? `▼${-moved}` : ''}</span>}
         <span className="standings-driver">
@@ -140,7 +140,7 @@ function ChampionshipTabs({ tab, onTab }: { tab: ChampionshipTab; onTab: (tab: C
 function TeamsNote({ round }: { round: TeamsRound }) {
   return (
     <p className="ladder-note">
-      Teams' championship after Bathurst (Supercars' standings); points from races here aren't added yet. It sets the pit
+      Teams' championship after {round.after} (Supercars' standings); points from races here aren't added yet. It sets the pit
       lane: the leading team gets the two garages nearest pit exit, and so on down (<a href={round.source} target="_blank" rel="noreferrer">this round's order</a>).
       The map puts each car in its garage.
     </p>
@@ -169,12 +169,12 @@ export function FinalsField({ meeting }: { meeting: string }) {
   const teams = teamsRoundFor(meeting)
   const [tab, setTab] = useState<ChampionshipTab>('drivers')
   const data = useFinalsData(round, '')
-  const standings = round && roundStandings(round, data?.earlier ?? [])
+  const standings = round && roundStandings(round, data?.earlier ?? [], undefined, data?.previous)
   if (!round || !standings) return null
   if (teams && tab === 'teams') {
     return (
       <section className="ladder finals-field" aria-label="Championship standings">
-        <h2>Championship standings <span className="ladder-live">teams, after Bathurst</span></h2>
+        <h2>Championship standings <span className="ladder-live">teams, after {teams.after}</span></h2>
         <ChampionshipTabs tab={tab} onTab={setTab} />
         <TeamsTable round={teams} />
         <TeamsNote round={teams} />
@@ -185,21 +185,21 @@ export function FinalsField({ meeting }: { meeting: string }) {
   const run = data?.earlier.length ?? 0
   return (
     <section className="ladder finals-field" aria-label="Championship standings">
-      <h2>Championship standings <span className="ladder-live">{run ? `after ${run} race${run > 1 ? 's' : ''} here` : 'now, after Bathurst'} · {advance} of {round.finalists} finalists go through</span></h2>
+      <h2>Championship standings <span className="ladder-live">{run ? `after ${run} race${run > 1 ? 's' : ''} here` : `now, after ${round.seededAfter}`} · {advance} of {round.finalists} finalists go through</span></h2>
       {teams && <ChampionshipTabs tab={tab} onTab={setTab} />}
       <p className="finals-explain">
-        The top {round.finalists} after Bathurst are the finalists. Their points were reset for the Finals: {round.reset} plus
-        a bonus for where they finished the regular season (up to {round.bonus[0]}), and {round.cupBonus} more for the Sprint
-        and Enduro Cup winners. After the two races here the bottom {round.eliminate} finalists are eliminated and {advance} go
-        on to Sandown, except that a finalist who wins a race here is through whatever their points (the next lowest goes
-        out instead); three more go out there and 4 contest the Grand Final in Adelaide. Everyone else, and eliminated
-        drivers, race on with their ordinary points for 11th and below.
+        {round.finalists} finalists are left after {round.seededAfter}. Their points were reset for {round.name}: {round.reset} plus
+        a bonus for where they stood after {round.seededAfter} (up to {round.bonus[0]}){round.cupBonus > 0 && <>, and {round.cupBonus} more for the Sprint
+        and Enduro Cup winners</>}. After the two races here the bottom {round.eliminate} finalists are eliminated and {advance} go
+        on to {round.next}, except that a finalist who wins a race here is through whatever their points (the next lowest goes
+        out instead){round.next === 'Sandown' && '; three more go out there and 4 contest the Grand Final in Adelaide'}. Everyone
+        else, and eliminated drivers, race on with their ordinary points for 11th and below.
       </p>
       <StandingsTable round={round} rows={rows} live={false} />
       <PointsOnOffer round={round} />
       <p className="ladder-note">
         Points now: Supercars' official Finals standings for the finalists, the championship after Bathurst (Speedcafe)
-        for everyone else{run ? ', plus the races here from our recordings (before any post-race penalties)' : ''}. Cut: points
+        for everyone else{round.previous.length ? `, plus the races since (${round.seededAfter})` : ''}{run ? ' and the races here' : ''}{round.previous.length || run ? ' from our recordings (before any post-race penalties)' : ''}. Cut: points
         clear of the first finalist out, or behind the last one in. The live tab shows these standings all weekend, and
         provisional points during the two races.
       </p>
@@ -219,7 +219,7 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
   const data = useFinalsData(round, timing.session.name)
   const pointsRace = POINTS_RACE.test(timing.session.name) && (timing.session.greenAt ?? 0) > 0
   const live = pointsRace ? projectedFinish(timing).map((c) => c.carNumber) : undefined
-  const standings = round && data ? roundStandings(round, data.earlier, live) : undefined
+  const standings = round && data ? roundStandings(round, data.earlier, live, data.previous) : undefined
   if (!round || !standings) return null
   const finished = flagKind(timing.session.flag) === 'finished'
   const highlight = (car: string | undefined) => {
@@ -229,7 +229,7 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
   if (teams && tab === 'teams') {
     return (
       <section className="ladder finals-ladder" aria-label="Championship standings">
-        <h2>Championship standings <span className="ladder-live">teams, after Bathurst</span></h2>
+        <h2>Championship standings <span className="ladder-live">teams, after {teams.after}</span></h2>
         <ChampionshipTabs tab={tab} onTab={setTab} />
         <TeamsTable round={teams} onHighlight={(cars) => onHighlight(timing.cars.filter((c) => cars.includes(c.carNumber)).map((c) => c.id))} />
         <TeamsNote round={teams} />
@@ -250,7 +250,8 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
       <p className="ladder-note">
         {live && 'Now: points earned before this race. Race: points for the position each car is running in. '}
         Finalists on Supercars' official Finals points, everyone else on the championship after Bathurst
-        {data?.earlier.length ? ', plus earlier races here from our recordings' : ''}.
+        {round.previous.length ? ` plus the races at ${round.seededAfter}` : ''}{data?.earlier.length ? ', plus earlier races here' : ''}
+        {round.previous.length || data?.earlier.length ? ' (from our recordings)' : ''}.
       </p>
     </section>
   )
