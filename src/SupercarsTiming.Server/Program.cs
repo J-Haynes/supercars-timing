@@ -5,11 +5,27 @@ using SupercarsTiming.Server.Hubs;
 using SupercarsTiming.Natsoft;
 using SupercarsTiming.Server.Sessions;
 using SupercarsTiming.Server.F1;
+using System.Text.Json;
+#if STANDALONE
+using Microsoft.Extensions.FileProviders;
+#endif
 
+#if STANDALONE
+var builder = StandaloneHost.CreateBuilder(args);
+using var instance = StandaloneHost.SingleInstance(builder.Environment.ContentRootPath, out var firstInstance);
+if (!firstInstance)
+{
+    if (builder.Configuration.GetValue("Standalone:OpenBrowser", true)) StandaloneHost.OpenBrowser(StandaloneHost.Url(builder.Configuration));
+    Console.WriteLine("Supercars Timing is already running. Use its existing browser page.");
+    return;
+}
+#else
 var builder = WebApplication.CreateBuilder(args);
+#endif
 
 builder.Services.Configure<FeedOptions>(builder.Configuration.GetSection(FeedOptions.Section));
 builder.Services.AddSingleton<RepoPaths>();
+builder.Services.AddSingleton<ScheduleStore>();
 builder.Services.AddSingleton<TimingStore>();
 builder.Services.AddHostedService<TimingFeedService>();
 builder.Services.AddHostedService<SnapshotBroadcaster>();
@@ -32,7 +48,29 @@ var app = builder.Build();
 
 app.MapGet("/api/health", (TimingStore store) => Results.Ok(store.Status));
 // What this viewer may use, for both series: replays only locally and on the tailnet, not through the tunnel.
-app.MapGet("/api/features", (RemoteAccess remote, HttpContext context) => Results.Ok(new { Replay = !remote.IsRemote(context) }));
+app.MapGet("/api/features", (RemoteAccess remote, HttpContext context) => Results.Ok(new
+{
+    Replay = !remote.IsRemote(context), ScheduleImport = StandaloneHost.Enabled && !remote.IsRemote(context),
+}));
+app.MapGet("/api/schedule", (ScheduleStore schedule) => Results.Content(schedule.Read(), "application/json"));
+#if STANDALONE
+app.MapPost("/api/schedule", async (HttpRequest request, ScheduleStore schedule) =>
+{
+    // A custom header requires a CORS preflight: other websites cannot change the local timetable with a form POST.
+    if (request.Headers["X-SupercarsTiming-Local"] != "1") return Results.StatusCode(403);
+    if (!request.HasJsonContentType()) return Results.StatusCode(415);
+    try
+    {
+        using var reader = new StreamReader(request.Body);
+        schedule.Import(await reader.ReadToEndAsync(request.HttpContext.RequestAborted));
+        return Results.Ok(new { Message = "Schedule updated. Reload the page to use the new timetable." });
+    }
+    catch (Exception ex) when (ex is JsonException or FormatException or KeyNotFoundException or InvalidOperationException or ArgumentException)
+    {
+        return Results.BadRequest(new { Message = "This is not a valid Supercars schedule. Your current timetable has been kept." });
+    }
+}).LocalOnly();
+#endif
 app.MapGet("/api/snapshot", (TimingStore store) => Results.Ok(new TimingUpdate(store.Status, store.Snapshot())));
 // Lap history for the charts: large, so it's fetched on its own every few seconds rather than pushed with each update.
 app.MapGet("/api/laps", (TimingStore store) => Results.Ok(store.Laps()));
@@ -88,6 +126,19 @@ app.MapGet("/api/f1/sessions/{id}/laps", (F1SessionCatalog catalog, string id) =
     catalog.Laps(id) is { } laps ? Results.Ok(laps) : Results.NotFound());
 app.MapHub<F1Hub>(F1Hub.Path);
 
+#if STANDALONE
+// Assets are read from the executable, with no unpacked wwwroot or dependency on the current directory.
+var files = new ManifestEmbeddedFileProvider(typeof(StandaloneHost).Assembly, "wwwroot");
+app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = files });
+app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
+app.MapFallbackToFile("index.html", new StaticFileOptions { FileProvider = files });
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var url = StandaloneHost.Url(builder.Configuration);
+    Console.WriteLine($"Supercars Timing is ready at {url}\nPress Ctrl+C or close this window to stop.\nRecordings and schedules: {builder.Environment.ContentRootPath}");
+    if (builder.Configuration.GetValue("Standalone:OpenBrowser", true)) StandaloneHost.OpenBrowser(url);
+});
+#else
 // Production: serve the built React app from wwwroot (npm run build in src/web writes there).
 // In development, run the Vite dev server instead (npm run dev in src/web -> http://localhost:5173).
 if (Directory.Exists(app.Environment.WebRootPath) && File.Exists(Path.Combine(app.Environment.WebRootPath, "index.html")))
@@ -102,5 +153,6 @@ else
         "Frontend not built. For development run `npm run dev` in src/web and open http://localhost:5173, " +
         "or run `npm run build` there and restart this server."));
 }
+#endif
 
 app.Run();

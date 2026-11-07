@@ -1,0 +1,68 @@
+name: Windows application
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - name: Build and test .NET
+        run: |
+          dotnet build --configuration Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test --configuration Release --no-build
+      - name: Publish single executable
+        run: pwsh -NoProfile -File scripts/Publish-Windows.ps1
+      - name: Test the packaged executable
+        run: pwsh -NoProfile -File scripts/Test-WindowsBuild.ps1 -Executable dist/win-x64/SupercarsTiming.Server.exe
+      - name: Prepare download
+        run: Copy-Item -LiteralPath dist/win-x64/SupercarsTiming.Server.exe -Destination dist/SupercarsTiming-windows-x64.exe
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: SupercarsTiming-windows-x64
+          path: dist/SupercarsTiming-windows-x64.exe
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    if: github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: SupercarsTiming-windows-x64
+          path: release
+      - name: Publish versioned executable
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$env:RELEASE_TAG" --json tagName *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "$env:RELEASE_TAG" release/SupercarsTiming-windows-x64.exe --clobber
+          } else {
+            gh release create "$env:RELEASE_TAG" release/SupercarsTiming-windows-x64.exe --verify-tag --generate-notes
+          }

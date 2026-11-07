@@ -8,6 +8,7 @@ public sealed class TimingFeedService(
     TimingStore store,
     IOptions<FeedOptions> options,
     RepoPaths paths,
+    ScheduleStore schedules,
     ILoggerFactory loggerFactory,
     ILogger<TimingFeedService> log) : BackgroundService
 {
@@ -24,19 +25,22 @@ public sealed class TimingFeedService(
     {
         WarmStart();
         bool always = string.Equals(_opt.Schedule, "Always", StringComparison.OrdinalIgnoreCase);
-        try
+        while (!ct.IsCancellationRequested)
         {
-            while (!ct.IsCancellationRequested)
+            // An import interrupts either a wait or the old connection window, keeping exactly one connection.
+            using var changed = CancellationTokenSource.CreateLinkedTokenSource(ct, schedules.Changed);
+            var token = changed.Token;
+            try
             {
                 if (always) { await Connect(ct); continue; }
 
                 // Re-read each time round: the timetable gets updated as Supercars publishes times.
-                var schedule = SessionSchedule.Load(paths.Resolve(_opt.ScheduleFile));
+                var schedule = schedules.Load();
                 var now = DateTimeOffset.UtcNow;
                 if (schedule.Current(now) is { } window)
                 {
                     log.LogInformation("Connecting to Natsoft for {Reason}, until {End:yyyy-MM-dd HH:mm zzz}", window.Reason, window.End);
-                    using var windowCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    using var windowCts = CancellationTokenSource.CreateLinkedTokenSource(token);
                     windowCts.CancelAfter(window.End - now);
                     await Connect(windowCts.Token);
                     if (!ct.IsCancellationRequested) log.LogInformation("Disconnected from Natsoft: {Reason} is over", window.Reason);
@@ -49,10 +53,10 @@ public sealed class TimingFeedService(
                     : $"Not connected to Natsoft until 30 min before the next session: {next.Reason}, connecting {next.Start:ddd d MMM HH:mm} track time"));
                 // Sleep until the next window, but wake at least every 10 min to pick up timetable changes.
                 var wait = next is null ? TimeSpan.FromMinutes(10) : TimeSpan.FromTicks(Math.Min((next.Start - now).Ticks, TimeSpan.FromMinutes(10).Ticks));
-                await Task.Delay(wait < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : wait, ct);
+                await Task.Delay(wait < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : wait, token);
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     }
 
     /// <summary>One connection to Natsoft, until <paramref name="ct"/> is cancelled (the window ends, or shutdown).

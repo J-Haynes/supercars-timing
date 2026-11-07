@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
  */
 export interface Features {
   replay: boolean
+  scheduleImport: boolean
 }
 
 // Asked once per page load. An older server without the endpoint answers with index.html (the SPA fallback): replay
@@ -13,12 +14,12 @@ export interface Features {
 let request: Promise<Features> | null = null
 const load = () => request ??= fetch('/api/features')
   .then((r) => r.json())
-  .then((f: Partial<Features>) => ({ replay: f.replay !== false }))
-  .catch(() => ({ replay: true }))
+  .then((f: Partial<Features>) => ({ replay: f.replay !== false, scheduleImport: f.scheduleImport === true }))
+  .catch(() => ({ replay: true, scheduleImport: false }))
 
 /** The server's features; replay counts as off until the answer is in, so a remote viewer never sees the button. */
 export function useFeatures(): Features {
-  const [features, setFeatures] = useState<Features>({ replay: false })
+  const [features, setFeatures] = useState<Features>({ replay: false, scheduleImport: false })
   useEffect(() => {
     let current = true
     void load().then((f) => { if (current) setFeatures(f) })

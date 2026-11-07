@@ -6,6 +6,8 @@ import { isF1, API_BASE } from '../series'
 import { isRace, splitSessionName } from '../session'
 import { ChequerIcon } from './ChequerIcon'
 import { SeriesSwitch } from './SeriesSwitch'
+import { ScheduleImport } from './ScheduleImport'
+import { useFeatures } from '../features'
 
 /** Slide-out menu: live timing, results of previous Supercars sessions, and upcoming events. */
 export function Menu({ open, onClose, resultsId, previewName, onWatchLive, onResults, onPreview }: {
@@ -22,6 +24,7 @@ export function Menu({ open, onClose, resultsId, previewName, onWatchLive, onRes
 }) {
   const [sessions, setSessions] = useState<RecordedSession[] | null>(null)
   const now = useNow(open)
+  const { scheduleImport } = useFeatures()
 
   // Refresh the list each time the menu opens: new sessions get recorded all weekend.
   useEffect(() => {
@@ -141,6 +144,7 @@ export function Menu({ open, onClose, resultsId, previewName, onWatchLive, onRes
             )
           })}
         </section>
+        {scheduleImport && <ScheduleImport />}
       </nav>
     </>
   )

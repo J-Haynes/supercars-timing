@@ -58,6 +58,15 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
 
 ## Layout
 
+- **Portable Windows build:** `pwsh -NoProfile -File scripts/Publish-Windows.ps1` publishes a self-contained single
+  executable. `Standalone=true` embeds wwwroot, defaults and the schedule; `StandaloneHost` binds loopback,
+  opens the browser and prevents duplicate feed processes. Data lives in `%LOCALAPPDATA%\SupercarsTiming`.
+  `ScheduleStore` validates and atomically imports timetables through the portable-only menu/API, wakes the feed,
+  and serves the same timetable to `calendar.ts` before rendering. Normal server deployment remains available.
+  `.github/workflows/windows-build.yml` runs only on manual dispatch: it builds/tests the executable and uploads an
+  artifact. A manual run against an existing `v*` tag also publishes it to GitHub Releases; pushing a tag alone does
+  nothing. `scripts/Test-WindowsBuild.ps1` runs offline checks against an isolated copy of the exe.
+
 - `src/SupercarsTiming.Natsoft` (no ASP.NET dependency; protocol and domain logic):
   - `NatsoftDecoder`: XOR-chain frame decoding. `NatsoftClient`: the WebSocket client (reconnects: 30 s while not
     live, 10 s after errors or after 30 s of silence while a session runs (a stalled socket), 2 s after the local

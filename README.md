@@ -76,6 +76,68 @@ to JSON Lines, which is what the results pages and replays read back.
 
 ## Running it
 
+### Windows application
+
+Download the Windows executable from a release or a Windows build's artifact, unzip it if needed, and double-click
+the `.exe`. Your browser opens at `http://127.0.0.1:5085`. You do not need to install .NET, Node.js or Docker.
+Keep the launcher window open while using the app. To stop the app and recording, press Ctrl+C in that window
+or close it; closing the browser alone leaves the app running. Live timing needs internet access.
+
+Your data is saved in `%LOCALAPPDATA%\SupercarsTiming`, independently of the executable. To open this folder,
+press **Win+R**, paste that path and press Enter. These are the default locations inside it:
+
+| Data | Location |
+|---|---|
+| Supercars recordings | `data\recordings\*.jsonl` |
+| F1 recordings | `data\recordings\f1\*.jsonl` |
+| Supercars timetable | `schedule\supercars.json` |
+| Optional app settings | `settings.json` |
+
+Recordings appear as sessions are recorded. Display preferences are saved in your browser. Moving or replacing
+the executable keeps the data in this folder.
+
+To update the timetable, open the app's menu and choose **Supercars schedule → Get the latest schedule**. Save
+the JSON file, then choose **Import schedule**. You can also import an edited copy. The app checks the file before
+replacing the current timetable and applies the new times to the browser and live connections. Invalid files
+leave the current timetable intact. Downloads use the timetable maintained in the upstream repository.
+
+### Building the Windows executable
+
+With the .NET 10 SDK, Node.js and PowerShell 7 installed, run:
+
+```powershell
+pwsh -NoProfile -File scripts/Publish-Windows.ps1
+```
+
+The single executable is written to `dist/win-x64/SupercarsTiming.Server.exe`; copy it anywhere to run it.
+
+Optional overrides go in `%LOCALAPPDATA%\SupercarsTiming\settings.json` or on the command line. Existing `Feed`
+and `F1` settings still apply. `Standalone:Port` changes the local port; `Standalone:OpenBrowser=false` disables
+automatic browser launch; `Standalone:DataDirectory=<absolute path>` selects a separate data folder (pass this
+on the command line or through an environment variable). The executable needs no companion assets or settings
+file; its initial schedule and defaults are embedded.
+
+The **Windows application** GitHub Actions workflow runs only when started manually. Open **Actions → Windows
+application → Run workflow** and select a branch to build and smoke-test the executable. Download
+`SupercarsTiming-windows-x64` from the run's artifacts. GitHub requires the workflow file on the repository's
+default branch before [manual runs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
+are available.
+
+To attach the executable to a GitHub Release, manually run the workflow against an existing version tag:
+
+```powershell
+gh workflow run windows-build.yml --ref v0.1.0
+```
+
+The release job runs only for tags starting with `v` and is the only job with repository write permission.
+To run the same packaged-app checks locally:
+
+```powershell
+pwsh -NoProfile -File scripts/Test-WindowsBuild.ps1 -Executable dist/win-x64/SupercarsTiming.Server.exe
+```
+
+### Running from source
+
 You'll need the .NET 10 SDK and Node.js 22.
 
 ```bash

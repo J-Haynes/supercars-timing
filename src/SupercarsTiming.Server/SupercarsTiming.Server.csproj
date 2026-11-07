@@ -1,4 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <!-- Single-file publishing must include the website and standalone startup, not only the .NET runtime. -->
+    <Standalone Condition="'$(PublishSingleFile)' == 'true'">true</Standalone>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Standalone)' == 'true'">
+    <DefineConstants>$(DefineConstants);STANDALONE</DefineConstants>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    <!-- Newly generated web assets belong in the executable, never beside it as default publish content. -->
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(Standalone)' == 'true'">
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.0" />
+    <Content Remove="wwwroot/**;appsettings*.json" />
+    <EmbeddedResource Include="appsettings.json" LogicalName="Standalone.appsettings.json" />
+    <EmbeddedResource Include="../web/src/schedule/supercars.json" LogicalName="Standalone.supercars.json" />
+  </ItemGroup>
+  <!-- The manifest input cache must include the new assets before resource paths are assigned. -->
+  <Target Name="BuildStandaloneFrontend" BeforeTargets="_CalculateEmbeddedFilesManifestInputs;AssignTargetPaths" Condition="'$(Standalone)' == 'true'">
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(MSBuildProjectDirectory)/../web" />
+    <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)/../web" />
+    <!-- Vite replaces its output; collect the new asset names after the build, including on a clean checkout. -->
+    <ItemGroup>
+      <EmbeddedResource Include="wwwroot/**" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
     <ProjectReference Include="../SupercarsTiming.Natsoft/SupercarsTiming.Natsoft.csproj" />
   </ItemGroup>

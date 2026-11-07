@@ -145,12 +145,39 @@ const SUPERCARS_EVENTS: Omit<UpcomingEvent, 'startDate' | 'endDate' | 'utcOffset
  * Upcoming Supercars events: the details above, with dates and session times from schedule/supercars.json. That
  * file is shared with the server, which connects to Natsoft only from 30 minutes before each session.
  */
-export const UPCOMING: UpcomingEvent[] = SUPERCARS_EVENTS.map((e) => {
-  const timed = (schedule.events as ScheduleEvent[]).find((x) => x.name === e.name)
-  if (!timed) throw new Error(`schedule/supercars.json has no "${e.name}"`)
-  const { startDate, endDate, utcOffset, sessions, sessionsSource, sessionsNote } = timed
-  return { ...e, startDate, endDate, utcOffset, sessions, sessionsSource, sessionsNote }
-})
+export const UPCOMING: UpcomingEvent[] = scheduleEvents(schedule.events)
+
+function scheduleEvents(events: ScheduleEvent[]): UpcomingEvent[] {
+  return events.map((timed) => {
+    const details = SUPERCARS_EVENTS.find((e) => e.name === timed.name)
+    // Only timetable fields may come from an import; unknown fields must not overwrite curated event information.
+    return {
+      ...details,
+      name: timed.name,
+      venue: timed.venue ?? details?.venue ?? timed.name,
+      location: timed.location ?? details?.location ?? '',
+      trackCode: timed.trackCode ?? details?.trackCode,
+      format: timed.format ?? details?.format,
+      startDate: timed.startDate, endDate: timed.endDate, utcOffset: timed.utcOffset,
+      sessionsSource: timed.sessionsSource, sessionsNote: timed.sessionsNote,
+      sessions: timed.sessions?.map(({ name, start, end, laps }) => ({ name, start, end, laps }))
+        .sort((a, b) => a.start.localeCompare(b.start)),
+    }
+  }).sort((a, b) => eventStart(a).getTime() - eventStart(b).getTime())
+}
+
+/** Load the same runtime timetable that controls the feed, before routes and countdowns are rendered. */
+export async function loadSchedule(): Promise<void> {
+  try {
+    const response = await fetch('/api/schedule', { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    if (!response.ok) return
+    const current: { events: ScheduleEvent[] } = await response.json()
+    // An older server can still use this frontend: keep the bundled timetable when no schedule API is available.
+    if (Array.isArray(current.events) && current.events.length > 0) {
+      UPCOMING.splice(0, UPCOMING.length, ...scheduleEvents(current.events))
+    }
+  } catch { /* Offline or older server: use the bundled timetable. */ }
+}
 
 /** An event in schedule/supercars.json. `complete` false: not every session is timed yet. */
 interface ScheduleEvent {
@@ -162,6 +189,10 @@ interface ScheduleEvent {
   sessionsSource?: string
   sessionsNote?: string
   complete: boolean
+  venue?: string
+  location?: string
+  trackCode?: string
+  format?: string
 }
 
 /**

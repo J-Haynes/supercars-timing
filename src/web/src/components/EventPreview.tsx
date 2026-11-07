@@ -42,6 +42,9 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
   const mine = browserTimeZone()
   const sessions = event.sessions ?? []
   const next = sessions.find((s) => sessionTime(event, s.end ?? s.start).getTime() > now)
+  // .NET and browsers accept different URL grammars (for example scoped IPv6 hosts).
+  const sourceLabel = event.sessionsSource && URL.canParse?.(event.sessionsSource)
+    ? new URL(event.sessionsSource).hostname.replace(/^www\./, '') : 'the published schedule'
 
   return (
     <div className="event-preview">
@@ -89,7 +92,7 @@ export function EventPreview({ event, onLive }: { event: UpcomingEvent; onLive: 
           )}
           {event.sessionsNote && <p className="chart-note">{event.sessionsNote}</p>}
           {event.sessionsSource && (
-            <p className="chart-note">Times from <a href={event.sessionsSource} target="_blank" rel="noreferrer">{new URL(event.sessionsSource).hostname.replace(/^www\./, '')}</a>; they can change before the weekend.{isF1 && event.trackCode ? ' The map was built from F1\'s recorded car positions at this circuit.' : ''} Live timing appears automatically when a session starts.</p>
+            <p className="chart-note">Times from <a href={event.sessionsSource} target="_blank" rel="noreferrer">{sourceLabel}</a>; they can change before the weekend.{isF1 && event.trackCode ? ' The map was built from F1\'s recorded car positions at this circuit.' : ''} Live timing appears automatically when a session starts.</p>
           )}
           {!isF1 && <FinalsField meeting={event.name} />}
           {event.info && <EventInfoPanel info={event.info} />}

@@ -8,6 +8,11 @@ public sealed class RepoPaths
 
     public RepoPaths(IHostEnvironment env)
     {
+        if (StandaloneHost.Enabled)
+        {
+            Root = env.ContentRootPath;
+            return;
+        }
         var dir = new DirectoryInfo(env.ContentRootPath);
         while (dir is not null && dir.GetFiles("SupercarsTiming.slnx").Length == 0) dir = dir.Parent;
         Root = dir?.FullName ?? env.ContentRootPath;
