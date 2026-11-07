@@ -20,6 +20,7 @@ import { ShootoutCard, pickFocusCar } from './ShootoutCard'
 import { PitLog } from './PitLog'
 import { RaceControl } from './RaceControl'
 import { RaceFeed } from './RaceFeed'
+import { TimeCertainBanner } from './TimeCertainBanner'
 import { useTowerSignals } from '../towerSignals'
 import { Ladder } from './Ladder'
 import { FinalsLadder } from './FinalsStandings'
@@ -84,6 +85,7 @@ export function SessionView({ update, live, history, settings, updateSettings, t
         style={settings.mapWidth ? { '--map-width': `${settings.mapWidth}px` } as CSSProperties : undefined}>
         <div className="tower-column" ref={towerColumn}>
           {race && <SafetyCarBanner timing={timing} />}
+          {race && <TimeCertainBanner timing={timing} history={history} />}
           {race && <RaceFeed key={resetKey} timing={timing} signals={signals} onHighlight={setHighlightIds} onOpen={open} />}
           <TimingTower
             timing={timing}

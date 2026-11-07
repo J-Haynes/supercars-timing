@@ -775,6 +775,11 @@ header.session { justify-content: flex-start; }
 .sc-banner.red { background: rgba(255, 77, 79, .14); border: 1px solid var(--red); }
 .sc-banner.red strong { color: var(--red); text-transform: uppercase; letter-spacing: .06em; }
 .sc-banner span { color: var(--muted); }
+.tc-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 8px 12px; border-radius: 8px; font-size: 13px; border: 1px solid var(--line-strong); background: var(--raise); }
+.tc-banner strong { text-transform: uppercase; letter-spacing: .06em; }
+.tc-banner span { color: var(--muted); }
+.tc-banner .tc-verdict { font-weight: 600; color: var(--green); }
+.tc-banner.short .tc-verdict { color: var(--yellow); }
 .sc-tag { margin-left: 6px; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 3px; background: var(--yellow); color: #2b2200; }
 
 /* Race charts (map column). Text uses text colours; only lines and swatches carry the series colour. */

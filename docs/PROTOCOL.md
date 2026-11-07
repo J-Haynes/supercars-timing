@@ -95,7 +95,7 @@ Counts are from Practice 5 (63 minutes, 8,844 messages).
 | `H` | 10 | Heartbeat |
 | `S` | 3 | Session status: `S` = flag, `E` = session code, `I` = time of the change (the green flag time = race start) |
 | `F` | 2 | Flag echo (`S` = Green / Yellow / Checkered / End) |
-| `G` | 3 | **Race control messages.** `R` = the text, `C` = empty so far. Bathurst 1000, 11 Oct 2026: `Race Control: Turn 19.2 Incident Cars 19 & 48 noted`, `Stewards: Turn 19.2 Incident under investigation Cars 19 & 48`, `Stewards: Penalty Car 19 - 5 seconds - driving infringement`. Free text only: no penalty field, and time penalties don't change the car's timing data. Nothing is sent when a penalty is served |
+| `G` | 3 | **Race control messages.** `R` = the text, `C` = empty so far. Bathurst 1000, 11 Oct 2026: `Race Control: Turn 19.2 Incident Cars 19 & 48 noted`, `Stewards: Turn 19.2 Incident under investigation Cars 19 & 48`, `Stewards: Penalty Car 19 - 5 seconds - driving infringement`. Free text only: no penalty field, and time penalties don't change the car's timing data. Nothing is sent when a penalty is served. **Time certain** (Sandown Race 33, 7 Nov 2026, 16:26, sent twice as the second safety car came out; the only one in any recording): `stewards: new time certain time for race 33 is 1753` = the race ends at 17:53 track time even if the distance isn't run (`timeCertain.ts`) |
 | `New` | 1 | Full snapshot, sent per session |
 
 Session types seen in `<E Y>`: `Practice`, `Race`, and `OverrideQual` for the Bathurst Top Ten Shootout
