@@ -216,9 +216,22 @@ export function roundStandings(round: FinalsRound, earlierRaces: string[][], liv
   return { rows, advance: round.finalists - round.eliminate }
 }
 
-/** Finishing order (car numbers) from a recorded session's results (GET /api/sessions/{id}/results). */
+/**
+ * The cars that score points, in finishing order: those that completed at least 75 % of the winner's laps. "Points
+ * were awarded ... to the driver or drivers of a car that completed at least 75% of the race distance" (2026 season
+ * page, Points system, https://en.wikipedia.org/wiki/2026_Supercars_Championship). Without this #9 Stewart, in the
+ * garage after 9 of 85 laps in Gold Coast Race 32, got 24th's 22 points: 775 here against the season page's 753.
+ * `cars` in finishing order; during a race (provisional points) the leader's laps so far stand in for the distance.
+ */
+export function pointsScorers<T extends { laps: number }>(cars: T[]): T[] {
+  const distance = cars[0]?.laps ?? 0
+  return cars.filter((c) => c.laps >= distance * 0.75)
+}
+
+/** Finishing order (car numbers) of the cars that scored, from a recorded session's results
+ * (GET /api/sessions/{id}/results). */
 export function resultOrder(results: TimingSnapshot): string[] {
-  return [...results.cars].filter((c) => c.position > 0).sort((a, b) => a.position - b.position).map((c) => c.carNumber)
+  return pointsScorers([...results.cars].filter((c) => c.position > 0).sort((a, b) => a.position - b.position)).map((c) => c.carNumber)
 }
 
 /** Recorded Supercars race sessions of a meeting this season, oldest first (last year's rebuilt Gold Coast races

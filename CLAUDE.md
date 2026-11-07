@@ -363,7 +363,10 @@ the tunnel's port 7844). `homeserver` is a Lenovo ThinkCentre M90q (i5-10500T, 1
   (non-finalists, drivers eliminated earlier) also gets the earlier Finals rounds' races (`FinalsRound.previous`, from
   our recordings, on that round's points scale); at Sandown Jones #96 (834) and Walls #11 (789) match Supercars' one-car
   team totals exactly. Checked 25 Oct 2026: all 10
-  finalists and 11th-24th match the official standings after Race 31 except Heimgartner (+10 here, no source found). A **Drivers | Teams** switch (owner's request) shows the teams' championship (`teams.ts`: Supercars'
+  finalists and 11th-24th match the official standings after Race 31 except Heimgartner (+10 here, no source found).
+  **Only cars that completed 75 % of the winner's laps score** (`pointsScorers`, recorded races and live provisional
+  points): #9 Stewart's 9-lap DNF in Race 32 had scored 24th's 22. Checked 7 Nov 2026: all 33 drivers match the
+  season page's standings before Sandown except Gomersall (105 here from Speedcafe, 220 there, unresolved). A **Drivers | Teams** switch (owner's request) shows the teams' championship (`teams.ts`: Supercars'
   standings after Bathurst, cited, each entry's cars and garages; races at the round aren't added) wherever the round
   has a `TEAMS_ROUNDS` entry. Only this season's races count (`racesOf`: last year's rebuilt Gold Coast races matched too).
 - **Charts** (`RaceCharts.tsx`, `LineChart.tsx`, `ChartLab.tsx` large view; colours validated with the dataviz palette

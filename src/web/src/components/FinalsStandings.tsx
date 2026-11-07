@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { TimingSnapshot } from '../types'
-import { finalsRoundFor, roundStandings, type FinalsRound, type StandingRow } from '../finals'
+import { finalsRoundFor, pointsScorers, roundStandings, type FinalsRound, type StandingRow } from '../finals'
 import { projectedFinish } from '../championship'
 import { flagKind } from '../session'
 import { useFinalsData } from '../useFinalsData'
@@ -218,7 +218,7 @@ export function FinalsLadder({ timing, onHighlight }: { timing: TimingSnapshot; 
   const [tab, setTab] = useState<ChampionshipTab>('drivers')
   const data = useFinalsData(round, timing.session.name)
   const pointsRace = POINTS_RACE.test(timing.session.name) && (timing.session.greenAt ?? 0) > 0
-  const live = pointsRace ? projectedFinish(timing).map((c) => c.carNumber) : undefined
+  const live = pointsRace ? pointsScorers(projectedFinish(timing)).map((c) => c.carNumber) : undefined
   const standings = round && data ? roundStandings(round, data.earlier, live, data.previous) : undefined
   if (!round || !standings) return null
   const finished = flagKind(timing.session.flag) === 'finished'
