@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
     <ProjectReference Include="../SupercarsTiming.Natsoft/SupercarsTiming.Natsoft.csproj" />
+    <EmbeddedResource Include="../web/src/schedule/f1.json" LogicalName="F1.schedule.json" />
   </ItemGroup>
 </Project>

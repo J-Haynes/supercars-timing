@@ -40,6 +40,10 @@ You can orbit, follow a car, or fly around freely.
 **The race feed.** A short list of what matters right now (battles, who's closing, strategy, minimum-lap risk) and a
 log of lead changes, fastest laps, race control messages and safety cars.
 
+F1 live monitoring connects from 30 minutes before scheduled sessions and waits between connection windows.
+Active delayed or red-flagged sessions remain connected until they finish or stop sending data. The session
+timetable in `src/web/src/schedule/f1.json` is shared with event pages; keep it up to date and rebuild after edits.
+
 **Broadcast delay.** Slide the timing back until it lines up with your TV or stream. The map uses what it already
 knows about the next timing point, so it stays smooth even with a 30 second delay.
 

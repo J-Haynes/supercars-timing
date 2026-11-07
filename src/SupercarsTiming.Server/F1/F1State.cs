@@ -29,6 +29,8 @@ public sealed partial class F1State
     public double Now { get; private set; }
     public long MessageCount { get; private set; }
     public string SessionName => (string?)Topic("SessionInfo")?["Name"] ?? "";
+    public DateTimeOffset? SessionStartUtc => DateTime.TryParse((string?)Topic("SessionInfo")?["StartDate"], CultureInfo.InvariantCulture,
+        DateTimeStyles.None, out var local) ? new DateTimeOffset(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), _gmtOffset) : null;
 
     int SegmentCount => _segmentsPerSector.Sum();
 

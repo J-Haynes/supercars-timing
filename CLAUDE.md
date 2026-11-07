@@ -83,6 +83,13 @@ Natsoft only around sessions, and an experimental pit rejoin ghost. Next round: 
     pushes to `/hubs/timing` at most every 250 ms.
   - `Sessions/SessionCatalog`: recorded sessions and their results + lap history (one cached replay per session).
     `Sessions/ReplayService`: one `SessionReplay` cursor per viewer and session (idle 10 min, max 16).
+- F1 monitoring windows (`F1/F1Schedule.cs`): `src/web/src/schedule/f1.json` is shared with the event pages and
+  embedded in the server. Connect 30 minutes before sessions through 30 minutes after their scheduled end;
+  unpublished ends use a one-hour practice/qualifying or four-hour race connection budget. Overlapping windows
+  use the existing `SessionSchedule` merging. Stay connected for an active overrun, including red flags; recent
+  recorded activity and matching session start can recover an overrun after restart. Waiting creates no socket
+  or recording file, and the existing F1 client retry policy applies only inside windows. Replay mode is unchanged.
+  Rebuild/restart after timetable edits. `F1ScheduleTests` cover boundaries, Sprint, waiting gaps and overrun recovery.
 - `src/web` (React 19 + Vite + TypeScript, strict). `src/types.ts` mirrors the C# DTOs **by hand**: update it when
   `CarRow`/`TimingSnapshot`/`SessionInfo` change. Key modules:
   - Data/logic: `routes.ts` (page URLs), `useTiming.ts` (SignalR), `useDelayedUpdate.ts` (broadcast delay), `liveGaps.ts` (live gaps, road

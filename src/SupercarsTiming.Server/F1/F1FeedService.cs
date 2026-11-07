@@ -32,15 +32,16 @@ public sealed class F1Options
 }
 
 /// <summary>Thread-safe owner of the live <see cref="F1State"/> (the F1 twin of <see cref="TimingStore"/>).</summary>
-public sealed class F1Store
+public sealed class F1Store(TimeProvider? timeProvider = null)
 {
+    readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
     readonly Lock _lock = new();
     F1State _state = new();
     TimingSnapshot _snapshot = TimingSnapshot.Empty;
     bool _dirty;
 
     FeedStatus _status = new(FeedMode.Live, "starting", null);
-    DateTime _lastMessageUtc = DateTime.MinValue;
+    DateTimeOffset _lastMessageUtc = DateTimeOffset.MinValue;
 
     /// <summary>F1 sends data all through a session (safety cars included); this long without any means none is on.</summary>
     static readonly TimeSpan Quiet = TimeSpan.FromMinutes(5);
@@ -61,16 +62,27 @@ public sealed class F1Store
                 // Look without clearing _dirty: the broadcast loop relies on it to know there's a new snapshot to send.
                 var snapshot = _dirty ? _state.Snapshot() : _snapshot;
                 bool ended = string.Equals(snapshot.Session.Flag, "Ended", StringComparison.OrdinalIgnoreCase);
-                bool quiet = DateTime.UtcNow - _lastMessageUtc > Quiet;
+                bool quiet = _time.GetUtcNow() - _lastMessageUtc > Quiet;
                 return ended || quiet ? _status with { State = "waiting", Detail = "Connected to F1 live timing · no session running" } : _status;
             }
         }
     }
 
-    public void Apply(F1Message m)
+    public void Apply(F1Message m, bool recorded = false)
     {
-        lock (_lock) { _state.Apply(m); _dirty = true; _lastMessageUtc = DateTime.UtcNow; }
+        lock (_lock) { _state.Apply(m); _dirty = true; _lastMessageUtc = recorded ? m.Utc : _time.GetUtcNow(); }
     }
+
+    public bool HasActiveSession
+    {
+        get
+        {
+            lock (_lock) return _status.Mode == FeedMode.Live && _time.GetUtcNow() - _lastMessageUtc < Quiet
+                && _state.Snapshot().Session.Flag is not ("WaitStart" or "Checkered" or "Ended");
+        }
+    }
+
+    public DateTimeOffset? SessionStartUtc { get { lock (_lock) return _state.SessionStartUtc; } }
 
     public void Reset()
     {
@@ -164,29 +176,63 @@ public sealed class F1FeedService(
     {
         var dir = string.IsNullOrWhiteSpace(_opt.RecordDirectory) ? null : paths.Resolve(_opt.RecordDirectory);
         WarmStart(dir);
-        StreamWriter? writer = null;
-        if (dir is not null)
+        var schedule = F1Schedule.Load();
+        while (!ct.IsCancellationRequested)
         {
-            Directory.CreateDirectory(dir);
-            var file = Path.Combine(dir, F1Recording.NewFileName(DateTimeOffset.UtcNow));
-            writer = new StreamWriter(file, append: true) { AutoFlush = true };
-            log.LogInformation("Recording F1 live timing to {Path}", file);
+            var now = DateTimeOffset.UtcNow;
+            if (schedule.Current(now, store.HasActiveSession, store.SessionStartUtc) is { } window)
+            {
+                log.LogInformation("Connecting to F1 live timing for {Reason}, until {End:yyyy-MM-dd HH:mm zzz}", window.Reason, window.End);
+                await Connect(window, dir, ct);
+                continue;
+            }
+            var next = schedule.Next(now);
+            store.Reset();
+            store.SetStatus(new(FeedMode.Live, "waiting", next is null
+                ? "Not connected to F1 live timing: no F1 sessions scheduled"
+                : $"Not connected to F1 live timing until 30 min before the next session: {next.Reason}, connecting {next.Start:ddd d MMM HH:mm} track time", 0));
+            var wait = next is null ? TimeSpan.FromMinutes(10)
+                : TimeSpan.FromTicks(Math.Min((next.Start - now).Ticks, TimeSpan.FromMinutes(10).Ticks));
+            await Task.Delay(wait < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : wait, ct);
         }
+    }
 
+    async Task Connect(SessionSchedule.Window window, string? dir, CancellationToken ct)
+    {
+        using var connectionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        await using var writer = dir is null ? null : CreateRecording(dir);
         var client = new F1Client(loggerFactory.CreateLogger<F1Client>());
         client.StatusChanged += s => store.SetStatus(new(FeedMode.Live, s.StartsWith("error") ? "error" : s, "F1 live timing"));
+        var connection = client.RunAsync(async m =>
+        {
+            if (writer is not null) await writer.WriteLineAsync(F1Recording.ToLine(m));
+            Apply(m);
+        }, connectionCts.Token);
         try
         {
-            await client.RunAsync(async m =>
+            while (!connection.IsCompleted)
             {
-                if (writer is not null) await writer.WriteLineAsync(F1Recording.ToLine(m));
-                Apply(m);
-            }, ct);
+                var remaining = window.End - DateTimeOffset.UtcNow;
+                // Keep a delayed or red-flagged session connected beyond its published end.
+                if (remaining <= TimeSpan.Zero && !store.HasActiveSession) break;
+                await Task.WhenAny(connection, Task.Delay(remaining > TimeSpan.Zero ? remaining : TimeSpan.FromMinutes(1), connectionCts.Token));
+                ct.ThrowIfCancellationRequested();
+            }
         }
         finally
         {
-            if (writer is not null) await writer.DisposeAsync();
+            await connectionCts.CancelAsync();
+            try { await connection; }
+            catch (OperationCanceledException) when (connectionCts.IsCancellationRequested) { }
         }
+    }
+
+    StreamWriter CreateRecording(string dir)
+    {
+        Directory.CreateDirectory(dir);
+        var file = Path.Combine(dir, F1Recording.NewFileName(DateTimeOffset.UtcNow));
+        log.LogInformation("Recording F1 live timing to {Path}", file);
+        return new StreamWriter(file, append: true) { AutoFlush = true };
     }
 
     /// <summary>
@@ -206,7 +252,7 @@ public sealed class F1FeedService(
             foreach (var file in recent)
             {
                 log.LogInformation("Restoring F1 state from {File}", file.Name);
-                foreach (var m in F1Recording.Read(file.FullName)) Apply(m);
+                foreach (var m in F1Recording.Read(file.FullName)) Apply(m, recorded: true);
             }
         }
         catch (Exception ex) { log.LogWarning(ex, "Couldn't restore F1 state from recordings"); }
@@ -255,9 +301,9 @@ public sealed class F1FeedService(
         }
     }
 
-    void Apply(F1Message m)
+    void Apply(F1Message m, bool recorded = false)
     {
-        try { store.Apply(m); }
+        try { store.Apply(m, recorded); }
         catch (Exception ex) { log.LogWarning(ex, "Failed to apply F1 {Topic} message", m.Topic); }
     }
 }
