@@ -50,18 +50,22 @@ public static class SessionIndex
     /// Scans recording files for sessions. A session starts at each <c>&lt;New&gt;</c> snapshot and ends at the
     /// next one, at <c>&lt;NotFound&gt;</c> (meeting no longer live) or at the end of the file.
     /// </summary>
-    /// <param name="minMessages">Ignore fragments shorter than this (e.g. a reconnect just as a session ended).</param>
+    /// <param name="minMessages">Ignore fragments shorter than this that don't continue a session (e.g. a reconnect
+    /// just as a session ended).</param>
     public static List<RecordedSession> Scan(IEnumerable<string> files, int minMessages = 50)
     {
-        var parts = files.SelectMany(f => ScanFile(f)).Where(p => p.Part.Messages >= minMessages).OrderBy(p => p.Part.Start).ToList();
+        var parts = files.SelectMany(f => ScanFile(f)).OrderBy(p => p.Part.Start).ToList();
 
         var sessions = new List<(PartInfo First, List<RecordedSessionPart> Parts)>();
         foreach (var p in parts)
         {
             var match = sessions.LastOrDefault(s => s.First.Meeting == p.Meeting && s.First.Name == p.Name
                 && p.Part.Start - s.Parts[^1].End < MergeGap);
+            // A short part that continues a session belongs to it: Natsoft re-sends the session (<New>) mid-session,
+            // and the 27 s between two of those (Sandown Shootout, 7 Nov 2026, #888 Brown's lap) were left out of
+            // replays. Only a short part that would start a session on its own is a fragment to ignore.
             if (match.First is not null) match.Parts.Add(p.Part);
-            else sessions.Add((p, [p.Part]));
+            else if (p.Part.Messages >= minMessages) sessions.Add((p, [p.Part]));
         }
 
         return sessions.Select(s => new RecordedSession(

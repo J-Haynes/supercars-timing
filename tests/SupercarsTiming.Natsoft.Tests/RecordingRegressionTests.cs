@@ -54,6 +54,7 @@ public class RecordingRegressionTests
     const string GoldCoast = "Gold Coast"; // Sandown's Practice 1 (6 Nov 2026) has the same name and more messages
     const string GoldCoastShootout = "Top Ten Shoot Out Race 31";
     const string GoldCoastRace31 = "Supercars Championship - Race 31";
+    const string SandownShootout = "Top Ten Shoot Out Race 33";
 
     [RecordingFact(Race)]
     public void Race_pit_log_matches_Natsofts_pit_count_with_no_duplicates_or_stuck_stops()
@@ -200,4 +201,32 @@ public class RecordingRegressionTests
         Assert.Equal(1, wood.DeletedLaps);
     }
 
+    [RecordingFact(SandownShootout)]
+    public void A_lap_in_progress_survives_natsoft_resending_the_session_mid_lap()
+    {
+        // Sandown Shootout, 7 Nov 2026: Natsoft re-sent the session (<New>) twice during #888 Brown's lap, at Pos1
+        // and again at Int2, with no reconnect. The lap in progress wasn't carried over, so it vanished from the
+        // board after two mini-sectors until he crossed the line, and the lap's splits were never stored.
+        var s = new TimingState();
+        var brown = () => s.Cars["24"]; // Natsoft's ID for #888
+        foreach (var m in SessionIndex.Read(Recordings.Session(SandownShootout)!))
+        {
+            if (m.Xml is null) continue;
+            s.Apply(m.Xml);
+            // Just before the line: the second snapshot (01:09:58) has passed, he's at Int2 (point 4).
+            if (s.Now is > 1794053400 and < 1794053419)
+            {
+                var b = brown();
+                Assert.Equal(1794053354.3364, b.LapStartAt, 3);
+                Assert.Equal(26.4116, b.CurrentLapSplits["2"], 3);
+                Assert.Equal(42.6543, b.CurrentLapSplits["4"], 3);
+                Assert.Equal(4, b.CurrentLapSegments.Count);
+            }
+        }
+        var lap = brown();
+        Assert.Equal(69.2398, lap.LastLap, 3);
+        Assert.Equal(69.2398, lap.LastLapSplits["M"], 3);
+        Assert.Equal(42.6543, lap.LastLapSplits["4"], 3);
+        Assert.Equal(6, lap.LastLapSegments.Count);
+    }
 }

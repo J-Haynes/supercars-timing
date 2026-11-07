@@ -599,6 +599,30 @@ public sealed class CarState
         LastLapSegments = new(old.LastLapSegments);
         LastLapSplits = new(old.LastLapSplits);
         BestLapSplits = new(old.BestLapSplits);
+        // No line crossed since: the last lap is the same one, and a deletion still stands (snapshots don't always
+        // repeat the "?": Gold Coast Shootout, #2 Wood's lap looked restored by a re-send after the session).
+        if (Laps == old.Laps && old.LastLapDeleted && !LastLapDeleted) { LastLapDeleted = true; LastLap = 0; }
+        CarryLapInProgressFrom(old);
+    }
+
+    /// <summary>
+    /// Keeps the lap in progress (start time, splits, mini-sectors) when the car is still on the same lap. Natsoft
+    /// re-sends the session mid-lap without any reconnect (Sandown Shootout, 7 Nov 2026: twice during #888 Brown's
+    /// lap); without this the lap vanished from the board until the line and its splits were never stored.
+    /// Same lap: no line crossed since (same lap count, and Natsoft's last crossing time, D/@T, is the lap's start)
+    /// and on track before and after. Anything else (a long disconnect, a pit visit) starts afresh as before.
+    /// </summary>
+    void CarryLapInProgressFrom(CarState old)
+    {
+        var sameLap = old.LapStartAt > 0 && LapStartAt == 0 && Laps == old.Laps && !InPit && !old.InPit
+            && (LastLineCrossing == 0 || Math.Abs(LastLineCrossing - old.LapStartAt) < 1);
+        if (!sameLap) return;
+        LapStartAt = old.LapStartAt;
+        // Points crossed since the snapshot (none, or the one in the first update after it) come after the old ones.
+        foreach (var (k, v) in old.CurrentLapSplits) CurrentLapSplits.TryAdd(k, v);
+        foreach (var (k, v) in old.CurrentLapSegments) CurrentLapSegments.TryAdd(k, v);
+        // Still at the point it last crossed: the stretch to the next one can be timed from that crossing.
+        if (LastPoint == old.LastPoint && SegmentStartAt == 0) SegmentStartAt = old.SegmentStartAt;
     }
 }
 
