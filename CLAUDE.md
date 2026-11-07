@@ -313,6 +313,12 @@ the tunnel's port 7844). `homeserver` is a Lenovo ThinkCentre M90q (i5-10500T, 1
   the tower doesn't draw an out-lap's stretches (they lit up in the Shootout). The column is called "Micro-sectors"
   (owner, 24 Oct 2026); code still says `minis`/`MiniSectors`.
 - **Flags:** always via `flagKind()`. Caution/red: screen border, `SafetyCarBanner`, race feed items, "SC" tags on stops.
+- **Time certain** (`timeCertain.ts` + `TimeCertainBanner.tsx`, under the safety-car banner, live and replay; owner's
+  request 7 Nov 2026): once race control sends a time certain ("... time certain time for race 33 is 1753", track
+  time; the latest wins, another race's is ignored), says whether the leader runs the distance before it at their
+  green-flag pace (median of their last 10 laps run wholly under green, from lap history), the finish time and the
+  spare in minutes and safety-car laps (this race's laps under caution, else 2x pace), or about how many laps will be
+  run. Measured data only. Supercars only in practice: F1 sends no such message (its 2-hour limit isn't modelled).
 - **Focus / Compare** (`DriverDialog.tsx`): click a driver's name in the tower (live and replay). Focus: key numbers,
   sectors vs session best, lap times, stints (split at `pitted` laps; checked: stints ending in a stop = `pitStops`
   for all 26 cars in Race 30), pit stops, driver laps. Compare: gap at the line per lap with the trend since either
