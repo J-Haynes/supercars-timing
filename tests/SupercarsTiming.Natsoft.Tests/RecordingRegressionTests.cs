@@ -8,9 +8,9 @@ namespace SupercarsTiming.Natsoft.Tests;
 /// </summary>
 public sealed class RecordingFactAttribute : FactAttribute
 {
-    public RecordingFactAttribute(string session)
+    public RecordingFactAttribute(string session, string? meeting = null)
     {
-        if (Recordings.Session(session) is null) Skip = $"Needs a recording of \"{session}\" in data/recordings";
+        if (Recordings.Session(session, meeting) is null) Skip = $"Needs a recording of \"{session}\" in data/recordings";
     }
 }
 
@@ -26,15 +26,18 @@ static class Recordings
             : [];
     });
 
-    /// <summary>The longest recorded session whose name ends with <paramref name="name"/> (merged across restarts).</summary>
-    public static RecordedSession? Session(string name) =>
-        All.Value.Where(s => s.Name.EndsWith(name, StringComparison.OrdinalIgnoreCase)).MaxBy(s => s.Messages);
+    /// <summary>The longest recorded session whose name ends with <paramref name="name"/> (merged across restarts),
+    /// at a meeting whose name contains <paramref name="meeting"/> if given (session names repeat every round).</summary>
+    public static RecordedSession? Session(string name, string? meeting = null) =>
+        All.Value.Where(s => s.Name.EndsWith(name, StringComparison.OrdinalIgnoreCase)
+                && (meeting is null || s.Meeting.Contains(meeting, StringComparison.OrdinalIgnoreCase)))
+            .MaxBy(s => s.Messages);
 
     /// <summary>Replays a whole recorded session through <see cref="TimingState"/>, as the server's warm start does.</summary>
-    public static TimingState Replay(string name)
+    public static TimingState Replay(string name, string? meeting = null)
     {
         var s = new TimingState();
-        foreach (var m in SessionIndex.Read(Session(name)!)) if (m.Xml is not null) s.Apply(m.Xml);
+        foreach (var m in SessionIndex.Read(Session(name, meeting)!)) if (m.Xml is not null) s.Apply(m.Xml);
         return s;
     }
 }
@@ -48,6 +51,7 @@ public class RecordingRegressionTests
     const string Race = "Supercars Championship - Race 30";
     const string Practice6 = "Practice 6 (All Drivers)";
     const string GoldCoastPractice1 = "Supercars Championship - Practice 1";
+    const string GoldCoast = "Gold Coast"; // Sandown's Practice 1 (6 Nov 2026) has the same name and more messages
     const string GoldCoastShootout = "Top Ten Shoot Out Race 31";
     const string GoldCoastRace31 = "Supercars Championship - Race 31";
 
@@ -141,12 +145,12 @@ public class RecordingRegressionTests
         Assert.InRange(times[times.Count / 2], 120, 140);   // a typical Bathurst race lap
     }
 
-    [RecordingFact(GoldCoastPractice1)]
+    [RecordingFact(GoldCoastPractice1, GoldCoast)]
     public void Gold_Coast_deleted_laps_are_flagged_and_never_show_the_previous_laps_time()
     {
         // Kerb hops at the Gold Coast: Natsoft sends I="?" at the line. #19 (Payne) lost laps 11 and 14, at 77.5 s
         // and 79.9 s pace through every timing point.
-        var s = Recordings.Replay(GoldCoastPractice1);
+        var s = Recordings.Replay(GoldCoastPractice1, GoldCoast);
         var payne = TimingSnapshot.From(s).Cars.Single(c => c.CarNumber == "19");
         var laps = s.Cars[payne.Id].LapHistory;
         Assert.Contains(laps, l => l.Lap == 11 && l.Deleted && l.Time == 0);
@@ -195,4 +199,5 @@ public class RecordingRegressionTests
         Assert.True(wood.LastLapDeleted);
         Assert.Equal(1, wood.DeletedLaps);
     }
+
 }

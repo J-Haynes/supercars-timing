@@ -15,7 +15,10 @@ through a Cloudflare Tunnel (below).
 ```bash
 # Development checkout (once)
 mkdir -p ~/Code && cd ~/Code && gh repo clone J-Haynes/supercars-timing
-ln -s ~/Dev/supercars-timing/data/recordings ~/Code/supercars-timing/data/recordings
+# data/recordings exists in the clone (its .gitkeep is tracked), so replace it, or ln puts the link inside it and
+# the recording tests silently skip (this checkout until 7 Nov 2026).
+cd ~/Code/supercars-timing && rm -r data/recordings && ln -s ~/Dev/supercars-timing/data/recordings data/recordings
+git update-index --skip-worktree data/recordings/.gitkeep && echo /data/recordings >> .git/info/exclude
 ```
 
 ## The timing service
